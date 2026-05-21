@@ -714,7 +714,7 @@
           name,
           slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           status: 'pending',
-          artist_type: ['musician'],
+          artist_type: [],
           submitted_by_name: submittedByName || document.getElementById('inp-submitter-name')?.value?.trim() || null,
         });
         // Public policy returns 204 — use a negative temp ID (never a valid DB integer)
