@@ -1,0 +1,1458 @@
+/* ============================================================
+   THE SCENE — SHARED STYLESHEET  (v3, minimalist Inter)
+   ────────────────────────────────────────────────────────────
+   Typography: Inter throughout, weights 300–700.
+   Hierarchy built on weight + size + tracking, not font family.
+   Architectural, labelled, confident.
+   ============================================================ */
+
+:root {
+  --primary:       #4BB9D0;
+  --secondary:     #3380C1;
+  --primary-light: #EBF5F8;
+  --tertiary:      #FFFFFF;
+  --charcoal:    #1A1A2E;
+  --slate:       #2D2D44;
+  --warm-grey:   #F7F5F2;
+  --cream:       #FFFCF7;
+  --text:        #1A1A2E;
+  --text-muted:  #6B6B80;
+  --text-dim:    #9A9AA8;
+  --border:      #E8E6E1;
+  --border-sub:  #F0EEE9;
+
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(26,26,46,0.04);
+  --shadow-md: 0 4px 20px rgba(26,26,46,0.06);
+  --shadow-lg: 0 16px 48px rgba(26,26,46,0.14);
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bot: env(safe-area-inset-bottom, 0);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Native webview feel:
+   - text-size-adjust: 100% prevents iOS from auto-zooming text on rotation
+   - touch-action: manipulation disables the double-tap-to-zoom gesture (but keeps
+     scroll and swipe responsive)
+   - user-select: none stops the long-press text-selection popover on content
+     that isn't meant to be copied (titles, meta, tags, buttons).
+     Input fields and things inside [data-selectable] get it re-enabled below. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  overscroll-behavior-y: none; /* no bounce past page edges — feels more native */
+}
+body {
+  font-family: var(--font);
+  background: var(--warm-grey);
+  color: var(--text);
+  min-height: 100dvh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  padding-bottom: calc(2rem + var(--safe-bot));
+  font-feature-settings: "cv11", "ss03";
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no "Copy / Share" popover on long-press */
+  overflow-x: hidden;
+}
+
+/* Re-enable selection only on inputs and anything explicitly opted in */
+input, textarea, [data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Hide scrollbars everywhere — keeps scroll functional, just no visible bar.
+   Firefox uses scrollbar-width; WebKit/Blink needs the ::-webkit pseudo. */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+/* Also hide inner-scrolling container scrollbars (bottom sheet, tier rails) */
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+* {
+  scrollbar-width: none;
+}
+
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+.gigs-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  padding-top: calc(1.5rem + var(--safe-top));
+}
+
+/* HEADER */
+.gigs-header {
+  margin-bottom: 2rem;
+  text-align: center;
+  padding-top: 0.5rem;
+}
+.gigs-header__title {
+  font-size: 2.75rem;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  color: var(--primary);
+}
+.gigs-header__subtitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--secondary);
+  margin-top: 0.85rem;
+}
+.gigs-header__curator-byline {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  letter-spacing: 0.01em;
+}
+
+/* SEARCH BAR */
+.search-bar {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+.search-bar__icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--text-dim);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.search-bar__input {
+  width: 100%;
+  padding: 0.65rem 0.85rem 0.65rem 2.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: white;
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search-bar__input::placeholder { color: var(--text-dim); }
+.search-bar__input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(75, 185, 208, 0.15);
+}
+/* Hide the native × clear button on webkit — we rely on the 'search' event */
+.search-bar__input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* TOOLBAR */
+.toolbar {
+  position: sticky;
+  top: calc(var(--safe-top) - 1px);
+  z-index: 30;
+  background: rgba(247,245,242,0.88);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  margin: 0 -1rem 1.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.toolbar.is-scrolled { border-bottom-color: var(--border); }
+.toolbar__count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: white;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  letter-spacing: -0.005em;
+}
+.filter-btn:active { transform: scale(0.96); }
+.filter-btn:hover { border-color: var(--charcoal); }
+.filter-btn.is-active {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: white;
+}
+.filter-btn__chevron { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.5; }
+.filter-btn.is-active .filter-btn__chevron { opacity: 0.8; }
+.filter-btn__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.filter-btn.is-active .filter-btn__badge { background: white; color: var(--charcoal); }
+
+/* DATE HEADER */
+.date-header {
+  font-size: 1.15rem;
+  font-weight: 500;
+  padding: 1.75rem 0 0.85rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.date-header:first-child { padding-top: 0.25rem; }
+
+/* Single-day view: cards are full content-column width */
+.date-header--day-view {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  padding: 0.25rem 0 1rem;
+  color: var(--text);
+}
+
+/* SECTION DIVIDER */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0 0.9rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.section-label:first-child { padding-top: 0.25rem; }
+.section-label__line { flex: 1; height: 1px; background: var(--border); }
+.section-label__mark {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+.section-label__mark--gold    { background: #C9932A; }
+.section-label__mark--silver  { background: #C5C5CD; }
+.section-label__mark--holo    { background: linear-gradient(90deg, #4BB9D0, #AA6EFF, #FF78C3, #FFC864); }
+
+/* ============================================================
+   DAY STRIP — horizontal swipe strip for one day (weekly view)
+   ============================================================ */
+.day-strip {
+  margin: 0 -1rem 1.75rem;
+}
+.day-strip:last-child {
+  margin-bottom: 0.5rem;
+}
+.day-strip__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0 1rem 0.65rem;
+}
+.day-strip__label {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.day-strip__count {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  margin-left: auto;
+}
+.day-strip__track {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding: 0.1rem 1rem 0.75rem;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 1rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.day-strip__track::-webkit-scrollbar { display: none; }
+.day-strip__track .gig-card {
+  flex: 0 0 87.5%;
+  scroll-snap-align: start;
+  margin-bottom: 0;
+}
+
+/* GIG CARD */
+.gig-card {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, border-color 0.15s;
+  position: relative;
+  isolation: isolate;
+}
+/* Body fills available vertical space — lets footer dock at the true bottom */
+.gig-card__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+/* Footer always sticks to the bottom of the card */
+.gig-card__footer {
+  margin-top: auto;
+}
+/* Horizontal rail cards get equal heights via tallest-sibling trick */
+.tier__track .gig-card { height: auto; align-self: stretch; }
+a.gig-card:hover { box-shadow: var(--shadow-md); border-color: #DAD7D0; }
+a.gig-card:active { opacity: 0.92; }
+
+/* CURATED VARIANTS — continuous CSS animation on the rainbow layers */
+
+/* Variant 1: Silver — 1 curator. Dramatic brushed-metal bullion: deep facet contrasts. */
+.gig-card[data-curated="1"] {
+  background:
+    /* moving sheen band (wider, softer than the specular sharp highlight below) */
+    linear-gradient(
+      calc(115deg + var(--refract, 0.5) * 40deg),
+      transparent 20%,
+      rgba(255,255,255,0.0) 32%,
+      rgba(255,255,255,0.55) 44%,
+      rgba(240,240,245,0.0) 56%,
+      transparent 72%
+    ),
+    /* main bullion body: narrow, high-contrast silver bands */
+    linear-gradient(
+      135deg,
+      #6F6F78 0%,
+      #A8A8B2 8%,
+      #E0E0E5 16%,
+      #FCFCFE 22%,
+      #E0E0E5 28%,
+      #8A8A94 40%,
+      #6F6F78 48%,
+      #B4B4BE 58%,
+      #F4F4F8 68%,
+      #8A8A94 80%,
+      #6F6F78 90%,
+      #A8A8B2 100%
+    );
+  border-color: #6F6F78;
+}
+.gig-card[data-curated="1"]::after {
+  /* sharp white specular glint riding on top of the bullion body */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    calc(110deg + var(--refract, 0.5) * 50deg),
+    transparent 36%,
+    rgba(255,255,255,0.85) calc(47% + var(--refract, 0.5) * 18%),
+    rgba(245,245,250,0.25) calc(52% + var(--refract, 0.5) * 18%),
+    transparent calc(58% + var(--refract, 0.5) * 18%)
+  );
+  mix-blend-mode: overlay;
+  transition: background 60ms linear;
+  z-index: 0;
+}
+
+/* Variant 2: Gold — 2 curators. Solid gold bullion: deep contrasts, polished facets. */
+.gig-card[data-curated="2"] {
+  background:
+    linear-gradient(
+      calc(115deg + var(--refract, 0.5) * 40deg),
+      transparent 20%,
+      rgba(255,245,200,0.0) 32%,
+      rgba(255,245,200,0.55) 44%,
+      rgba(255,225,140,0.0) 56%,
+      transparent 72%
+    ),
+    linear-gradient(
+      135deg,
+      #8A5E15 0%,
+      #C9932A 8%,
+      #F5D14C 16%,
+      #FFF0A8 22%,
+      #F5D14C 28%,
+      #B07F1C 40%,
+      #8A5E15 48%,
+      #D4A232 58%,
+      #F8DD5E 68%,
+      #B07F1C 80%,
+      #8A5E15 90%,
+      #C9932A 100%
+    );
+  border-color: #8A5E15;
+}
+.gig-card[data-curated="2"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    calc(110deg + var(--refract, 0.5) * 50deg),
+    transparent 36%,
+    rgba(255,250,220,0.85) calc(47% + var(--refract, 0.5) * 18%),
+    rgba(255,240,170,0.2) calc(52% + var(--refract, 0.5) * 18%),
+    transparent calc(58% + var(--refract, 0.5) * 18%)
+  );
+  mix-blend-mode: overlay;
+  transition: background 60ms linear;
+  z-index: 0;
+}
+
+/* Variant 3: Holographic — 3+ curators. Iridescent foil card.
+   Reference: a physical holographic foil card — warm silver-champagne base
+   with multiple overlapping radial rainbow blooms that bleed into each other
+   softly, plus a subtle foil grain texture. The rainbows sit on the surface
+   as organic iridescent patches, not a linear spectrum.
+
+   Architecture (two pseudo-elements + card base):
+   1. Card base: warm silver-cream gradient (the metallic foil material)
+   2. ::before: five overlapping radial rainbow blooms at irregular positions,
+      blended with `mix-blend-mode: screen` so they add prismatic light onto
+      the silver surface without replacing it
+   3. ::after: subtle SVG noise texture for the foil grain / matte quality
+
+   Scroll motion: --refract (0→1) shifts the bloom composition's vertical
+   position by ~30%. Subtle drift as the card moves through the viewport,
+   not a sweeping animation. */
+.gig-card[data-curated="3"] {
+  background:
+    /* subtle diagonal sheen over the metal */
+    linear-gradient(
+      135deg,
+      rgba(255, 248, 230, 0.35) 0%,
+      rgba(240, 240, 244, 0.0) 40%,
+      rgba(230, 232, 240, 0.35) 100%
+    ),
+    /* base metallic silver-cream */
+    linear-gradient(
+      160deg,
+      #F5EFE2 0%,
+      #EAE6DC 20%,
+      #DFDDD9 45%,
+      #D4D5D8 65%,
+      #DDD9D1 85%,
+      #E8E2D2 100%
+    );
+  border-color: rgba(200, 198, 190, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(170, 168, 160, 0.3),
+    0 2px 10px rgba(140, 138, 130, 0.12);
+}
+.gig-card[data-curated="3"]::before {
+  /* Iridescent bloom composition, palette matched to pearlescent foil:
+     peach-coral, mint-cyan, soft champagne yellow, lilac, periwinkle.
+     All colours are LIGHT and low-saturation — the reference is airy and
+     luminous, not painterly. `soft-light` blend preserves that quality by
+     darkening/lightening gently rather than pushing contrast.
+     Scroll motion: transform translateY driven by --refract (compositor-only,
+     doesn't repaint the gradient). */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    /* top-right peach-coral bloom */
+    radial-gradient(ellipse 65% 50% at 78% 18%,
+      rgba(255, 175, 150, 0.70) 0%,
+      rgba(255, 200, 175, 0.50) 30%,
+      rgba(255, 220, 200, 0.28) 55%,
+      transparent 80%
+    ),
+    /* center-left mint-cyan pool (the biggest feature in the reference) */
+    radial-gradient(ellipse 65% 55% at 20% 50%,
+      rgba(150, 230, 225, 0.72) 0%,
+      rgba(180, 235, 220, 0.52) 25%,
+      rgba(205, 240, 220, 0.32) 50%,
+      transparent 78%
+    ),
+    /* center soft champagne-yellow diffusion */
+    radial-gradient(ellipse 55% 45% at 50% 40%,
+      rgba(255, 235, 180, 0.55) 0%,
+      rgba(250, 235, 195, 0.35) 30%,
+      transparent 65%
+    ),
+    /* lower lilac-periwinkle bloom */
+    radial-gradient(ellipse 60% 50% at 55% 85%,
+      rgba(190, 185, 230, 0.68) 0%,
+      rgba(210, 200, 235, 0.48) 28%,
+      rgba(225, 220, 240, 0.28) 55%,
+      transparent 80%
+    ),
+    /* right-edge pale blue haze */
+    radial-gradient(ellipse 50% 60% at 90% 72%,
+      rgba(170, 200, 235, 0.60) 0%,
+      rgba(195, 215, 240, 0.38) 30%,
+      transparent 65%
+    );
+  transform: translateY(calc((var(--refract, 0.5) - 0.5) * 40px));
+  mix-blend-mode: soft-light;
+  z-index: 0;
+}
+.gig-card[data-curated="3"]::after {
+  /* Foil grain texture — tiny inline SVG fractal noise, base64-free.
+     Adds the matte foil-sticker quality from the reference photo. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.45 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+/* Content above the sheen pseudo-elements */
+.gig-card[data-curated] > * { position: relative; z-index: 2; }
+
+/* Body washes — silver and gold need a wash so text reads over the metal.
+   Holographic is transparent glass, so the body wash is clear — rainbows show through
+   behind the text, which itself stays charcoal and crisp. */
+.gig-card[data-curated="1"] .gig-card__body { background: rgba(250,250,252,0.4); }
+.gig-card[data-curated="2"] .gig-card__body { background: rgba(255,250,230,0.4); }
+.gig-card[data-curated="3"] .gig-card__body { background: rgba(248,246,240,0.55); }
+
+/* Tinted glass footer on curated cards — lighter, more see-through than before.
+   Stretches edge-to-edge (negative horizontal margin cancels body padding).
+   backdrop-filter blurs whatever is behind it, keeping the glass character. */
+.gig-card[data-curated] .gig-card__footer {
+  /* `margin-top: auto` docks the footer at the bottom of the body across all
+     card heights — was `1rem` before, which left short-content cards with the
+     footer floating mid-card. Negative horizontal/bottom margins keep the
+     edge-to-edge glass treatment unchanged. */
+  margin: auto -1.15rem -1.1rem;
+  padding: 1.25rem 1.15rem 0.9rem;
+  border-top: 1px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  position: relative;
+  isolation: isolate;
+}
+.gig-card[data-curated="1"] .gig-card__footer {
+  background: rgba(70,72,82,0.19);
+}
+.gig-card[data-curated="2"] .gig-card__footer {
+  background: rgba(85,62,20,0.21); /* warm tint — honours the gold tone */
+}
+.gig-card[data-curated="3"] .gig-card__footer {
+  background: rgba(255,255,255,0.13); /* very light glass on holographic */
+  border-top: 1px solid rgba(255,255,255,0.5);
+}
+
+/* Footer text — silver and gold have dark tinted glass so text flips to light.
+   Holographic footer is light transparent glass, text stays dark for contrast.
+   Light text carries a subtle shadow for legibility over the thin glass tint. */
+.gig-card[data-curated="1"] .gig-card__footer .price__prefix,
+.gig-card[data-curated="2"] .gig-card__footer .price__prefix {
+  color: rgba(255,255,255,0.78);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.gig-card[data-curated="1"] .gig-card__footer .price__value,
+.gig-card[data-curated="2"] .gig-card__footer .price__value {
+  color: #FFFFFF;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+}
+.gig-card[data-curated="1"] .gig-card__footer .cta,
+.gig-card[data-curated="2"] .gig-card__footer .cta {
+  color: #FFFFFF;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+}
+.gig-card[data-curated="1"] .gig-card__footer .price--free .price__value {
+  color: #8FE3D5;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+}
+.gig-card[data-curated="2"] .gig-card__footer .price--free .price__value {
+  color: #F5D275;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+}
+.gig-card[data-curated] .gig-card__footer .cta__arrow {
+  opacity: 0.85;
+}
+/* Holographic footer keeps default dark text — the glass is light */
+.gig-card[data-curated="3"] .gig-card__footer .price__prefix {
+  color: var(--text-muted);
+}
+.gig-card[data-curated="3"] .gig-card__footer .price__value {
+  color: var(--text);
+}
+.gig-card[data-curated="3"] .gig-card__footer .cta {
+  color: var(--charcoal);
+}
+}
+.gig-card[data-curated] .gig-card__footer .cta__arrow {
+  opacity: 0.85;
+}
+.gig-card[data-curated="1"] .gig-card__footer > span[style*="color: var(--text-muted)"],
+.gig-card[data-curated="1"] .gig-card__footer > span[style*="--text-muted"],
+.gig-card[data-curated="2"] .gig-card__footer > span[style*="color: var(--text-muted)"],
+.gig-card[data-curated="2"] .gig-card__footer > span[style*="--text-muted"] {
+  color: rgba(255,255,255,0.6) !important;
+}
+
+.gig-card__poster {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: fill;
+  background: var(--slate);
+  display: block;
+}
+.gig-card__poster-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, var(--charcoal), var(--slate));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.gig-card__body { padding: 1.1rem 1.25rem 1.25rem; }
+
+.gig-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--secondary);
+  margin-bottom: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gig-card__title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+  /* Cap title to 2 lines so cards with longer titles don't blow up the tier height */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.gig-card__venue {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+  line-height: 1.4;
+}
+.gig-card__venue-name { color: var(--text); font-weight: 500; }
+.gig-card__venue-area { color: var(--text-dim); margin-left: 0.4rem; }
+
+.gig-card__artists {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  /* Single line — long artist lists ellipsis rather than wrap */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+.gig-card__artists-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  margin-right: 6px;
+}
+
+.gig-card__desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  line-height: 1.5;
+  /* JS truncates to 120 chars before render; 2-line clamp is a safety net */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.gig-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+.tag {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid rgba(42, 191, 171, 0.5);
+  color: var(--teal-dark);
+  letter-spacing: -0.005em;
+}
+.tag--neutral {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.curators {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-sub);
+}
+.curators__label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+}
+.curator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 11px 3px 3px;
+  border-radius: var(--radius-pill);
+  background: white;
+  border: 1px solid var(--border);
+  font-size: 0.74rem;
+  color: var(--text);
+  font-weight: 500;
+}
+.curator-badge__logo {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--slate);
+  flex-shrink: 0;
+}
+.curator-badge__logo--placeholder {
+  background: linear-gradient(135deg, var(--charcoal), var(--slate));
+}
+
+.promoter {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  /* Default: acts as the section separator when no curators are present */
+  margin-top: 1rem;
+  padding-top: 1rem;
+  margin-bottom: 0; /* footer supplies its own padding-top: 1rem, keeping the pill centred */
+  border-top: 1px solid var(--border-sub);
+}
+/* When curators precede the promoter row, curators already owns the separator line —
+   suppress the duplicate and tighten the gap so they read as one group */
+.curators + .promoter {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0.4rem;
+  margin-bottom: 0.5rem; /* restore bottom spacing — no centering needed here */
+}
+.promoter__label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6rem;
+  margin-right: 4px;
+  color: var(--text-muted);
+}
+
+.gig-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  padding-bottom: 0.25rem;
+  border-top: 1px solid var(--border-sub);
+}
+.price { display: flex; flex-direction: column; line-height: 1.1; }
+.price__prefix {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.price__value {
+  font-size: 1.05rem;
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.price--free .price__value { color: var(--secondary); }
+
+.cta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  letter-spacing: -0.01em;
+}
+.cta__arrow { display: inline-block; transition: transform 0.15s; }
+a.gig-card:hover .cta__arrow { transform: translateX(3px); }
+
+/* SHEET */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(26,26,46,0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.sheet-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 100;
+  background: var(--cream);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow-lg);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding-bottom: var(--safe-bot);
+}
+.sheet.is-open { transform: translateY(0); }
+
+.sheet__grip {
+  width: 42px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+.sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border-sub);
+  flex-shrink: 0;
+}
+.sheet__title { font-size: 1.2rem; font-weight: 500; letter-spacing: -0.02em; }
+.sheet__close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--warm-grey);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, background 0.15s;
+}
+.sheet__close:active { transform: scale(0.9); }
+.sheet__close:hover { background: var(--border); }
+.sheet__close svg { width: 14px; height: 14px; }
+
+.sheet__body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+
+.sheet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 0.92rem;
+  color: var(--text);
+  font-weight: 500;
+}
+.sheet-option:hover { background: var(--warm-grey); }
+.sheet-option__label { display: flex; align-items: center; gap: 0.75rem; }
+.sheet-option__count {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  margin-right: 0.75rem;
+  font-weight: 500;
+}
+.sheet-option__check {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sheet-option__check svg {
+  width: 13px; height: 13px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sheet-option.is-selected .sheet-option__check {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+}
+.sheet-option.is-selected .sheet-option__check svg { opacity: 1; transform: scale(1); }
+
+/* PRICE SLIDER — bottom-sheet body when filter kind === 'price' */
+.price-slider {
+  padding: 1.5rem 1.5rem 1rem;
+}
+.price-slider__value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.price-slider__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+.price-slider__value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.price-slider__value--free { color: var(--secondary); }
+.price-slider__range {
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.price-slider__range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0%,
+    var(--primary) var(--slider-fill, 50%),
+    var(--border) var(--slider-fill, 50%),
+    var(--border) 100%
+  );
+}
+.price-slider__range::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.price-slider__range::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+.price-slider__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--charcoal);
+  border: 3px solid white;
+  box-shadow: var(--shadow-md);
+  cursor: grab;
+  margin-top: -9px;
+  transition: transform 0.1s;
+}
+.price-slider__range::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+.price-slider__range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--charcoal);
+  border: 3px solid white;
+  box-shadow: var(--shadow-md);
+  cursor: grab;
+}
+.price-slider__ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding: 0 2px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.price-slider__count {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.price-slider__count strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sheet__footer {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem calc(0.85rem + var(--safe-bot));
+  border-top: 1px solid var(--border-sub);
+  background: var(--cream);
+  flex-shrink: 0;
+}
+.btn {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: transform 0.1s, background 0.15s;
+  letter-spacing: -0.005em;
+}
+.btn:active { transform: scale(0.98); }
+.btn--primary { background: var(--charcoal); color: white; }
+.btn--primary:hover { background: var(--slate); }
+.btn--ghost {
+  background: white;
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  flex: 0 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+.btn--ghost:hover { border-color: var(--charcoal); }
+
+/* STATE */
+.state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+.state__title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+.state__text { font-size: 0.9rem; max-width: 320px; margin: 0 auto; }
+.state__action {
+  margin-top: 1rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-pill);
+  background: var(--charcoal);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.spinner {
+  display: inline-block;
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* RESPONSIVE */
+@media (min-width: 640px) {
+  .gigs-page {
+    padding: 2.5rem 1.5rem 4rem;
+    padding-top: calc(2.5rem + var(--safe-top));
+  }
+  .gigs-header__title { font-size: 3.25rem; }
+  .gig-card__title { font-size: 1.5rem; }
+  .gig-card__body { padding: 1.25rem 1.5rem 1.5rem; }
+  .toolbar {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .tier {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+  }
+  .tier__header {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .tier__track {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .tier__track .gig-card {
+    flex: 0 0 62%;
+  }
+  .day-strip {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+  }
+  .day-strip__header {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .day-strip__track {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .day-strip__track .gig-card {
+    flex: 0 0 75%;
+  }
+}
+
+/* ============================================================
+   WEBGL HOLOGRAPHIC SHADER — per-card canvas (v4)
+   ────────────────────────────────────────────────────────────
+   v4 mounts a <canvas> as a child of each holo card so it
+   scrolls with the card naturally — no scissor math, no
+   scroll lag. The canvas sits at z-index 0 inside the card's
+   stacking context; existing `.gig-card[data-curated] > *
+   { z-index: 2 }` rule keeps the poster, text, and footer
+   above the canvas.
+   ============================================================ */
+/* The selector must beat `.gig-card[data-curated] > *` (specificity 0,2,0)
+   from the rule above this block, otherwise the canvas inherits
+   position:relative + z-index:2 and joins the flex flow, stretching the card. */
+.gig-card[data-curated="3"] > .holo-shader-card-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  display: block;
+}
+
+/* Make the holo card transparent so the canvas behind shows through.
+   Hide the CSS pseudo-element fallbacks so they don't double up. */
+.gig-card[data-curated="3"].holo-shader-active {
+  background: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(170, 168, 160, 0.25),
+    0 2px 14px rgba(140, 138, 130, 0.15);
+}
+.gig-card[data-curated="3"].holo-shader-active::before,
+.gig-card[data-curated="3"].holo-shader-active::after {
+  display: none;
+}
+
+/* Lighter body wash so more of the shader shows through behind text.
+   Increase opacity if text legibility suffers; decrease for richer foil. */
+.gig-card[data-curated="3"].holo-shader-active .gig-card__body {
+  background: rgba(248, 246, 240, 0.32);
+}
+
+/* ============================================================
+   PROMOTER LINK — clickable name on gig card
+   ============================================================ */
+.gig-card__promoter-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 11px 3px 3px; /* tight left for logo, matches curator-badge */
+  border-radius: var(--radius-pill);
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  vertical-align: middle;
+}
+.gig-card__promoter-link:hover,
+.gig-card__promoter-link:active {
+  background: var(--warm-grey);
+  border-color: var(--text-dim);
+}
+.promoter-pill__logo {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--slate);
+  flex-shrink: 0;
+}
+.promoter-pill__logo--placeholder {
+  background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+}
+
+/* ============================================================
+   PROMOTER SHEET — bottom-sheet profile view
+   ============================================================ */
+
+/* In promoter mode: hide the filter footer, remove body padding */
+.sheet[data-mode="promoter"] .sheet__footer { display: none; }
+.sheet[data-mode="promoter"] .sheet__body   { padding: 0; }
+
+/* Loading skeleton */
+.promoter-sheet__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1rem;
+}
+
+/* Root container — --promoter-accent set inline when brand colour exists */
+.promoter-sheet {
+  --promoter-accent: var(--teal);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 2rem;
+}
+
+/* Header: avatar, name, bio, links — centred column */
+.promoter-sheet__header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  overflow: hidden;
+  border-top: 3px solid var(--promoter-accent);
+  border-bottom: 1px solid var(--border-sub);
+}
+
+/* Subtle brand wash behind the header — purely decorative */
+.promoter-sheet__accent-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--promoter-accent);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* Avatar */
+.promoter-sheet__avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid var(--promoter-accent);
+  flex-shrink: 0;
+  position: relative; /* sit above accent-bg */
+}
+.promoter-sheet__avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--promoter-accent);
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* Name */
+.promoter-sheet__name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--charcoal);
+  position: relative;
+  margin: 0;
+}
+
+/* Bio */
+.promoter-sheet__bio {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 28ch;
+  margin: 0;
+  position: relative;
+}
+
+/* Website + social links */
+.promoter-sheet__website,
+.promoter-sheet__social-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--promoter-accent);
+  text-decoration: none;
+  position: relative;
+}
+.promoter-sheet__website:hover,
+.promoter-sheet__social-link:hover { text-decoration: underline; }
+
+.promoter-sheet__socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  position: relative;
+}
+
+/* Upcoming events section */
+.promoter-sheet__events { padding: 0 1rem; }
+
+.promoter-sheet__events-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--promoter-accent);
+  padding: 1rem 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.promoter-sheet__event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.promoter-sheet__event-item {
+  border-top: 1px solid var(--border-sub);
+  padding: 0.65rem 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.promoter-sheet__event-item:last-child {
+  border-bottom: 1px solid var(--border-sub);
+}
+
+.promoter-sheet__event-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+}
+.promoter-sheet__event-link:hover .promoter-sheet__event-title {
+  color: var(--promoter-accent);
+}
+
+/* 16:9 thumbnail */
+.promoter-sheet__event-thumb {
+  width: 72px;
+  height: 40px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--warm-grey);
+}
+.promoter-sheet__event-thumb--placeholder {
+  background: var(--border-sub);
+}
+
+.promoter-sheet__event-text {
+  flex: 1;
+  min-width: 0; /* prevent title overflow */
+}
+
+.promoter-sheet__event-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 0.2rem;
+  transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.promoter-sheet__event-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.promoter-sheet__no-events {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 1.5rem 1rem;
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
+       maximum-scale=1 + user-scalable=no together disable all manual zoom.
+       iOS Safari still respects user-scalable=no when maximum-scale is also set. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F7F5F2">
+  <!-- Web app capability hints for when this is loaded in a Fabrik webview -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no"><!-- don't auto-link phone numbers -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Cape Town's live music calendar, curated by The Scene.">
+  <title>Events Guide — The Scene Cape Town</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=23">
+
+  <style>
+    /* Inline header override — guarantees correct rendering even if styles.css is cached stale.
+       Uses raw hex codes (not CSS variables) so it works regardless of the stylesheet state. */
+    .gigs-header {
+      text-align: center;
+      padding-top: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .gigs-header__title {
+      font-size: 2.75rem;
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 0.95;
+      color: #4BB9D0;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .gigs-header__subtitle {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #3380C1;
+      margin-top: 0.85rem;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .gigs-header__date {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #6B6B80;
+      margin-top: 0.5rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      letter-spacing: -0.005em;
+    }
+    .gig-card__title {
+      font-weight: 600;
+    }
+    @media (min-width: 640px) {
+      .gigs-header__title { font-size: 3.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="gigs-page">
+
+    <header class="gigs-header">
+      <h1 class="gigs-header__title" id="gigs-header-title">The Scene</h1>
+      <p class="gigs-header__subtitle" id="gigs-header-subtitle">Gig Guide</p>
+      <p class="gigs-header__curator-byline" id="gigs-header-curator-byline" hidden>This week's picks</p>
+      <p class="gigs-header__date" id="gigs-header-date"></p>
+    </header>
+
+    <!-- Search bar -->
+    <div class="search-bar">
+      <svg class="search-bar__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input
+        type="search"
+        id="gig-search"
+        class="search-bar__input"
+        placeholder="Search events…"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        aria-label="Search events by name"
+      >
+    </div>
+
+    <!-- Sticky filter toolbar -->
+    <div class="toolbar" id="toolbar" role="toolbar" aria-label="Filter gigs">
+      <button class="filter-btn" id="btn-type" type="button" aria-haspopup="dialog">
+        <span>Type</span>
+        <span class="filter-btn__badge" id="badge-type" hidden>0</span>
+        <svg class="filter-btn__chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="filter-btn" id="btn-area" type="button" aria-haspopup="dialog">
+        <span>Area</span>
+        <span class="filter-btn__badge" id="badge-area" hidden>0</span>
+        <svg class="filter-btn__chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="filter-btn" id="btn-price" type="button" aria-haspopup="dialog">
+        <span>Price</span>
+        <span class="filter-btn__badge" id="badge-price" hidden>0</span>
+        <svg class="filter-btn__chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
+    </div>
+
+    <section id="gig-list" aria-live="polite">
+      <div class="state">
+        <div class="spinner"></div>
+        <p class="state__text" style="margin-top: 0.75rem;">Loading gigs…</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom sheet for filter selection -->
+  <div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true"></div>
+  <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <header class="sheet__header">
+      <h2 class="sheet__title" id="sheet-title">Filter</h2>
+      <button class="sheet__close" id="sheet-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+    <div class="sheet__body" id="sheet-body" role="listbox" aria-multiselectable="true"></div>
+    <footer class="sheet__footer">
+      <button class="btn btn--ghost" id="sheet-clear" type="button">Clear</button>
+      <button class="btn btn--primary" id="sheet-apply" type="button">Apply</button>
+    </footer>
+  </aside>
+
+  <script src="holo-shader.js?v=7"></script>
+  <script src="app.js?v=23"></script>
+</body>
+</html>

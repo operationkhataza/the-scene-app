@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#15233D">
+  <title>Submit an Event — The Scene Cape Town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="event-submission-stylesheet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="sub-header">
+    <div class="sub-header-brand">The Scene</div>
+    <div class="sub-header-badge" id="header-badge">Submit an Event</div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <div id="form-wrap">
+    <div class="page-wrap">
+
+      <!-- HERO -->
+      <div class="sub-hero">
+        <div class="sub-hero-eyebrow">Cape Town Cultural Calendar</div>
+        <h1 class="sub-hero-title" id="hero-title">Tell us about<br>your event</h1>
+        <p class="sub-hero-sub" id="hero-sub">Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.</p>
+      </div>
+
+      <!-- STEPPER -->
+      <div class="stepper" id="stepper">
+        <div class="step is-active" data-step="1">
+          <div class="step-dot">1</div>
+          <div class="step-label">Basics</div>
+        </div>
+        <div class="step-line" id="line-1-2"></div>
+        <div class="step" data-step="2">
+          <div class="step-dot">2</div>
+          <div class="step-label">Date &amp; Venue</div>
+        </div>
+        <div class="step-line" id="line-2-3"></div>
+        <div class="step" data-step="3">
+          <div class="step-dot">3</div>
+          <div class="step-label">Details</div>
+        </div>
+        <div class="step-line" id="line-3-4"></div>
+        <div class="step" data-step="4">
+          <div class="step-dot">4</div>
+          <div class="step-label">Confirm</div>
+        </div>
+      </div>
+
+      <!-- PAGE 1: BASICS -->
+      <div class="form-page is-active" id="page-1">
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Event name &amp; description</h3>
+          </div>
+          <div class="card-body">
+            <div class="fg" id="fg-title">
+              <label>Event title <span class="req">*</span></label>
+              <input type="text" id="inp-title" placeholder="e.g. Sipho Gumede Live at The Crypt" autocomplete="off">
+              <div class="form-error">Please enter a name for the event.</div>
+            </div>
+            <div class="fg" id="fg-short-desc">
+              <label>Short description <span class="req">*</span></label>
+              <textarea id="inp-short-desc" rows="3" placeholder="One or two sentences — what should people know before clicking?"></textarea>
+              <div class="short-desc-footer">
+                <div class="form-hint">Shown on event cards in the gig guide.</div>
+                <div class="char-counter" id="char-counter"><span id="char-count">0</span> / 120</div>
+              </div>
+              <div class="form-error" id="short-desc-error">Please add a short description.</div>
+            </div>
+            <!-- Format selector: only shown for community events -->
+            <div class="fg" id="fg-format" style="display:none;">
+              <label>Format <span class="req">*</span></label>
+              <select id="inp-format"><option value="">Loading…</option></select>
+              <div class="form-error">Required.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-1 -->
+
+      <!-- PAGE 2: DATE & VENUE -->
+      <div class="form-page" id="page-2">
+
+        <div class="card">
+          <div class="card-header"><h3>Date &amp; time</h3></div>
+          <div class="card-body">
+            <div class="fg" id="fg-date">
+              <label>Event date <span class="req">*</span></label>
+              <input type="date" id="inp-date">
+              <div class="form-error">Please pick a date.</div>
+            </div>
+            <div class="fg-row">
+              <div class="fg" id="fg-doors">
+                <label>Doors / Start <span class="req">*</span></label>
+                <input type="time" id="inp-doors">
+                <div class="form-error">Required.</div>
+              </div>
+              <div class="fg">
+                <label>End time <span class="opt">(optional)</span></label>
+                <input type="time" id="inp-end">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Venue <span style="color:var(--scene-cyan-deep);">*</span></h3></div>
+          <div class="card-body">
+            <div class="editorial-note">
+              Our editorial team has already preloaded venue profiles into the system. If your venue doesn't appear in the search, feel free to suggest it — our team will review and approve it.
+            </div>
+            <div class="fg" id="fg-venue">
+              <label>Search for a venue <span class="req">*</span></label>
+              <div class="venue-search-wrap">
+                <input type="text" id="venue-search" placeholder="Start typing a venue name…" autocomplete="off" autocorrect="off">
+                <input type="hidden" id="venue-hidden">
+              </div>
+              <div class="form-error">Please select or suggest a venue.</div>
+            </div>
+            <button class="suggest-trigger-btn" id="suggest-venue-btn" type="button">＋ Suggest a new venue</button>
+
+            <div class="suggest-panel" id="suggest-venue-panel">
+              <div class="suggest-panel-title">Suggest a new venue</div>
+              <div class="fg">
+                <label>Venue name <span class="req">*</span></label>
+                <input type="text" id="new-venue-name" placeholder="e.g. The Waiting Room">
+              </div>
+              <div class="fg">
+                <label>Address <span class="req">*</span></label>
+                <input type="text" id="new-venue-address" placeholder="e.g. 273 Long Street, Cape Town">
+              </div>
+              <div class="fg">
+                <label>Area <span class="opt">(optional)</span></label>
+                <select id="new-venue-location">
+                  <option value="">Select area…</option>
+                  <option value="cbd">CBD</option>
+                  <option value="southern-suburbs">Southern Suburbs</option>
+                  <option value="northern-suburbs">Northern Suburbs</option>
+                  <option value="atlantic-seaboard">Atlantic Seaboard</option>
+                  <option value="hout-bay">Hout Bay</option>
+                  <option value="southern-peninsula">Southern Peninsula</option>
+                  <option value="cape-flats">Cape Flats</option>
+                  <option value="observatory">Observatory</option>
+                  <option value="industrial-district">Industrial District</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Your name <span class="opt">(optional)</span></label>
+                <input type="text" id="new-venue-submitted-by" placeholder="Your full name" autocomplete="name">
+                <div class="form-hint">So our team knows who suggested this.</div>
+              </div>
+              <button class="btn btn-p btn-full" id="submit-venue-btn" type="button">Submit venue suggestion →</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-2 -->
+
+      <!-- PAGE 3: DETAILS -->
+      <div class="form-page" id="page-3">
+
+        <!-- POSTER -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Event poster <span style="color:var(--scene-cyan-deep);">*</span></h3>
+            <p>Banner format (16:9) preferred — press photos also work well</p>
+          </div>
+          <div class="card-body">
+            <div class="img-upload" id="poster-wrap" data-state="empty">
+              <div class="img-upload-empty" id="poster-drop">
+                <div class="img-upload-icon">🖼</div>
+                <div class="img-upload-primary">Tap to upload an image</div>
+                <div class="img-upload-hint">JPEG, PNG or WebP, max 8MB — you'll crop after selecting</div>
+              </div>
+              <div class="img-upload-preview" id="poster-preview">
+                <div class="poster-confirmed" id="poster-confirmed">
+                  <div class="poster-confirmed-icon">✓</div>
+                  <div class="poster-confirmed-text">Poster ready</div>
+                  <div class="poster-confirmed-hint">Crop saved — we'll apply it automatically</div>
+                </div>
+                <div class="img-upload-overlay" id="poster-overlay">
+                  <div class="spinner"></div>
+                  <span>Uploading…</span>
+                </div>
+                <button class="img-upload-remove" id="poster-remove" type="button">✕</button>
+              </div>
+              <input type="file" id="poster-input" accept="image/*" hidden>
+            </div>
+            <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="card">
+          <div class="card-header"><h3>Full description</h3></div>
+          <div class="card-body">
+            <div class="fg">
+              <label>Description <span class="opt">(optional)</span></label>
+              <textarea id="inp-description" rows="4" placeholder="More context, lineup details, special guests, what to expect…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARTISTS — shown for live music and DJ events -->
+        <div class="card" id="card-artists" style="display:none;">
+          <div class="card-header">
+            <h3>Artists <span style="color:var(--scene-cyan-deep);">*</span></h3>
+            <p>At least one artist required</p>
+          </div>
+          <div class="card-body">
+            <div class="editorial-note">
+              Our editorial team has already preloaded artist profiles into the system. If your artist doesn't appear in the search, feel free to suggest them — our team will review and approve it.
+            </div>
+            <div class="fg" id="fg-artists">
+              <label>Search for artists <span class="req">*</span></label>
+              <div class="artist-search-wrap">
+                <input type="text" id="artist-search" placeholder="Search by name…" autocomplete="off" autocorrect="off">
+              </div>
+              <div class="artists-selected" id="artists-selected"></div>
+              <div class="form-error" id="artists-error">Please add at least one artist.</div>
+            </div>
+            <button class="suggest-trigger-btn" id="suggest-artist-btn-trigger" type="button">＋ Suggest a new artist</button>
+            <div class="suggest-panel" id="suggest-artist-panel">
+              <div class="suggest-panel-title">Add a new artist</div>
+              <div class="fg">
+                <label>Artist name <span class="req">*</span></label>
+                <input type="text" id="new-artist-name" placeholder="e.g. Thandiswa Mazwai" autocomplete="off">
+              </div>
+              <div class="fg">
+                <label>Your name <span class="opt">(optional)</span></label>
+                <input type="text" id="new-artist-submitted-by" placeholder="Your full name" autocomplete="name">
+                <div class="form-hint">So our team knows who suggested this artist.</div>
+              </div>
+              <button class="btn btn-p btn-full" id="submit-artist-btn" type="button">Add artist →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- GENRES — shown for live music and DJ events; chips populated per form type -->
+        <div class="card" id="card-genres" style="display:none;">
+          <div class="card-header"><h3>Genres</h3></div>
+          <div class="card-body">
+            <div class="fg">
+              <label>Select genres <span class="req">*</span></label>
+              <div class="chips" id="genre-chips"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAGS & CLASSIFICATION -->
+        <div class="card">
+          <div class="card-header"><h3>Tags &amp; Classification</h3></div>
+          <div class="card-body">
+            <div class="fg-row">
+              <div class="fg">
+                <label>Tags <span class="opt">(optional)</span></label>
+                <div class="tags-input-wrap" id="tags-wrap">
+                  <input type="text" class="tags-bare-input" id="tags-input" placeholder="Type and press Enter…">
+                </div>
+                <div class="form-hint">e.g. outdoor, rooftop, family-friendly</div>
+              </div>
+              <div class="fg">
+                <label>Age restriction <span class="req">*</span></label>
+                <select id="inp-age">
+                  <option value="all-ages">All Ages</option>
+                  <option value="18+">18+</option>
+                  <option value="21+">21+</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TICKETS -->
+        <div class="card">
+          <div class="card-header"><h3>Tickets &amp; pricing</h3></div>
+          <div class="card-body">
+            <label class="toggle-row" for="chk-free">
+              <div class="toggle-row-info">
+                <div class="toggle-row-label">Free event</div>
+                <div class="toggle-row-sub">No tickets or payment required</div>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="chk-free">
+                <div class="toggle-track"></div>
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+
+            <div id="tiers-wrap">
+              <div class="section-divider">Ticket tiers</div>
+              <div id="tiers-list"></div>
+              <div class="form-hint" style="margin-bottom:10px;">Enter price as a number only — no currency symbol (e.g. 150, not R150)</div>
+              <button class="add-tier-btn" id="add-tier-btn" type="button"><span>＋</span> Add ticket tier</button>
+            </div>
+            <div class="fg" style="margin-top:14px;">
+              <label>Ticketing link <span class="opt">(optional)</span></label>
+              <input type="url" id="inp-ticket-url" placeholder="https://quicket.co.za/…">
+              <div class="form-hint">Quicket, Webtickets, FIXR, venue website, etc.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-3 -->
+
+      <!-- PAGE 4: CONFIRM -->
+      <div class="form-page" id="page-4">
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Review &amp; submit</h3>
+            <p>Check your details before sending</p>
+          </div>
+          <div class="card-body">
+
+            <div class="summary-card" id="summary-card">
+              <div class="summary-label">Your submission</div>
+              <div id="summary-content"></div>
+            </div>
+
+            <div class="fg" id="fg-submitter">
+              <label>Your name <span class="req">*</span></label>
+              <input type="text" id="inp-submitter-name" placeholder="Your full name" autocomplete="name">
+              <div class="form-hint">So our team can credit or contact you.</div>
+              <div class="form-error">Please enter your name.</div>
+            </div>
+
+            <div class="disclaimer">
+              By submitting you agree that The Scene may publish this event on our platform and affiliated channels. We'll review it within 48 hours.
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /page-4 -->
+
+    </div><!-- /page-wrap -->
+  </div><!-- /form-wrap -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bottom-nav">
+    <button class="btn btn-s" id="btn-back" style="display:none;">← Back</button>
+    <button class="btn btn-p" id="btn-next">Next →</button>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="success-screen">
+    <div class="success-glow">✓</div>
+    <h2 class="success-title">Gig submitted!</h2>
+    <p class="success-body">Thanks — our editorial team will review your submission and get it on the gig guide within 48 hours.</p>
+    <button class="success-another" id="submit-another-btn">Submit another gig</button>
+  </div>
+
+  <!-- TOASTS -->
+  <div class="toast-c" id="toast-c"></div>
+
+  <!-- PORTAL DROPDOWNS — rendered at body level to escape card stacking contexts -->
+  <div id="venue-dropdown" style="display:none; position:fixed; z-index:9999; background:rgba(255,255,255,0.98); border:1px solid rgba(255,255,255,0.82); border-radius:18px; box-shadow:0 12px 40px rgba(51,128,193,0.15),inset 0 1px 0 rgba(255,255,255,0.85); overflow:hidden; overflow-y:auto; max-height:240px;"></div>
+  <div id="artist-dropdown" style="display:none; position:fixed; z-index:9999; background:rgba(255,255,255,0.98); border:1px solid rgba(255,255,255,0.82); border-radius:18px; box-shadow:0 12px 40px rgba(51,128,193,0.15),inset 0 1px 0 rgba(255,255,255,0.85); overflow:hidden; overflow-y:auto; max-height:220px;"></div>
+
+  <!-- CROP MODAL -->
+  <div id="crop-modal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(10,15,30,0.92); flex-direction:column;">
+    <div style="flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; padding:12px 12px 0; touch-action:none;">
+      <img id="crop-img" style="max-width:100%; max-height:100%; display:block;">
+    </div>
+    <div style="padding:14px 16px calc(14px + var(--safe-bot)); background:rgba(255,255,255,0.06); border-top:1px solid rgba(255,255,255,0.12); display:flex; gap:10px; align-items:center; flex-shrink:0;">
+      <div style="flex:1; font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.55); line-height:1.4;">Drag to reposition · Pinch or scroll to zoom</div>
+      <button id="crop-cancel" type="button" style="padding:13px 18px; border-radius:var(--radius-sm); background:rgba(255,255,255,0.12); color:white; font-weight:700; font-size:0.88rem; border:1px solid rgba(255,255,255,0.18); font-family:inherit; cursor:pointer; min-height:48px;">Cancel</button>
+      <button id="crop-confirm" type="button" style="padding:13px 22px; border-radius:var(--radius-sm); background:var(--selected-bg); color:white; font-weight:700; font-size:0.88rem; border:none; font-family:inherit; cursor:pointer; box-shadow:var(--selected-shadow); min-height:48px;">Use this crop</button>
+    </div>
+  </div>
+
+  <script type="module">
+    const API_URL = 'https://api.thescenecapetown.co.za';
+
+    /* FORM TYPE — read from URL param, default to live-music if missing/unrecognised */
+    const FORM_TYPE = (() => {
+      const p = new URLSearchParams(window.location.search).get('type') || '';
+      return ['live-music', 'djs-and-parties', 'comedy', 'community'].includes(p) ? p : 'live-music';
+    })();
+
+    /* Per-type configuration — pre-set values and which sections to show */
+    const FORM_CONFIG = {
+      'live-music': {
+        badge:          'Submit Live Music',
+        heroTitle:      'Tell us about<br>your gig',
+        heroSub:        'Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.',
+        categoryId:     9,   // "Live Music"
+        formatId:       6,   // "Performance" — pre-set, selector hidden
+        showFormat:     false,
+        showArtists:    true,
+        showGenres:     true,
+        genreCollection:'genres',         // fetches from /items/genres
+        genreJunction:  'genre',          // field name on events for M2M payload
+        genreIdKey:     'genres_id',      // key used in junction row
+      },
+      'djs-and-parties': {
+        badge:          'Submit a DJ Event',
+        heroTitle:      'Tell us about<br>your night',
+        heroSub:        'Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.',
+        categoryId:     4,   // "DJs & Parties"
+        formatId:       6,   // "Performance" — pre-set, selector hidden
+        showFormat:     false,
+        showArtists:    true,
+        showGenres:     true,
+        genreCollection:'dj_genres',      // fetches from /items/dj_genres
+        genreJunction:  'dj_genres',      // field name on events for M2M payload
+        genreIdKey:     'dj_genres_id',   // key used in junction row
+      },
+      'comedy': {
+        badge:          'Submit Comedy',
+        heroTitle:      'Tell us about<br>your show',
+        heroSub:        'Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.',
+        categoryId:     3,   // "Comedy"
+        formatId:       6,   // "Performance" — pre-set, selector hidden
+        showFormat:     false,
+        showArtists:    false,
+        showGenres:     false,
+        genreCollection: null,
+        genreJunction:   null,
+        genreIdKey:      null,
+      },
+      'community': {
+        badge:          'Submit a Community Event',
+        heroTitle:      'Tell us about<br>your event',
+        heroSub:        'Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.',
+        categoryId:     2,   // "Community"
+        formatId:       null, // user selects format
+        showFormat:     true,
+        showArtists:    false,
+        showGenres:     false,
+        genreCollection: null,
+        genreJunction:   null,
+        genreIdKey:      null,
+      },
+    };
+
+    const config = FORM_CONFIG[FORM_TYPE];
+
+    const state = {
+      currentPage: 1, totalPages: 4,
+      venues: [], formats: [], genres: [],
+      selectedVenueId: null, selectedVenueName: null,
+      posterFileId: null,
+      pendingFile: null,      // original File object — uploaded directly, no canvas
+      pendingCropData: null,  // Cropper.js getData() result — sent to events.poster_crop
+      selectedArtists: [], selectedGenres: [], tags: [],
+    };
+
+    /* TOAST */
+    function toast(msg, type = 'ok') {
+      const el = document.createElement('div');
+      el.className = `toast t-${type}`;
+      el.textContent = msg;
+      document.getElementById('toast-c').appendChild(el);
+      setTimeout(() => { el.classList.add('out'); el.addEventListener('animationend', () => el.remove()); }, 3400);
+    }
+
+    /* API */
+    async function apiGet(path, params = {}) {
+      const url = new URL(`${API_URL}${path}`);
+      Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined) url.searchParams.set(k, v); });
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      return res.json();
+    }
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_URL}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.errors?.[0]?.message || `API ${res.status}`); }
+      const text = await res.text();
+      return text ? JSON.parse(text) : {};
+    }
+    async function uploadFile(file) {
+      const fd = new FormData();
+      fd.append('file', file, file.name || 'upload.jpg');
+      // Set title so Directus File Library shows the slugified event name
+      if (file.name && file.name !== 'upload.jpg') {
+        fd.append('title', file.name.replace(/\.png$/, '').replace(/-/g, ' '));
+      }
+      const res = await fetch(`${API_URL}/files`, { method: 'POST', body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.errors?.[0]?.message || `Upload failed (${res.status})`); }
+      return (await res.json()).data.id;
+    }
+
+    /* FORM TYPE INIT — apply config to DOM before user sees anything */
+    function initFormType() {
+      document.getElementById('header-badge').textContent  = config.badge;
+      document.getElementById('hero-title').innerHTML      = config.heroTitle;
+      document.getElementById('hero-sub').textContent      = config.heroSub;
+      document.title = `${config.badge} — The Scene Cape Town`;
+
+      // Show/hide artists and genres cards
+      document.getElementById('card-artists').style.display = config.showArtists ? '' : 'none';
+      document.getElementById('card-genres').style.display  = config.showGenres  ? '' : 'none';
+
+      // Show/hide format selector (community only)
+      document.getElementById('fg-format').style.display = config.showFormat ? '' : 'none';
+    }
+
+    /* LOOKUPS — each collection fetched independently so one failure doesn't block the rest */
+    async function loadLookups() {
+      // Venues
+      try {
+        const vR = await apiGet('/items/venues', { 'fields': 'id,name', 'sort': 'name', 'limit': '500' });
+        state.venues = vR.data || [];
+      } catch (err) { console.error('Venues load failed:', err); toast('Couldn\'t load venues — venue search may not work.', 'err'); }
+
+      // Formats — only needed for community form
+      if (config.showFormat) {
+        try {
+          const fR = await apiGet('/items/event_format', { 'fields': 'id,name', 'sort': 'name', 'limit': '100' });
+          state.formats = fR.data || [];
+          document.getElementById('inp-format').innerHTML =
+            '<option value="">Select a format…</option>' +
+            state.formats.map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+        } catch (err) { console.error('Formats load failed:', err); }
+      }
+
+      // Genres — only for live music and DJs, fetched from the correct collection per form type
+      if (config.showGenres && config.genreCollection) {
+        try {
+          const gR = await apiGet(`/items/${config.genreCollection}`, { 'fields': 'id,name', 'sort': 'name', 'limit': '200' });
+          state.genres = gR.data || [];
+          const gc = document.getElementById('genre-chips');
+          gc.innerHTML = state.genres.map(g =>
+            `<button type="button" class="chip" data-gid="${esc(g.id)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
+          ).join('');
+          gc.querySelectorAll('.chip').forEach(c => {
+            c.addEventListener('click', () => {
+              const id = parseInt(c.dataset.gid), name = c.dataset.gname;
+              const idx = state.selectedGenres.findIndex(g => g.id === id);
+              if (idx === -1) { state.selectedGenres.push({ id, name }); c.classList.add('is-on'); }
+              else            { state.selectedGenres.splice(idx, 1); c.classList.remove('is-on'); }
+            });
+          });
+        } catch (err) { console.error('Genres load failed:', err); }
+      }
+    }
+
+    /* SHORT DESCRIPTION — 120-char counter */
+    const shortDesc    = document.getElementById('inp-short-desc');
+    const charCount    = document.getElementById('char-count');
+    const charCounter  = document.getElementById('char-counter');
+    const CHAR_LIMIT   = 120;
+
+    shortDesc.addEventListener('input', () => {
+      const len = shortDesc.value.length;
+      charCount.textContent = len;
+      if (len > CHAR_LIMIT) {
+        charCounter.classList.add('is-over');
+      } else if (len >= CHAR_LIMIT * 0.85) {
+        charCounter.classList.add('is-warn');
+        charCounter.classList.remove('is-over');
+      } else {
+        charCounter.classList.remove('is-warn', 'is-over');
+      }
+    });
+
+    /* VENUE SEARCH — portal dropdown positioned via getBoundingClientRect */
+    const venueSearch   = document.getElementById('venue-search');
+    const venueHidden   = document.getElementById('venue-hidden');
+    const venueDropdown = document.getElementById('venue-dropdown');
+    const suggestPanel  = document.getElementById('suggest-venue-panel');
+
+    function positionDropdown(dropdown, anchor) {
+      const r = anchor.getBoundingClientRect();
+      dropdown.style.left  = r.left + 'px';
+      dropdown.style.top   = (r.bottom + 4) + 'px';
+      dropdown.style.width = r.width + 'px';
+    }
+
+    function showVenueDropdown(q) {
+      const filtered = state.venues.filter(v => v.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+      let html = filtered.map(v => `<div class="venue-option" data-id="${esc(v.id)}" data-name="${esc(v.name)}">${esc(v.name)}</div>`).join('');
+      html += `<div class="venue-option is-add" id="venue-add-opt">＋ Suggest "${esc(q)}" as a new venue</div>`;
+      venueDropdown.innerHTML = html;
+      positionDropdown(venueDropdown, venueSearch);
+      venueDropdown.style.display = 'block';
+
+      venueDropdown.querySelectorAll('.venue-option:not(.is-add)').forEach(el => {
+        el.addEventListener('click', () => {
+          state.selectedVenueId = parseInt(el.dataset.id); state.selectedVenueName = el.dataset.name;
+          venueSearch.value = el.dataset.name; venueHidden.value = el.dataset.id;
+          venueDropdown.style.display = 'none'; suggestPanel.classList.remove('is-open');
+          document.getElementById('fg-venue').classList.remove('has-error');
+        });
+      });
+      document.getElementById('venue-add-opt')?.addEventListener('click', () => {
+        venueDropdown.style.display = 'none'; suggestPanel.classList.add('is-open');
+        document.getElementById('new-venue-name').value = q;
+        document.getElementById('new-venue-name').focus();
+      });
+    }
+
+    venueSearch.addEventListener('input', () => {
+      const q = venueSearch.value.trim();
+      if (q.length < 2) { venueDropdown.style.display = 'none'; return; }
+      showVenueDropdown(q);
+    });
+
+    document.getElementById('suggest-venue-btn').addEventListener('click', () => {
+      suggestPanel.classList.toggle('is-open');
+      if (suggestPanel.classList.contains('is-open')) {
+        document.getElementById('new-venue-name').focus();
+      }
+    });
+
+    // Reposition on scroll/resize so portal stays aligned
+    window.addEventListener('scroll', () => { if (venueDropdown.style.display !== 'none') positionDropdown(venueDropdown, venueSearch); }, { passive: true });
+    window.addEventListener('resize', () => { if (venueDropdown.style.display !== 'none') positionDropdown(venueDropdown, venueSearch); }, { passive: true });
+
+    document.addEventListener('click', e => {
+      if (!venueSearch.contains(e.target) && !venueDropdown.contains(e.target)) venueDropdown.style.display = 'none';
+    });
+    document.getElementById('submit-venue-btn').addEventListener('click', async () => {
+      const name = document.getElementById('new-venue-name').value.trim();
+      const address = document.getElementById('new-venue-address').value.trim();
+      if (!name || !address) { toast('Please fill in venue name and address.', 'err'); return; }
+      const btn = document.getElementById('submit-venue-btn');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      try {
+        await apiPost('/items/venues', {
+          name, address,
+          location: document.getElementById('new-venue-location').value || null,
+          submitted_by_name: document.getElementById('new-venue-submitted-by')?.value?.trim() || document.getElementById('inp-submitter-name')?.value?.trim() || null,
+        });
+        // Public policy returns 204 with no body — use the name the user typed directly
+        const tempId = 'pending-' + Date.now();
+        state.venues.push({ id: tempId, name });
+        state.selectedVenueId = tempId; state.selectedVenueName = name;
+        venueSearch.value = name; venueHidden.value = tempId;
+        suggestPanel.classList.remove('is-open');
+        document.getElementById('fg-venue').classList.remove('has-error');
+        toast(`"${name}" submitted — it'll be linked once an editor approves it.`, 'ok');
+      } catch (err) { toast(`Couldn't submit venue: ${err.message}`, 'err'); }
+      finally { btn.disabled = false; btn.textContent = 'Submit venue suggestion →'; }
+    });
+
+    /* ARTIST SEARCH — portal dropdown */
+    const artistSearch    = document.getElementById('artist-search');
+    const artistDropdown  = document.getElementById('artist-dropdown');
+    const artistsSelected = document.getElementById('artists-selected');
+    let artistTimer = null;
+
+    artistSearch.addEventListener('input', () => {
+      clearTimeout(artistTimer);
+      const q = artistSearch.value.trim();
+      if (q.length < 2) { artistDropdown.style.display = 'none'; return; }
+      artistTimer = setTimeout(() => runArtistSearch(q), 280);
+    });
+
+    async function runArtistSearch(q) {
+      try {
+        const res = await apiGet('/items/artists', {
+          'filter[name][_icontains]': q,
+          'fields': 'id,name,artist_type', 'limit': '8',
+        });
+        const artists = res.data || [];
+        let html = artists.map(a => {
+          const types = Array.isArray(a.artist_type) ? a.artist_type.join(', ') : (a.artist_type || '');
+          return `<div class="artist-option" data-id="${esc(a.id)}" data-name="${esc(a.name)}">${esc(a.name)}${types ? `<div class="artist-option-sub">${esc(types)}</div>` : ''}</div>`;
+        }).join('');
+        html += `<div class="artist-option is-new" data-new="${esc(q)}">＋ Add "${esc(q)}" as a new artist</div>`;
+        artistDropdown.innerHTML = html;
+        positionDropdown(artistDropdown, artistSearch);
+        artistDropdown.style.display = 'block';
+
+        artistDropdown.querySelectorAll('.artist-option:not(.is-new)').forEach(el => {
+          el.addEventListener('click', () => addArtist(parseInt(el.dataset.id), el.dataset.name));
+        });
+        artistDropdown.querySelectorAll('.artist-option.is-new').forEach(el => {
+          el.addEventListener('click', () => {
+            // Populate the name field and open the suggest panel
+            document.getElementById('new-artist-name').value = el.dataset.new;
+            document.getElementById('suggest-artist-panel').classList.add('is-open');
+            artistDropdown.style.display = 'none';
+            artistSearch.value = '';
+            document.getElementById('new-artist-name').focus();
+          });
+        });
+      } catch (err) { console.error('Artist search failed:', err); }
+    }
+
+    window.addEventListener('scroll', () => { if (artistDropdown.style.display !== 'none') positionDropdown(artistDropdown, artistSearch); }, { passive: true });
+    window.addEventListener('resize', () => { if (artistDropdown.style.display !== 'none') positionDropdown(artistDropdown, artistSearch); }, { passive: true });
+
+    document.getElementById('suggest-artist-btn-trigger').addEventListener('click', () => {
+      const panel = document.getElementById('suggest-artist-panel');
+      panel.classList.toggle('is-open');
+      if (panel.classList.contains('is-open')) {
+        document.getElementById('new-artist-name').focus();
+      }
+    });
+
+    function addArtist(id, name) {
+      if (state.selectedArtists.find(a => a.id === id)) { artistDropdown.style.display = 'none'; artistSearch.value = ''; return; }
+      state.selectedArtists.push({ id, name }); renderArtistPills();
+      artistDropdown.style.display = 'none'; artistSearch.value = '';
+    }
+    async function createAndAddArtist(name, submittedByName) {
+      try {
+        await apiPost('/items/artists', {
+          name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          status: 'pending',
+          artist_type: ['musician'],
+          submitted_by_name: submittedByName || document.getElementById('inp-submitter-name')?.value?.trim() || null,
+        });
+        // Public policy returns 204 — use a negative temp ID (never a valid DB integer)
+        const tempId = -(Date.now() % 1000000);
+        addArtist(tempId, name);
+        toast(`Artist "${name}" added.`, 'ok');
+      } catch (err) { toast(`Couldn't add artist: ${err.message}`, 'err'); }
+      artistDropdown.style.display = 'none'; artistSearch.value = '';
+    }
+
+    // Suggest artist panel submit button
+    document.getElementById('submit-artist-btn').addEventListener('click', async () => {
+      const name = document.getElementById('new-artist-name').value.trim();
+      const submittedByName = document.getElementById('new-artist-submitted-by').value.trim();
+      if (!name) { toast('Please enter an artist name.', 'err'); return; }
+      const btn = document.getElementById('submit-artist-btn');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      await createAndAddArtist(name, submittedByName);
+      document.getElementById('new-artist-name').value = '';
+      document.getElementById('new-artist-submitted-by').value = '';
+      document.getElementById('suggest-artist-panel').classList.remove('is-open');
+      btn.disabled = false; btn.textContent = 'Add artist →';
+    });
+    function renderArtistPills() {
+      artistsSelected.innerHTML = state.selectedArtists.map(a =>
+        `<div class="artist-pill">${esc(a.name)}<span class="artist-pill-remove" data-rid="${a.id}">✕</span></div>`
+      ).join('');
+      artistsSelected.querySelectorAll('.artist-pill-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedArtists = state.selectedArtists.filter(a => a.id !== parseInt(btn.dataset.rid));
+          renderArtistPills();
+        });
+      });
+    }
+    document.addEventListener('click', e => {
+      if (!artistSearch.contains(e.target) && !artistDropdown.contains(e.target)) artistDropdown.style.display = 'none';
+    });
+
+    /* TAGS */
+    const tagsInput = document.getElementById('tags-input');
+    const tagsWrap  = document.getElementById('tags-wrap');
+    tagsWrap.addEventListener('click', () => tagsInput.focus());
+    tagsInput.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ',') && tagsInput.value.trim()) {
+        e.preventDefault(); addTag(tagsInput.value.replace(/,$/, '').trim()); tagsInput.value = '';
+      }
+      if (e.key === 'Backspace' && !tagsInput.value && state.tags.length) { state.tags.pop(); renderTags(); }
+    });
+    function addTag(tag) {
+      const clean = tag.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim();
+      if (!clean || state.tags.includes(clean)) return;
+      state.tags.push(clean); renderTags();
+    }
+    function renderTags() {
+      const pills = state.tags.map(t =>
+        `<div class="tag-pill">${esc(t)}<span class="tag-remove" data-t="${esc(t)}">✕</span></div>`
+      ).join('');
+      tagsWrap.innerHTML = pills;
+      tagsWrap.appendChild(tagsInput);
+      tagsWrap.querySelectorAll('.tag-remove').forEach(btn => {
+        btn.addEventListener('click', () => { state.tags = state.tags.filter(t => t !== btn.dataset.t); renderTags(); });
+      });
+      tagsInput.focus();
+    }
+
+    /* FREE TOGGLE */
+    document.getElementById('chk-free').addEventListener('change', function() {
+      document.getElementById('tiers-wrap').style.display = this.checked ? 'none' : '';
+    });
+
+    /* TICKET TIERS */
+    function addTier(name = '', price = '') {
+      const row = document.createElement('div'); row.className = 'tier-row';
+      row.innerHTML = `<input type="text" class="tier-name" placeholder="Tier (e.g. General)" value="${esc(name)}">
+        <input type="text" class="tier-price" placeholder="Amount (numbers only, e.g. 150)" value="${esc(price)}">
+        <button class="tier-remove" type="button">✕</button>`;
+      row.querySelector('.tier-remove').addEventListener('click', () => row.remove());
+      document.getElementById('tiers-list').appendChild(row);
+    }
+    function getTicketTiers() {
+      return Array.from(document.querySelectorAll('.tier-row')).reduce((acc, row) => {
+        const name = row.querySelector('.tier-name').value.trim();
+        const price= row.querySelector('.tier-price').value.trim();
+        if (name || price) acc.push({ tier_name: name, price });
+        return acc;
+      }, []);
+    }
+    document.getElementById('add-tier-btn').addEventListener('click', () => addTier());
+    addTier();
+
+    /* POSTER UPLOAD — with Cropper.js 16:9 crop modal */
+    const posterWrap   = document.getElementById('poster-wrap');
+    const posterDrop   = document.getElementById('poster-drop');
+    const posterInput  = document.getElementById('poster-input');
+    const posterRemove = document.getElementById('poster-remove');
+    const cropModal    = document.getElementById('crop-modal');
+    const cropImg      = document.getElementById('crop-img');
+    const cropConfirm  = document.getElementById('crop-confirm');
+    const cropCancel   = document.getElementById('crop-cancel');
+    let cropper        = null;
+    let pendingObjectURL = null;
+
+    posterDrop.addEventListener('click', () => posterInput.click());
+    posterDrop.addEventListener('dragover', e => { e.preventDefault(); posterWrap.classList.add('is-dragover'); });
+    posterDrop.addEventListener('dragleave', () => posterWrap.classList.remove('is-dragover'));
+    posterDrop.addEventListener('drop', e => {
+      e.preventDefault(); posterWrap.classList.remove('is-dragover');
+      if (e.dataTransfer.files[0]) openCropper(e.dataTransfer.files[0]);
+    });
+    posterInput.addEventListener('change', () => {
+      if (posterInput.files[0]) openCropper(posterInput.files[0]);
+    });
+    posterRemove.addEventListener('click', () => {
+      posterWrap.dataset.state = 'empty';
+      previewDiv.style.aspectRatio        = '';
+      previewDiv.style.width              = '';
+      posterInput.value          = '';
+      state.posterFileId    = null;
+      state.pendingFile     = null;
+      state.pendingCropData = null;
+      if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
+    });
+
+    /* Accepted MIME types — must match Directus allowedMimeTypes on events.poster */
+    const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    /* 8MB pre-flight limit — well above any real photo but low enough to protect
+       older iPhones from memory pressure when decoding into a canvas.
+       The canvas export always outputs a ~250-500KB JPEG regardless of source size. */
+    const MAX_FILE_BYTES = 8 * 1024 * 1024;
+
+    async function openCropper(file) {
+      // Pre-flight: type check against Directus allowedMimeTypes
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        toast(`Unsupported file type (${file.type || 'unknown'}). Please use a JPEG, PNG, or WebP image.`, 'err');
+        posterInput.value = '';
+        return;
+      }
+      // Pre-flight: size check — catches files that would exhaust mobile memory
+      // before we even attempt to decode them
+      if (file.size > MAX_FILE_BYTES) {
+        const mb = (file.size / 1024 / 1024).toFixed(1);
+        toast(`Image is ${mb}MB — please use a file under 8MB.`, 'err');
+        posterInput.value = '';
+        return;
+      }
+
+      if (pendingObjectURL) URL.revokeObjectURL(pendingObjectURL);
+      state.pendingFile = file;
+      pendingObjectURL = URL.createObjectURL(file);
+
+      // Pre-decode and transparency fix.
+      // createImageBitmap decodes the file to verify it's valid.
+      // For PNGs, we also check for transparency — transparent PNGs cause incorrect crop
+      // coordinates because Cropper.js display size diverges from natural image size.
+      // Users must flatten to JPEG or opaque PNG before uploading.
+      let cropperSrc = pendingObjectURL;
+      try {
+        const bitmap = await createImageBitmap(file);
+        if (file.type === 'image/png') {
+          // Sample a small canvas to detect transparency — minimal memory overhead
+          const sampleSize = Math.min(bitmap.width, 256);
+          const sampleScale = sampleSize / bitmap.width;
+          const sampleCanvas = document.createElement('canvas');
+          sampleCanvas.width  = sampleSize;
+          sampleCanvas.height = Math.round(bitmap.height * sampleScale);
+          const sampleCtx = sampleCanvas.getContext('2d');
+          sampleCtx.drawImage(bitmap, 0, 0, sampleCanvas.width, sampleCanvas.height);
+          const pixels = sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
+          let hasTransparency = false;
+          for (let i = 3; i < pixels.length; i += 4) {
+            if (pixels[i] < 255) { hasTransparency = true; break; }
+          }
+          bitmap.close();
+          if (hasTransparency) {
+            state.pendingFile = null;
+            URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null;
+            posterInput.value = '';
+            toast('Transparent backgrounds are not supported. Please save as a JPEG or flatten the background before uploading.', 'err');
+            return;
+          }
+        } else {
+          bitmap.close();
+        }
+      } catch (e) {
+        state.pendingFile = null;
+        URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null;
+        posterInput.value = '';
+        toast('Could not decode image — please try a different file.', 'err');
+        return;
+      }
+
+      // Show modal
+      cropModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      // Tear down any existing cropper first
+      if (cropper) { cropper.destroy(); cropper = null; }
+      cropImg.src = '';
+
+      // Handle load failure gracefully (e.g. unsupported file, memory pressure on mobile)
+      cropImg.onerror = () => {
+        cropImg.onerror = null;
+        cropImg.onload  = null;
+        // Full cleanup — must mirror resetForm poster state to avoid blank screen
+        cropModal.style.display  = 'none';
+        document.body.style.overflow = '';  // critical — prevents blank screen
+        if (cropper) { cropper.destroy(); cropper = null; }
+        cropImg.src = '';
+        state.pendingFile     = null;
+        state.pendingCropData = null;
+        if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
+        posterInput.value = '';
+        toast('Could not load image. If it has a transparent background, try saving it as a JPEG first.', 'err');
+      };
+
+      cropImg.onload = () => {
+        cropImg.onerror = null;
+        cropper = new Cropper(cropImg, {
+          aspectRatio: 16 / 9,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.9,
+          responsive: true,
+          restore: false,
+          guides: true,
+          center: true,
+          highlight: false,
+          cropBoxMovable: false,
+          cropBoxResizable: false,
+          toggleDragModeOnDblclick: false,
+          // Ensure crop box is rendered after Cropper has laid out its container.
+          // Critical on mobile where layout can be deferred after the image loads.
+          ready() {
+            const container = this.cropper.getContainerData();
+            const box = this.cropper.getCropBoxData();
+            if (!box.width || !box.height) {
+              this.cropper.setCropBoxData({
+                left: 0, top: 0,
+                width: container.width,
+                height: container.width * (9 / 16),
+              });
+            }
+          },
+        });
+      };
+
+      cropImg.src = cropperSrc;
+    }
+
+    cropCancel.addEventListener('click', () => {
+      closeCropModal();
+      posterInput.value = '';
+    });
+
+    cropConfirm.addEventListener('click', () => {
+      if (!cropper) return;
+
+      // getData() returns crop rectangle in natural image coordinates — zero memory overhead.
+      // File is NOT uploaded here. Upload happens in submitGig() only.
+      state.pendingCropData = cropper.getData(true);
+
+      // Close modal — crop data is saved, confirmation state shown
+      closeCropModal();
+
+      // Show confirmation state — no preview rendering, crop is applied server-side
+      posterWrap.dataset.state = 'uploaded';
+    });
+
+    function closeCropModal() {
+      cropModal.style.display = 'none';
+      document.body.style.overflow = '';
+      if (cropper) { cropper.destroy(); cropper = null; }
+      // pendingObjectURL is revoked in resetForm() when the form is fully cleared
+      cropImg.src = '';
+    }
+
+    /* VALIDATION */
+    function validatePage(page) {
+      let ok = true;
+      function req(fgId, inputId) {
+        const val = document.getElementById(inputId)?.value?.trim() || '';
+        if (!val) { document.getElementById(fgId)?.classList.add('has-error'); ok = false; }
+        else       { document.getElementById(fgId)?.classList.remove('has-error'); }
+      }
+      if (page === 1) {
+        req('fg-title', 'inp-title');
+
+        // Format only required when visible (community form)
+        if (config.showFormat) { req('fg-format', 'inp-format'); }
+
+        // Short description — required + 120-char hard limit
+        const sdVal = document.getElementById('inp-short-desc').value.trim();
+        const sdFg  = document.getElementById('fg-short-desc');
+        const sdErr = document.getElementById('short-desc-error');
+        if (!sdVal) {
+          sdFg.classList.add('has-error');
+          sdErr.textContent = 'Please add a short description.';
+          ok = false;
+        } else if (sdVal.length > CHAR_LIMIT) {
+          sdFg.classList.add('has-error');
+          sdErr.textContent = `Short description must be ${CHAR_LIMIT} characters or fewer (currently ${sdVal.length}).`;
+          ok = false;
+        } else {
+          sdFg.classList.remove('has-error');
+        }
+      }
+      if (page === 2) {
+        req('fg-date', 'inp-date'); req('fg-doors', 'inp-doors');
+        const fgV = document.getElementById('fg-venue');
+        if (!state.selectedVenueId && !venueHidden.value) { fgV.classList.add('has-error'); ok = false; }
+        else fgV.classList.remove('has-error');
+      }
+      if (page === 3) {
+        // Artist validation — only when card is visible
+        const artistCard = document.getElementById('card-artists');
+        if (artistCard.style.display !== 'none') {
+          const fgA = document.getElementById('fg-artists');
+          if (state.selectedArtists.length === 0) {
+            fgA.classList.add('has-error');
+            ok = false;
+          } else {
+            fgA.classList.remove('has-error');
+          }
+        }
+      }
+      if (page === 4) { req('fg-submitter', 'inp-submitter-name'); }
+      return ok;
+    }
+
+    /* SUMMARY */
+    function buildSummary() {
+      const title  = document.getElementById('inp-title').value.trim() || '—';
+      const date   = document.getElementById('inp-date').value;
+      const doors  = document.getElementById('inp-doors').value;
+      const venue  = state.selectedVenueName || venueSearch.value || '—';
+      const isFree = document.getElementById('chk-free').checked;
+      const formatEl = document.getElementById('inp-format');
+      const formatLabel = config.showFormat ? (formatEl.options[formatEl.selectedIndex]?.text || '—') : null;
+      const dateStr = date ? new Date(date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'long', year:'numeric' }) : '—';
+      document.getElementById('summary-content').innerHTML = `
+        <div class="summary-title">${esc(title)}</div>
+        <div class="summary-meta">
+          ${esc(dateStr)}${doors ? ' · ' + esc(doors.slice(0,5)) : ''}<br>
+          ${esc(venue)}<br>
+          ${esc(config.badge)}${formatLabel ? ' · ' + esc(formatLabel) : ''} · ${isFree ? 'Free' : 'Ticketed'}
+        </div>
+        <div class="${state.pendingFile ? 'summary-poster-ok' : 'summary-poster-missing'}">
+          ${state.pendingFile ? '✓ Poster ready' : '✗ No poster — consider going back to add one'}
+        </div>`;
+    }
+
+    /* PAGE NAVIGATION */
+    function goToPage(n) {
+      document.querySelectorAll('.form-page').forEach((p, i) => p.classList.toggle('is-active', i + 1 === n));
+      document.querySelectorAll('.step').forEach(s => {
+        const sn = parseInt(s.dataset.step);
+        s.classList.toggle('is-active', sn === n); s.classList.toggle('is-done', sn < n);
+      });
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById(`line-${i}-${i+1}`)?.classList.toggle('is-done', i < n);
+      }
+      document.getElementById('btn-back').style.display = n > 1 ? '' : 'none';
+      document.getElementById('btn-next').textContent   = n === state.totalPages ? 'Submit gig →' : 'Next →';
+      if (n === 4) buildSummary();
+      state.currentPage = n;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('btn-next').addEventListener('click', async () => {
+      if (!validatePage(state.currentPage)) { toast('Please fill in the required fields.', 'err'); return; }
+      if (state.currentPage < state.totalPages) { goToPage(state.currentPage + 1); }
+      else { await submitGig(); }
+    });
+    document.getElementById('btn-back').addEventListener('click', () => {
+      if (state.currentPage > 1) goToPage(state.currentPage - 1);
+    });
+
+    /* SUBMIT */
+    async function submitGig() {
+      const btn = document.getElementById('btn-next');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+
+      // Upload poster now — file is held in memory until this point, never uploaded early.
+      // This prevents orphaned files in Directus if the user changes or removes their poster.
+      if (state.pendingFile && state.pendingCropData) {
+        try {
+          const rawTitle = document.getElementById('inp-title')?.value?.trim() || '';
+          const slugTitle = rawTitle
+            ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+            : 'poster';
+          const ext      = state.pendingFile.name.split('.').pop() || 'png';
+          const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
+          state.posterFileId = await uploadFile(namedFile);
+        } catch (err) {
+          toast(`Poster upload failed — ${err.message}. Please try again.`, 'err');
+          btn.disabled = false; btn.textContent = 'Submit gig →';
+          return;
+        }
+      } else if (state.pendingCropData && !state.pendingFile) {
+        // File object was lost (e.g. iOS purged WKWebView memory) — ask user to re-select
+        toast('Your poster was lost — please go back and re-select it before submitting.', 'err');
+        btn.disabled = false; btn.textContent = 'Submit gig →';
+        return;
+      }
+
+      const title  = document.getElementById('inp-title').value.trim();
+      const isFree = document.getElementById('chk-free').checked;
+      const payload = {
+        title,
+        slug:              title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        status:            'pending',
+        submitted_by_name: document.getElementById('inp-submitter-name').value.trim()  || null,
+        tags:              state.tags.length ? state.tags                              : null,
+        short_description: document.getElementById('inp-short-desc').value.trim()      || null,
+        description:       document.getElementById('inp-description').value.trim()     || null,
+        event_category:    config.categoryId,
+        event_format:      config.showFormat ? (document.getElementById('inp-format').value || null) : config.formatId,
+        venue:             (state.selectedVenueId && !String(state.selectedVenueId).startsWith('pending-')) ? state.selectedVenueId : (parseInt(venueHidden.value) || null),
+        date:              document.getElementById('inp-date').value                   || null,
+        doors_time:        document.getElementById('inp-doors').value                  || null,
+        end_time:          document.getElementById('inp-end').value                    || null,
+        age_restriction:   document.getElementById('inp-age').value                    || 'all-ages',
+        is_free:           isFree,
+        ticket_url:        document.getElementById('inp-ticket-url')?.value?.trim()    || null,
+        ticket_tiers:      isFree ? [] : getTicketTiers(),
+        poster:            state.posterFileId                                           || null,
+        poster_crop:       state.pendingCropData                                        || null,
+        artists:           config.showArtists ? state.selectedArtists.filter(a => a.id > 0).map(a => ({ artists_id: a.id })) : [],
+      };
+      // Add genre M2M payload using the correct junction field and key for this form type
+      if (config.showGenres && config.genreJunction && state.selectedGenres.length) {
+        payload[config.genreJunction] = state.selectedGenres.map(g => ({ [config.genreIdKey]: g.id }));
+      }
+      try {
+        await apiPost('/items/events', payload);
+        showSuccess();
+      } catch (err) {
+        console.error('Submit failed:', err);
+        toast(`Couldn't submit: ${err.message}`, 'err');
+        btn.disabled = false; btn.textContent = 'Submit gig →';
+      }
+    }
+
+    /* SUCCESS */
+    function showSuccess() {
+      document.getElementById('form-wrap').style.display  = 'none';
+      document.getElementById('bottom-nav').style.display = 'none';
+      document.getElementById('success-screen').classList.add('is-active');
+      window.scrollTo({ top: 0 });
+    }
+    document.getElementById('submit-another-btn').addEventListener('click', () => {
+      resetForm();
+      document.getElementById('form-wrap').style.display  = '';
+      document.getElementById('bottom-nav').style.display = '';
+      document.getElementById('success-screen').classList.remove('is-active');
+      goToPage(1);
+    });
+
+    /* RESET */
+    function resetForm() {
+      const btnNext = document.getElementById('btn-next');
+      btnNext.disabled = false;
+      btnNext.textContent = 'Next →';
+      document.querySelectorAll('input[type="text"], input[type="url"], input[type="date"], input[type="time"], textarea').forEach(el => el.value = '');
+      document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+      document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+      state.selectedVenueId = null; state.selectedVenueName = null;
+      state.posterFileId = null; state.pendingFile = null; state.pendingCropData = null;
+      state.selectedArtists = []; state.selectedGenres = []; state.tags = [];
+      venueHidden.value = '';
+      posterWrap.dataset.state = 'empty';
+      posterInput.value = '';
+      if (cropper) { cropper.destroy(); cropper = null; }
+      if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
+      artistsSelected.innerHTML = '';
+      document.querySelectorAll('#genre-chips .chip').forEach(c => c.classList.remove('is-on'));
+      document.getElementById('tiers-list').innerHTML = ''; addTier();
+      document.getElementById('tiers-wrap').style.display = '';
+      suggestPanel.classList.remove('is-open');
+      document.getElementById('suggest-artist-panel').classList.remove('is-open');
+      document.getElementById('new-artist-name').value = '';
+      document.getElementById('new-artist-submitted-by').value = '';
+      tagsWrap.innerHTML = ''; tagsWrap.appendChild(tagsInput); tagsInput.value = '';
+      // Reset char counter
+      charCount.textContent = '0';
+      charCounter.classList.remove('is-warn', 'is-over');
+      // Reset artist error state
+      document.getElementById('fg-artists')?.classList.remove('has-error');
+    }
+
+    /* ESC */
+    function esc(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    /* INIT */
+    initFormType();
+    loadLookups();
+  </script>
+</body>
+</html>
