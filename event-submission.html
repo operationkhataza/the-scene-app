@@ -512,7 +512,7 @@
     async function loadLookups() {
       // Venues
       try {
-        const vR = await apiGet('/items/venues', { 'fields': 'id,name', 'sort': 'name', 'limit': '500' });
+        const vR = await apiGet('/items/venues', { 'fields': 'id,name', 'sort': 'name', 'limit': '500', 'filter[status][_eq]': 'published' });
         state.venues = vR.data || [];
       } catch (err) { console.error('Venues load failed:', err); toast('Couldn\'t load venues — venue search may not work.', 'err'); }
 
@@ -630,16 +630,20 @@
       const btn = document.getElementById('submit-venue-btn');
       btn.disabled = true; btn.textContent = 'Submitting…';
       try {
-        await apiPost('/items/venues', {
+        const res = await apiPost('/items/venues', {
           name, address,
           location: document.getElementById('new-venue-location').value || null,
           submitted_by_name: document.getElementById('new-venue-submitted-by')?.value?.trim() || document.getElementById('inp-submitter-name')?.value?.trim() || null,
         });
-        // Public policy returns 204 with no body — use the name the user typed directly
-        const tempId = 'pending-' + Date.now();
-        state.venues.push({ id: tempId, name });
-        state.selectedVenueId = tempId; state.selectedVenueName = name;
-        venueSearch.value = name; venueHidden.value = tempId;
+        // Use the real venue ID from the API response if Directus returned one.
+        // Directus returns the created item when the Read policy allows reading
+        // pending venues (status _in [published, pending]). Falls back to a
+        // temporary placeholder if the policy is still restricted to published-only —
+        // in that case the event submits with venue: null and must be corrected manually.
+        const venueId = res?.data?.id || ('pending-' + Date.now());
+        state.venues.push({ id: venueId, name });
+        state.selectedVenueId = venueId; state.selectedVenueName = name;
+        venueSearch.value = name; venueHidden.value = String(venueId);
         suggestPanel.classList.remove('is-open');
         document.getElementById('fg-venue').classList.remove('has-error');
         toast(`"${name}" submitted — it'll be linked once an editor approves it.`, 'ok');
