@@ -624,7 +624,7 @@ function clearSheet() {
 /* ============================================================
    DIRECTUS FETCH
    ============================================================ */
-async function fetchEvents({ fromDate, toDate, curatorSlug = null }) {
+async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug = null }) {
   const fields = [
     'id', 'title', 'slug', 'date', 'doors_time',
     'short_description', 'ticket_url', 'poster',
@@ -652,6 +652,11 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null }) {
   // Curator mode: filter to only events this curator has endorsed
   if (curatorSlug) {
     params.set('filter[curators][curators_id][slug][_eq]', curatorSlug);
+  }
+
+  // Promoter mode: filter to only events this promoter has presented
+  if (promoterSlug) {
+    params.set('filter[promoters][promoters_id][slug][_eq]', promoterSlug);
   }
 
   const res = await fetch(`${API}/items/events?${params}`);
@@ -706,6 +711,22 @@ async function loadCurator(slug) {
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load curator:', err);
+    return null;
+  }
+}
+
+/* ============================================================
+   LOAD PROMOTER — fetches name and avatar for promoter-mode
+   views (?promoter=slug)
+   ============================================================ */
+async function loadPromoter(slug) {
+  try {
+    const res = await fetch(`${API}/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data?.[0] || null;
+  } catch (err) {
+    console.warn('[Scene] Could not load promoter:', err);
     return null;
   }
 }
@@ -1091,6 +1112,7 @@ async function init() {
   const day = getParam('day');
   const view = getParam('view') || 'week';
   const curatorSlug = getParam('curator');
+  const promoterSlug = getParam('promoter');
   const today = new Date();
 
   let fromDate, toDate;
@@ -1125,13 +1147,30 @@ async function init() {
     renderOptions = { groupByDate: true, singleDay: null };
   }
 
+  // ── PROMOTER MODE — 30-day window ──
+  // Override whatever the default date range was: show the next 30 days so
+  // visitors can see the promoter's full upcoming schedule at a glance.
+  if (promoterSlug) {
+    fromDate = isoDate(today);
+    toDate   = isoDate(addDays(today, 29));
+    renderOptions = { groupByDate: true, singleDay: null };
+  }
+
   // ── CURATOR MODE ──
   // If ?curator=slug is present, fetch the curator record and swap the header.
-  // The toolbar and search bar are hidden — the curator's picks are the filter.
+  // Both the toolbar and search bar are hidden — the curator's picks are the filter.
   if (curatorSlug) {
     const toolbarEl = document.getElementById('toolbar');
     const searchEl = document.querySelector('.search-bar');
     if (toolbarEl) toolbarEl.hidden = true;
+    if (searchEl) searchEl.hidden = true;
+  }
+
+  // ── PROMOTER MODE UI ──
+  // Keep the filter toolbar visible (useful over a 30-day window) but hide the
+  // search bar — the promoter's name in the header is the primary context.
+  if (promoterSlug) {
+    const searchEl = document.querySelector('.search-bar');
     if (searchEl) searchEl.hidden = true;
   }
 
@@ -1151,13 +1190,14 @@ async function init() {
   }
 
   try {
-    // In curator mode, load the curator in parallel with taxonomies + events.
-    // If the curator fetch fails, we still render the feed — just with a generic header.
-    const [categories, areas, gigs, curator] = await Promise.all([
+    // Load curator/promoter metadata in parallel with taxonomies + events.
+    // If either fetch fails, we still render the feed — just with a generic header.
+    const [categories, areas, gigs, curator, promoter] = await Promise.all([
       loadCategories(),
       loadAreas(),
-      fetchEvents({ fromDate, toDate, curatorSlug }),
-      curatorSlug ? loadCurator(curatorSlug) : Promise.resolve(null),
+      fetchEvents({ fromDate, toDate, curatorSlug, promoterSlug }),
+      curatorSlug  ? loadCurator(curatorSlug)   : Promise.resolve(null),
+      promoterSlug ? loadPromoter(promoterSlug) : Promise.resolve(null),
     ]);
     state.categories = categories;
     state.areas = areas;
@@ -1171,6 +1211,20 @@ async function init() {
       if (titleEl) titleEl.textContent = curator?.name || 'Curator Picks';
       if (subtitleEl) subtitleEl.textContent = 'Curated picks';
       if (curatorBylineEl) curatorBylineEl.hidden = false;
+    }
+
+    // ── PROMOTER HEADER ──
+    if (promoterSlug) {
+      const titleEl    = document.getElementById('gigs-header-title');
+      const subtitleEl = document.getElementById('gigs-header-subtitle');
+      const avatarEl   = document.getElementById('gigs-header-promoter-avatar');
+      if (titleEl)    titleEl.textContent    = promoter?.name || 'Promoter Events';
+      if (subtitleEl) subtitleEl.textContent = 'Events';
+      if (avatarEl && promoter?.profile_image) {
+        avatarEl.src    = imgUrl(promoter.profile_image, { width: '128', height: '128', fit: 'cover' });
+        avatarEl.alt    = promoter.name ? `${promoter.name} logo` : '';
+        avatarEl.hidden = false;
+      }
     }
 
     // ── DIAGNOSTIC — visible in browser console, helps debug filter issues ──

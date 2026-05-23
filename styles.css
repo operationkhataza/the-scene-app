@@ -136,6 +136,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: 0.01em;
 }
 
+/* Promoter mode — circular avatar above the title */
+.gigs-header__promoter-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 0.75rem;
+  border: 2px solid var(--border);
+}
+
 /* SEARCH BAR */
 .search-bar {
   position: relative;
