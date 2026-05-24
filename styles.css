@@ -1,36 +1,93 @@
 /* ============================================================
-   THE SCENE — SHARED STYLESHEET  (v3, minimalist Inter)
+   THE SCENE — GIG GUIDE STYLESHEET  (v4, liquid-glass reskin)
    ────────────────────────────────────────────────────────────
-   Typography: Inter throughout, weights 300–700.
-   Hierarchy built on weight + size + tracking, not font family.
-   Architectural, labelled, confident.
+   Aesthetic ported from Scene Studio:
+     · Iridescent ice gradient + drifting bloom background
+     · Frosted glass surfaces (search, toolbar, cards, sheets)
+     · Scene cyan→blue gradient for primary actions
+     · Blue/cyan tinted shadows and borders, no warm greys
+   Functional structure & class names preserved 1:1 so app.js
+   and holo-shader.js continue to work untouched.
    ============================================================ */
 
 :root {
-  --primary:       #4BB9D0;
-  --secondary:     #3380C1;
-  --primary-light: #EBF5F8;
-  --tertiary:      #FFFFFF;
-  --charcoal:    #1A1A2E;
-  --slate:       #2D2D44;
-  --warm-grey:   #F7F5F2;
-  --cream:       #FFFCF7;
-  --text:        #1A1A2E;
-  --text-muted:  #6B6B80;
-  --text-dim:    #9A9AA8;
-  --border:      #E8E6E1;
-  --border-sub:  #F0EEE9;
+  /* ── Scene palette (from studiostylesheet) ── */
+  --scene-cyan:        #4BB9D0;
+  --scene-cyan-soft:   #9FDCE7;
+  --scene-cyan-wash:   #E4F5FA;
+  --scene-cyan-deep:   #2A9BB5;
+  --scene-blue:        #3380C1;
+  --scene-blue-soft:   #8FB5DB;
+  --scene-blue-wash:   #E8F0F9;
+  --scene-blue-deep:   #1E5E96;
+  --scene-gradient:    linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
+  --selected-bg:       linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
+  --selected-shadow:   0 4px 14px rgba(51, 128, 193, 0.32),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.38);
 
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
+  /* ── Legacy aliases — app.js & inline styles reach for these ── */
+  --primary:       var(--scene-cyan);
+  --secondary:     var(--scene-blue);
+  --primary-light: var(--scene-cyan-wash);
+  --tertiary:      #FFFFFF;
+  --teal:          var(--scene-cyan);
+  --teal-dark:     var(--scene-blue);
+  --teal-light:    var(--scene-cyan-wash);
+
+  --charcoal:      #15233D;
+  --slate:         #2E3E5E;
+  --warm-grey:     #F4F7FB;
+  --cream:         #FFFCF7;
+
+  --text:          #15233D;
+  --text-soft:     #2E3E5E;
+  --text-muted:    #6B7A95;
+  --text-dim:      #A0ADC3;
+  --text-subtle:   #A0ADC3;
+
+  --border:        rgba(51, 128, 193, 0.16);
+  --border-sub:    rgba(51, 128, 193, 0.09);
+
+  /* ── Glass tokens ── */
+  --glass-bg:           rgba(255, 255, 255, 0.62);
+  --glass-bg-strong:    rgba(255, 255, 255, 0.78);
+  --glass-bg-soft:      rgba(255, 255, 255, 0.46);
+  --glass-border:       rgba(255, 255, 255, 0.82);
+  --glass-border-sub:   rgba(255, 255, 255, 0.48);
+  --glass-blur:         blur(16px) saturate(140%);
+  --glass-blur-strong:  blur(22px) saturate(160%);
+
+  --radius-sm:   10px;
+  --radius-md:   18px;
+  --radius-lg:   24px;
+  --radius-xl:   32px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(26,26,46,0.04);
-  --shadow-md: 0 4px 20px rgba(26,26,46,0.06);
-  --shadow-lg: 0 16px 48px rgba(26,26,46,0.14);
+  --shadow-xs: 0 2px 8px rgba(51, 128, 193, 0.06);
+  --shadow-sm: 0 4px 18px rgba(51, 128, 193, 0.10),
+               inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  --shadow-md: 0 12px 36px rgba(51, 128, 193, 0.14),
+               inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-lg: 0 28px 70px rgba(51, 128, 193, 0.22),
+               inset 0 1px 0 rgba(255, 255, 255, 0.90);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  /* ── Functional palette · graphics manual §4 ──
+     Green is the promoter signal colour. Reserved for promoter pills,
+     promoter identity cards, and the promoter dark-mode surface. */
+  --success:     #22A874;
+  --success-soft:rgba(34,168,116,0.10);
+
+  /* ── Identity-card dark mode · graphics manual §9 ──
+     Deep navy gradient base. The accent colour (cyan for curators,
+     green for promoters) is applied separately on top of this base. */
+  --id-ink:           #15233D;
+  --id-ink-deep:      #0F1A2E;
+  --id-on-dark:       rgba(255,255,255,0.78);
+  --id-on-dark-mut:   rgba(255,255,255,0.60);
+  --id-rule-dark:     rgba(255,255,255,0.12);
 
   --safe-top: env(safe-area-inset-top, 0);
   --safe-bot: env(safe-area-inset-bottom, 0);
@@ -38,22 +95,16 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* Native webview feel:
-   - text-size-adjust: 100% prevents iOS from auto-zooming text on rotation
-   - touch-action: manipulation disables the double-tap-to-zoom gesture (but keeps
-     scroll and swipe responsive)
-   - user-select: none stops the long-press text-selection popover on content
-     that isn't meant to be copied (titles, meta, tags, buttons).
-     Input fields and things inside [data-selectable] get it re-enabled below. */
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   touch-action: manipulation;
-  overscroll-behavior-y: none; /* no bounce past page edges — feels more native */
+  overscroll-behavior-y: none;
 }
+
+/* ── Body: iridescent ice gradient (Kamil's bg from Scene Studio) ── */
 body {
   font-family: var(--font);
-  background: var(--warm-grey);
   color: var(--text);
   min-height: 100dvh;
   line-height: 1.5;
@@ -63,44 +114,62 @@ body {
   font-feature-settings: "cv11", "ss03";
   -webkit-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none; /* no "Copy / Share" popover on long-press */
+  -webkit-touch-callout: none;
   overflow-x: hidden;
+  position: relative;
+
+  background: linear-gradient(135deg,
+    #E8F2FB  0%,
+    #F2F6FB 25%,
+    #FAEEF1 50%,
+    #F0F7FC 78%,
+    #DDE9F5 100%);
+  background-attachment: fixed;
 }
 
-/* Re-enable selection only on inputs and anything explicitly opted in */
+/* Animated iridescent bloom — compositor-only, ~free on CPU */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -15%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 900px 700px  at 18% 22%, rgba(75, 185, 208, 0.22),  transparent 70%),
+    radial-gradient(ellipse 1000px 800px at 85% 18%, rgba(240, 195, 210, 0.18), transparent 72%),
+    radial-gradient(ellipse 900px 900px  at 15% 85%, rgba(170, 205, 230, 0.22), transparent 72%),
+    radial-gradient(ellipse 1100px 800px at 88% 88%, rgba(51, 128, 193, 0.22),  transparent 70%),
+    radial-gradient(ellipse 800px 900px  at 50% 55%, rgba(215, 220, 240, 0.16), transparent 75%),
+    radial-gradient(ellipse 600px 400px  at 75% 30%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse 500px 500px  at 25% 70%, rgba(255, 255, 255, 0.22), transparent 65%);
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  animation: bloomDrift 32s ease-in-out infinite alternate;
+}
+@keyframes bloomDrift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  50%  { opacity: 0.92; }
+  100% { transform: translate3d(2%, -1.2%, 0) scale(1.04); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
 input, textarea, [data-selectable] {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
 }
 
-/* Hide scrollbars everywhere — keeps scroll functional, just no visible bar.
-   Firefox uses scrollbar-width; WebKit/Blink needs the ::-webkit pseudo. */
-html, body {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* legacy Edge */
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-/* Also hide inner-scrolling container scrollbars (bottom sheet, tier rails) */
-*::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-* {
-  scrollbar-width: none;
-}
+/* Hide scrollbars — keep scroll functional */
+html, body { scrollbar-width: none; -ms-overflow-style: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
+* { scrollbar-width: none; }
 
 img { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-/* Ensure the HTML hidden attribute always works, even when a CSS reset sets display on an element type.
-   Without this, `img { display: block }` above overrides [hidden] for any img element. */
 [hidden] { display: none !important; }
 
 .gigs-page {
@@ -108,142 +177,245 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
   padding-top: calc(1.5rem + var(--safe-top));
+  position: relative;
+  z-index: 1;
 }
 
-/* HEADER */
+/* ============================================================
+   HEADER + TOOLBAR — one continuous frosted-glass panel
+   The header carries the entire panel's glass surface: title,
+   nested search pill, AND filter toolbar all sit on the same
+   single surface. The toolbar is a transparent overlay riding
+   on the header glass at rest — it only paints its own glass
+   when scrolled (sticky) so it can occlude content beneath.
+   ============================================================ */
+.gigs-page > .gigs-header,
 .gigs-header {
-  margin-bottom: 2rem;
+  margin: calc(-1.5rem - var(--safe-top)) -1rem 0;
+  padding: calc(2.4rem + var(--safe-top)) 1.4rem 10rem;
   text-align: center;
-  padding-top: 0.5rem;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+          backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid var(--glass-border);
+  border-top: none;
+  box-shadow:
+    0 22px 50px rgba(51, 128, 193, 0.18),
+    0 2px 6px rgba(51, 128, 193, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6);
 }
-.gigs-header__title {
-  font-size: 2.75rem;
-  font-weight: 600;
-  letter-spacing: -0.045em;
+/* Soft top-left specular sheen — gloss highlight, no tint */
+.gigs-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 65%; height: 40%;
+  background: radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.55), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Iridescent bloom in the lower corners of the combined panel */
+.gigs-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 60% at 100% 100%, rgba(75, 185, 208, 0.18), transparent 65%),
+    radial-gradient(ellipse 50% 60% at 0% 100%, rgba(51, 128, 193, 0.14), transparent 65%);
+  z-index: 0;
+}
+.gigs-header > * { position: relative; z-index: 1; }
+
+.gigs-page .gigs-header__title,
+.gigs-header .gigs-header__title {
+  font-size: 2.85rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
   line-height: 0.95;
-  color: var(--primary);
+  background: var(--scene-gradient);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
-.gigs-header__subtitle {
-  font-size: 0.75rem;
-  font-weight: 600;
+.gigs-page .gigs-header__subtitle,
+.gigs-header .gigs-header__subtitle {
+  font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--secondary);
+  letter-spacing: 0.24em;
+  color: var(--scene-blue);
   margin-top: 0.85rem;
 }
-.gigs-header__curator-byline {
+.gigs-page .gigs-header__curator-byline,
+.gigs-header .gigs-header__curator-byline {
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-muted);
-  margin-top: 0.3rem;
+  margin-top: 0.35rem;
   letter-spacing: 0.01em;
+}
+.gigs-page .gigs-header__date,
+.gigs-header .gigs-header__date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--scene-blue-deep);
+  margin-top: 0.55rem;
+  letter-spacing: -0.005em;
 }
 
 /* Promoter mode — circular avatar above the title */
 .gigs-header__promoter-avatar {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   object-fit: cover;
-  margin: 0 auto 0.75rem;
-  border: 2px solid var(--border);
+  margin: 0 auto 0.85rem;
+  border: 3px solid white;
+  box-shadow:
+    0 8px 24px rgba(51, 128, 193, 0.25),
+    0 0 0 1px rgba(51, 128, 193, 0.20);
 }
-/* Only show as block when the hidden attribute is absent.
-   Without this, display:block would override the browser's UA
-   [hidden]{display:none} rule and the circle appears in all views. */
-.gigs-header__promoter-avatar:not([hidden]) {
-  display: block;
-}
+.gigs-header__promoter-avatar:not([hidden]) { display: block; }
 
-/* SEARCH BAR */
+/* ============================================================
+   SEARCH BAR — nested inside the header glass, upper half of the
+   bottom-padding area. Negative margin pulls it back into the
+   header's lower region; below it sits the toolbar, also nested.
+   ============================================================ */
 .search-bar {
   position: relative;
-  margin-bottom: 0.75rem;
+  margin: -8rem 1.5rem 0;
+  z-index: 2;
 }
 .search-bar__icon {
   position: absolute;
-  left: 0.85rem;
+  left: 0.95rem;
   top: 50%;
   transform: translateY(-50%);
   width: 15px;
   height: 15px;
-  color: var(--text-dim);
+  color: var(--scene-blue);
+  opacity: 0.7;
   pointer-events: none;
   flex-shrink: 0;
 }
 .search-bar__input {
   width: 100%;
-  padding: 0.65rem 0.85rem 0.65rem 2.4rem;
-  border: 1px solid var(--border);
+  padding: 0.8rem 1rem 0.8rem 2.55rem;
+  border: 1px solid rgba(51, 128, 193, 0.20);
   border-radius: var(--radius-pill);
-  background: white;
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
   font-family: var(--font);
-  font-size: 0.88rem;
-  font-weight: 400;
+  font-size: 0.92rem;
+  font-weight: 500;
   color: var(--text);
   line-height: 1.4;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   -webkit-appearance: none;
   appearance: none;
+  box-shadow:
+    0 6px 18px rgba(51, 128, 193, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
-.search-bar__input::placeholder { color: var(--text-dim); }
+.search-bar__input::placeholder { color: var(--text-muted); font-weight: 500; }
 .search-bar__input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(75, 185, 208, 0.15);
+  border-color: var(--scene-cyan);
+  background: white;
+  box-shadow:
+    0 0 0 4px rgba(75, 185, 208, 0.22),
+    0 6px 18px rgba(51, 128, 193, 0.14);
 }
-/* Hide the native × clear button on webkit — we rely on the 'search' event */
 .search-bar__input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
-/* TOOLBAR */
+/* ============================================================
+   TOOLBAR — the filter row, also nested INTO the header glass.
+   At rest the toolbar is transparent so the header's surface
+   shows through unbroken (no seam). Negative top margin pulls
+   it up into the header's lower padding area. When the user
+   scrolls and the toolbar sticks, it paints its own opaque
+   glass so it can occlude content beneath.
+   ============================================================ */
 .toolbar {
   position: sticky;
   top: calc(var(--safe-top) - 1px);
   z-index: 30;
-  background: rgba(247,245,242,0.88);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  margin: 0 -1rem 1.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
+  margin: 1rem 0.6rem 2.5rem;
+  padding: 0.55rem 0.85rem 0.6rem;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s, border-radius 0.2s, -webkit-backdrop-filter 0.2s, backdrop-filter 0.2s;
   display: flex;
   gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
+  box-shadow: none;
 }
-.toolbar.is-scrolled { border-bottom-color: var(--border); }
+.toolbar.is-scrolled {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+          backdrop-filter: var(--glass-blur-strong);
+  border-color: var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow:
+    0 10px 26px rgba(51, 128, 193, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
 .toolbar__count {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-left: auto;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 600;
 }
+
 .filter-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--border);
+  padding: 0.55rem 0.95rem;
+  border: 1px solid rgba(51, 128, 193, 0.22);
   border-radius: var(--radius-pill);
-  background: white;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+          backdrop-filter: blur(8px) saturate(140%);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-soft);
   line-height: 1;
-  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  transition: transform 0.12s, border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
   letter-spacing: -0.005em;
 }
 .filter-btn:active { transform: scale(0.96); }
-.filter-btn:hover { border-color: var(--charcoal); }
-.filter-btn.is-active {
-  background: var(--charcoal);
-  border-color: var(--charcoal);
-  color: white;
+.filter-btn:hover {
+  border-color: var(--scene-blue);
+  color: var(--scene-blue);
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(51, 128, 193, 0.12);
 }
-.filter-btn__chevron { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.5; }
-.filter-btn.is-active .filter-btn__chevron { opacity: 0.8; }
+.filter-btn.is-active {
+  background: var(--selected-bg);
+  border-color: transparent;
+  color: white;
+  font-weight: 700;
+  box-shadow: var(--selected-shadow);
+}
+.filter-btn.is-active:hover { color: white; }
+.filter-btn__chevron { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.6; }
+.filter-btn.is-active .filter-btn__chevron { opacity: 0.95; }
 .filter-btn__badge {
   display: inline-flex;
   align-items: center;
@@ -252,67 +424,71 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   height: 18px;
   padding: 0 5px;
   border-radius: var(--radius-pill);
-  background: var(--primary);
+  background: var(--scene-gradient);
   color: white;
   font-size: 0.65rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  box-shadow: 0 1px 3px rgba(51, 128, 193, 0.18);
 }
-.filter-btn.is-active .filter-btn__badge { background: white; color: var(--charcoal); }
+.filter-btn.is-active .filter-btn__badge {
+  background: white;
+  color: var(--scene-blue-deep);
+  box-shadow: none;
+}
 
-/* DATE HEADER */
+/* ============================================================
+   DATE / SECTION HEADERS
+   ============================================================ */
 .date-header {
-  font-size: 1.15rem;
-  font-weight: 500;
+  font-size: 1.2rem;
+  font-weight: 700;
   padding: 1.75rem 0 0.85rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--text);
 }
 .date-header:first-child { padding-top: 0.25rem; }
-
-/* Single-day view: cards are full content-column width */
 .date-header--day-view {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   padding: 0.25rem 0 1rem;
   color: var(--text);
 }
 
-/* SECTION DIVIDER */
 .section-label {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 1.5rem 0 0.9rem;
   font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 800;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--scene-blue-deep);
 }
 .section-label:first-child { padding-top: 0.25rem; }
 .section-label__line { flex: 1; height: 1px; background: var(--border); }
 .section-label__mark {
-  width: 6px; height: 6px;
+  width: 7px; height: 7px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--scene-gradient);
+  box-shadow: 0 0 0 3px rgba(75, 185, 208, 0.15);
   flex-shrink: 0;
 }
-.section-label__mark--gold    { background: #C9932A; }
-.section-label__mark--silver  { background: #C5C5CD; }
-.section-label__mark--holo    { background: linear-gradient(90deg, #4BB9D0, #AA6EFF, #FF78C3, #FFC864); }
+.section-label__mark--gold   { background: linear-gradient(135deg, #C9932A, #F5D14C); box-shadow: 0 0 0 3px rgba(201, 147, 42, 0.18); }
+.section-label__mark--silver { background: linear-gradient(135deg, #A8A8B2, #E0E0E5); box-shadow: 0 0 0 3px rgba(168, 168, 178, 0.18); }
+.section-label__mark--holo   {
+  background: linear-gradient(90deg, #4BB9D0, #AA6EFF, #FF78C3, #FFC864);
+  box-shadow: 0 0 0 3px rgba(170, 110, 255, 0.18);
+}
 
 /* ============================================================
-   DAY STRIP — horizontal swipe strip for one day (weekly view)
+   DAY STRIP — horizontal swipe rail
    ============================================================ */
-.day-strip {
-  margin: 0 -1rem 1.75rem;
-}
-.day-strip:last-child {
-  margin-bottom: 0.5rem;
-}
+.day-strip { margin: 0 -1rem 1.75rem; }
+.day-strip:last-child { margin-bottom: 0.5rem; }
 .day-strip__header {
   display: flex;
   align-items: baseline;
@@ -321,22 +497,23 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .day-strip__label {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
 }
 .day-strip__count {
   font-size: 0.72rem;
-  color: var(--text-dim);
+  color: var(--scene-blue);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 700;
   margin-left: auto;
+  letter-spacing: 0.04em;
 }
 .day-strip__track {
   display: flex;
   gap: 0.85rem;
   overflow-x: auto;
-  padding: 0.1rem 1rem 0.75rem;
+  padding: 0.25rem 1rem 0.85rem;
   scroll-snap-type: x proximity;
   scroll-padding-left: 1rem;
   -webkit-overflow-scrolling: touch;
@@ -349,42 +526,62 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   margin-bottom: 0;
 }
 
-/* GIG CARD */
+/* ============================================================
+   GIG CARD — frosted glass
+   ============================================================ */
 .gig-card {
   display: flex;
   flex-direction: column;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.95rem;
   text-decoration: none;
   color: inherit;
-  transition: box-shadow 0.2s ease, border-color 0.15s;
+  transition: box-shadow 0.25s ease, border-color 0.15s, transform 0.18s;
   position: relative;
   isolation: isolate;
+  box-shadow: var(--shadow-sm);
 }
-/* Body fills available vertical space — lets footer dock at the true bottom */
+/* Soft top-left specular highlight on every card */
+.gig-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%; height: 38%;
+  background: radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.55), transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+.gig-card > * { position: relative; z-index: 1; }
+
 .gig-card__body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
 }
-/* Footer always sticks to the bottom of the card */
-.gig-card__footer {
-  margin-top: auto;
-}
-/* Horizontal rail cards get equal heights via tallest-sibling trick */
+.gig-card__footer { margin-top: auto; }
 .tier__track .gig-card { height: auto; align-self: stretch; }
-a.gig-card:hover { box-shadow: var(--shadow-md); border-color: #DAD7D0; }
-a.gig-card:active { opacity: 0.92; }
 
-/* CURATED VARIANTS — continuous CSS animation on the rainbow layers */
+a.gig-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+a.gig-card:active { opacity: 0.94; transform: translateY(0); }
 
-/* Variant 1: Silver — 1 curator. Dramatic brushed-metal bullion: deep facet contrasts. */
+/* ============================================================
+   CURATED VARIANTS — premium foil tiers (silver, gold, holo)
+   Kept structurally so holo-shader.js still hooks data-curated="3"
+   ============================================================ */
+
+/* Variant 1: Silver — 1 curator. */
 .gig-card[data-curated="1"] {
   background:
-    /* moving sheen band (wider, softer than the specular sharp highlight below) */
     linear-gradient(
       calc(115deg + var(--refract, 0.5) * 40deg),
       transparent 20%,
@@ -393,26 +590,15 @@ a.gig-card:active { opacity: 0.92; }
       rgba(240,240,245,0.0) 56%,
       transparent 72%
     ),
-    /* main bullion body: narrow, high-contrast silver bands */
     linear-gradient(
       135deg,
-      #6F6F78 0%,
-      #A8A8B2 8%,
-      #E0E0E5 16%,
-      #FCFCFE 22%,
-      #E0E0E5 28%,
-      #8A8A94 40%,
-      #6F6F78 48%,
-      #B4B4BE 58%,
-      #F4F4F8 68%,
-      #8A8A94 80%,
-      #6F6F78 90%,
-      #A8A8B2 100%
+      #6F7A8A 0%, #A8B0BE 8%, #E0E4EC 16%, #FCFCFE 22%,
+      #E0E4EC 28%, #8A94A4 40%, #6F7A8A 48%, #B4BCCC 58%,
+      #F4F6FA 68%, #8A94A4 80%, #6F7A8A 90%, #A8B0BE 100%
     );
-  border-color: #6F6F78;
+  border-color: #6F7A8A;
 }
 .gig-card[data-curated="1"]::after {
-  /* sharp white specular glint riding on top of the bullion body */
   content: '';
   position: absolute;
   inset: 0;
@@ -429,7 +615,7 @@ a.gig-card:active { opacity: 0.92; }
   z-index: 0;
 }
 
-/* Variant 2: Gold — 2 curators. Solid gold bullion: deep contrasts, polished facets. */
+/* Variant 2: Gold — 2 curators. */
 .gig-card[data-curated="2"] {
   background:
     linear-gradient(
@@ -442,18 +628,9 @@ a.gig-card:active { opacity: 0.92; }
     ),
     linear-gradient(
       135deg,
-      #8A5E15 0%,
-      #C9932A 8%,
-      #F5D14C 16%,
-      #FFF0A8 22%,
-      #F5D14C 28%,
-      #B07F1C 40%,
-      #8A5E15 48%,
-      #D4A232 58%,
-      #F8DD5E 68%,
-      #B07F1C 80%,
-      #8A5E15 90%,
-      #C9932A 100%
+      #8A5E15 0%, #C9932A 8%, #F5D14C 16%, #FFF0A8 22%,
+      #F5D14C 28%, #B07F1C 40%, #8A5E15 48%, #D4A232 58%,
+      #F8DD5E 68%, #B07F1C 80%, #8A5E15 90%, #C9932A 100%
     );
   border-color: #8A5E15;
 }
@@ -474,40 +651,21 @@ a.gig-card:active { opacity: 0.92; }
   z-index: 0;
 }
 
-/* Variant 3: Holographic — 3+ curators. Iridescent foil card.
-   Reference: a physical holographic foil card — warm silver-champagne base
-   with multiple overlapping radial rainbow blooms that bleed into each other
-   softly, plus a subtle foil grain texture. The rainbows sit on the surface
-   as organic iridescent patches, not a linear spectrum.
-
-   Architecture (two pseudo-elements + card base):
-   1. Card base: warm silver-cream gradient (the metallic foil material)
-   2. ::before: five overlapping radial rainbow blooms at irregular positions,
-      blended with `mix-blend-mode: screen` so they add prismatic light onto
-      the silver surface without replacing it
-   3. ::after: subtle SVG noise texture for the foil grain / matte quality
-
-   Scroll motion: --refract (0→1) shifts the bloom composition's vertical
-   position by ~30%. Subtle drift as the card moves through the viewport,
-   not a sweeping animation. */
+/* Variant 3: Holographic — 3+ curators. CSS fallback before
+   holo-shader.js mounts its canvas; the shader replaces this once
+   .holo-shader-active is applied. */
 .gig-card[data-curated="3"] {
   background:
-    /* subtle diagonal sheen over the metal */
     linear-gradient(
       135deg,
       rgba(255, 248, 230, 0.35) 0%,
       rgba(240, 240, 244, 0.0) 40%,
       rgba(230, 232, 240, 0.35) 100%
     ),
-    /* base metallic silver-cream */
     linear-gradient(
       160deg,
-      #F5EFE2 0%,
-      #EAE6DC 20%,
-      #DFDDD9 45%,
-      #D4D5D8 65%,
-      #DDD9D1 85%,
-      #E8E2D2 100%
+      #F5EFE2 0%, #EAE6DC 20%, #DFDDD9 45%,
+      #D4D5D8 65%, #DDD9D1 85%, #E8E2D2 100%
     );
   border-color: rgba(200, 198, 190, 0.8);
   box-shadow:
@@ -516,58 +674,21 @@ a.gig-card:active { opacity: 0.92; }
     0 2px 10px rgba(140, 138, 130, 0.12);
 }
 .gig-card[data-curated="3"]::before {
-  /* Iridescent bloom composition, palette matched to pearlescent foil:
-     peach-coral, mint-cyan, soft champagne yellow, lilac, periwinkle.
-     All colours are LIGHT and low-saturation — the reference is airy and
-     luminous, not painterly. `soft-light` blend preserves that quality by
-     darkening/lightening gently rather than pushing contrast.
-     Scroll motion: transform translateY driven by --refract (compositor-only,
-     doesn't repaint the gradient). */
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    /* top-right peach-coral bloom */
-    radial-gradient(ellipse 65% 50% at 78% 18%,
-      rgba(255, 175, 150, 0.70) 0%,
-      rgba(255, 200, 175, 0.50) 30%,
-      rgba(255, 220, 200, 0.28) 55%,
-      transparent 80%
-    ),
-    /* center-left mint-cyan pool (the biggest feature in the reference) */
-    radial-gradient(ellipse 65% 55% at 20% 50%,
-      rgba(150, 230, 225, 0.72) 0%,
-      rgba(180, 235, 220, 0.52) 25%,
-      rgba(205, 240, 220, 0.32) 50%,
-      transparent 78%
-    ),
-    /* center soft champagne-yellow diffusion */
-    radial-gradient(ellipse 55% 45% at 50% 40%,
-      rgba(255, 235, 180, 0.55) 0%,
-      rgba(250, 235, 195, 0.35) 30%,
-      transparent 65%
-    ),
-    /* lower lilac-periwinkle bloom */
-    radial-gradient(ellipse 60% 50% at 55% 85%,
-      rgba(190, 185, 230, 0.68) 0%,
-      rgba(210, 200, 235, 0.48) 28%,
-      rgba(225, 220, 240, 0.28) 55%,
-      transparent 80%
-    ),
-    /* right-edge pale blue haze */
-    radial-gradient(ellipse 50% 60% at 90% 72%,
-      rgba(170, 200, 235, 0.60) 0%,
-      rgba(195, 215, 240, 0.38) 30%,
-      transparent 65%
-    );
+    radial-gradient(ellipse 65% 50% at 78% 18%, rgba(255, 175, 150, 0.70) 0%, rgba(255, 200, 175, 0.50) 30%, rgba(255, 220, 200, 0.28) 55%, transparent 80%),
+    radial-gradient(ellipse 65% 55% at 20% 50%, rgba(150, 230, 225, 0.72) 0%, rgba(180, 235, 220, 0.52) 25%, rgba(205, 240, 220, 0.32) 50%, transparent 78%),
+    radial-gradient(ellipse 55% 45% at 50% 40%, rgba(255, 235, 180, 0.55) 0%, rgba(250, 235, 195, 0.35) 30%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 55% 85%, rgba(190, 185, 230, 0.68) 0%, rgba(210, 200, 235, 0.48) 28%, rgba(225, 220, 240, 0.28) 55%, transparent 80%),
+    radial-gradient(ellipse 50% 60% at 90% 72%, rgba(170, 200, 235, 0.60) 0%, rgba(195, 215, 240, 0.38) 30%, transparent 65%);
   transform: translateY(calc((var(--refract, 0.5) - 0.5) * 40px));
   mix-blend-mode: soft-light;
   z-index: 0;
 }
 .gig-card[data-curated="3"]::after {
-  /* Foil grain texture — tiny inline SVG fractal noise, base64-free.
-     Adds the matte foil-sticker quality from the reference photo. */
   content: '';
   position: absolute;
   inset: 0;
@@ -579,86 +700,49 @@ a.gig-card:active { opacity: 0.92; }
   z-index: 1;
 }
 
-/* Content above the sheen pseudo-elements */
+/* Curated content sits above the foil layers */
 .gig-card[data-curated] > * { position: relative; z-index: 2; }
 
-/* Body washes — silver and gold need a wash so text reads over the metal.
-   Holographic is transparent glass, so the body wash is clear — rainbows show through
-   behind the text, which itself stays charcoal and crisp. */
+/* Curated body washes — wash legibility over the metal */
 .gig-card[data-curated="1"] .gig-card__body { background: rgba(250,250,252,0.4); }
 .gig-card[data-curated="2"] .gig-card__body { background: rgba(255,250,230,0.4); }
 .gig-card[data-curated="3"] .gig-card__body { background: rgba(248,246,240,0.55); }
 
-/* Tinted glass footer on curated cards — lighter, more see-through than before.
-   Stretches edge-to-edge (negative horizontal margin cancels body padding).
-   backdrop-filter blurs whatever is behind it, keeping the glass character. */
+/* Curated tinted glass footers */
 .gig-card[data-curated] .gig-card__footer {
-  /* `margin-top: auto` docks the footer at the bottom of the body across all
-     card heights — was `1rem` before, which left short-content cards with the
-     footer floating mid-card. Negative horizontal/bottom margins keep the
-     edge-to-edge glass treatment unchanged. */
-  margin: auto -1.15rem -1.1rem;
-  padding: 1.25rem 1.15rem 0.9rem;
+  margin: auto -1.25rem -1.25rem;
+  padding: 1.25rem 1.25rem 1rem;
   border-top: 1px solid rgba(255,255,255,0.35);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   position: relative;
   isolation: isolate;
 }
-.gig-card[data-curated="1"] .gig-card__footer {
-  background: rgba(70,72,82,0.19);
-}
-.gig-card[data-curated="2"] .gig-card__footer {
-  background: rgba(85,62,20,0.21); /* warm tint — honours the gold tone */
-}
+.gig-card[data-curated="1"] .gig-card__footer { background: rgba(70,82,102,0.20); }
+.gig-card[data-curated="2"] .gig-card__footer { background: rgba(85,62,20,0.21); }
 .gig-card[data-curated="3"] .gig-card__footer {
-  background: rgba(255,255,255,0.13); /* very light glass on holographic */
+  background: rgba(255,255,255,0.13);
   border-top: 1px solid rgba(255,255,255,0.5);
 }
-
-/* Footer text — silver and gold have dark tinted glass so text flips to light.
-   Holographic footer is light transparent glass, text stays dark for contrast.
-   Light text carries a subtle shadow for legibility over the thin glass tint. */
 .gig-card[data-curated="1"] .gig-card__footer .price__prefix,
 .gig-card[data-curated="2"] .gig-card__footer .price__prefix {
   color: rgba(255,255,255,0.78);
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .gig-card[data-curated="1"] .gig-card__footer .price__value,
-.gig-card[data-curated="2"] .gig-card__footer .price__value {
-  color: #FFFFFF;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
-}
+.gig-card[data-curated="2"] .gig-card__footer .price__value,
 .gig-card[data-curated="1"] .gig-card__footer .cta,
 .gig-card[data-curated="2"] .gig-card__footer .cta {
   color: #FFFFFF;
   text-shadow: 0 1px 3px rgba(0,0,0,0.55);
 }
-.gig-card[data-curated="1"] .gig-card__footer .price--free .price__value {
-  color: #8FE3D5;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
-}
-.gig-card[data-curated="2"] .gig-card__footer .price--free .price__value {
-  color: #F5D275;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
-}
-.gig-card[data-curated] .gig-card__footer .cta__arrow {
-  opacity: 0.85;
-}
-/* Holographic footer keeps default dark text — the glass is light */
-.gig-card[data-curated="3"] .gig-card__footer .price__prefix {
-  color: var(--text-muted);
-}
-.gig-card[data-curated="3"] .gig-card__footer .price__value {
-  color: var(--text);
-}
-.gig-card[data-curated="3"] .gig-card__footer .cta {
-  color: var(--charcoal);
-}
-}
-.gig-card[data-curated] .gig-card__footer .cta__arrow {
-  opacity: 0.85;
-}
+.gig-card[data-curated="1"] .gig-card__footer .price--free .price__value { color: #8FE3D5; text-shadow: 0 1px 3px rgba(0,0,0,0.55); }
+.gig-card[data-curated="2"] .gig-card__footer .price--free .price__value { color: #F5D275; text-shadow: 0 1px 3px rgba(0,0,0,0.55); }
+.gig-card[data-curated] .gig-card__footer .cta__arrow { opacity: 0.85; }
+.gig-card[data-curated="3"] .gig-card__footer .price__prefix { color: var(--text-muted); }
+.gig-card[data-curated="3"] .gig-card__footer .price__value { color: var(--text); }
+.gig-card[data-curated="3"] .gig-card__footer .cta { color: var(--scene-blue-deep); }
+
 .gig-card[data-curated="1"] .gig-card__footer > span[style*="color: var(--text-muted)"],
 .gig-card[data-curated="1"] .gig-card__footer > span[style*="--text-muted"],
 .gig-card[data-curated="2"] .gig-card__footer > span[style*="color: var(--text-muted)"],
@@ -666,50 +750,54 @@ a.gig-card:active { opacity: 0.92; }
   color: rgba(255,255,255,0.6) !important;
 }
 
+/* ============================================================
+   GIG CARD CONTENT
+   ============================================================ */
 .gig-card__poster {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: fill;
-  background: var(--slate);
+  background: linear-gradient(135deg, var(--scene-blue), var(--scene-cyan));
   display: block;
 }
 .gig-card__poster-placeholder {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: linear-gradient(135deg, var(--charcoal), var(--slate));
+  background: linear-gradient(135deg, var(--scene-blue-deep), var(--scene-cyan));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.55);
   font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.gig-card__body { padding: 1.1rem 1.25rem 1.25rem; }
+.gig-card__body { padding: 1.15rem 1.3rem 1.3rem; }
 
 .gig-card__meta {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--secondary);
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.10em;
+  color: var(--scene-blue);
+  margin-bottom: 0.55rem;
   font-variant-numeric: tabular-nums;
 }
 
 .gig-card__title {
   font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.028em;
   margin-bottom: 0.35rem;
   color: var(--text);
-  /* Cap title to 2 lines so cards with longer titles don't blow up the tier height */
+  text-wrap: pretty;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -723,15 +811,14 @@ a.gig-card:active { opacity: 0.92; }
   margin-bottom: 0.2rem;
   line-height: 1.4;
 }
-.gig-card__venue-name { color: var(--text); font-weight: 500; }
+.gig-card__venue-name { color: var(--text); font-weight: 600; }
 .gig-card__venue-area { color: var(--text-dim); margin-left: 0.4rem; }
 
 .gig-card__artists {
   font-size: 0.85rem;
   color: var(--text);
-  margin-top: 0.5rem;
+  margin-top: 0.55rem;
   line-height: 1.4;
-  /* Single line — long artist lists ellipsis rather than wrap */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
@@ -739,20 +826,20 @@ a.gig-card:active { opacity: 0.92; }
   overflow: hidden;
 }
 .gig-card__artists-label {
+  font-family: var(--font-mono);
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  color: var(--scene-blue);
   margin-right: 6px;
 }
 
 .gig-card__desc {
   font-size: 0.88rem;
   color: var(--text-muted);
-  margin-top: 0.5rem;
+  margin-top: 0.55rem;
   line-height: 1.5;
-  /* JS truncates to 120 chars before render; 2-line clamp is a safety net */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -764,25 +851,30 @@ a.gig-card:active { opacity: 0.92; }
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-top: 0.85rem;
+  margin-top: 0.95rem;
 }
 .tag {
   display: inline-block;
-  padding: 4px 11px;
+  padding: 4px 12px;
   border-radius: var(--radius-pill);
-  font-size: 0.7rem;
-  font-weight: 500;
-  background: transparent;
-  border: 1px solid rgba(42, 191, 171, 0.5);
-  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(75, 185, 208, 0.10);
+  border: 1px solid rgba(75, 185, 208, 0.32);
+  color: var(--scene-blue-deep);
   letter-spacing: -0.005em;
+  white-space: nowrap;
 }
 .tag--neutral {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.45);
   border: 1px solid var(--border);
   color: var(--text-muted);
 }
 
+/* ============================================================
+   CURATORS + PROMOTER PILL — graphics-manual styling
+   Frosted glass chips with scene blue accents
+   ============================================================ */
 .curators {
   display: flex;
   flex-wrap: wrap;
@@ -794,62 +886,72 @@ a.gig-card:active { opacity: 0.92; }
   border-top: 1px solid var(--border-sub);
 }
 .curators__label {
+  font-family: var(--font-mono);
   font-size: 0.6rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  color: var(--scene-blue);
   margin-right: 0.15rem;
+  white-space: nowrap;
 }
 .curator-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 3px 11px 3px 3px;
+  gap: 0.45rem;
+  padding: 3px 12px 3px 3px;
   border-radius: var(--radius-pill);
-  background: white;
-  border: 1px solid var(--border);
-  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(51, 128, 193, 0.22);
+  font-size: 0.76rem;
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(51, 128, 193, 0.06);
+  transition: border-color 0.15s, background 0.15s;
+}
+.curator-badge:hover {
+  border-color: var(--scene-blue);
+  background: white;
 }
 .curator-badge__logo {
-  width: 20px; height: 20px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   object-fit: cover;
-  background: var(--slate);
+  background: var(--scene-blue-soft);
   flex-shrink: 0;
 }
 .curator-badge__logo--placeholder {
-  background: linear-gradient(135deg, var(--charcoal), var(--slate));
+  background: var(--scene-gradient);
 }
 
 .promoter {
   font-size: 0.76rem;
   color: var(--text-muted);
-  /* Default: acts as the section separator when no curators are present */
   margin-top: 1rem;
   padding-top: 1rem;
-  margin-bottom: 0; /* footer supplies its own padding-top: 1rem, keeping the pill centred */
+  margin-bottom: 0;
   border-top: 1px solid var(--border-sub);
 }
-/* When curators precede the promoter row, curators already owns the separator line —
-   suppress the duplicate and tighten the gap so they read as one group */
 .curators + .promoter {
   border-top: none;
   padding-top: 0;
   margin-top: 0.4rem;
-  margin-bottom: 0.5rem; /* restore bottom spacing — no centering needed here */
+  margin-bottom: 0.5rem;
 }
 .promoter__label {
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.6rem;
-  margin-right: 4px;
-  color: var(--text-muted);
+  margin-right: 6px;
+  color: var(--success);
 }
 
+/* ============================================================
+   GIG CARD FOOTER
+   ============================================================ */
 .gig-card__footer {
   display: flex;
   align-items: center;
@@ -862,43 +964,81 @@ a.gig-card:active { opacity: 0.92; }
 }
 .price { display: flex; flex-direction: column; line-height: 1.1; }
 .price__prefix {
+  font-family: var(--font-mono);
   font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: var(--text-muted);
-  font-weight: 700;
-  margin-bottom: 3px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 .price__value {
-  font-size: 1.05rem;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
   color: var(--text);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.price--free .price__value { color: var(--secondary); }
+.price--free .price__value { color: var(--scene-blue); }
 
 .cta {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
   font-weight: 600;
-  color: var(--charcoal);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--scene-blue);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  letter-spacing: -0.01em;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: rgba(75, 185, 208, 0.10);
+  border: 1px solid rgba(51, 128, 193, 0.22);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+a.gig-card:hover .cta {
+  background: var(--selected-bg);
+  border-color: transparent;
+  color: white;
+  box-shadow: var(--selected-shadow);
 }
 .cta__arrow { display: inline-block; transition: transform 0.15s; }
 a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
-/* SHEET */
+/* "At the door" fallback (rendered inline by app.js when no ticket URL) — keep
+   typographically consistent with the rest of the footer's data row. */
+.gig-card__footer > span:not(.cta):not(.price) {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+/* Curated CTAs override (the pill becomes a glass chip on darker footers) */
+.gig-card[data-curated="1"] .gig-card__footer .cta,
+.gig-card[data-curated="2"] .gig-card__footer .cta {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.35);
+}
+.gig-card[data-curated="3"] .gig-card__footer .cta {
+  background: rgba(255,255,255,0.55);
+  border-color: rgba(51, 128, 193, 0.25);
+}
+
+/* ============================================================
+   FILTER SHEET (bottom)
+   ============================================================ */
 .sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 90;
-  background: rgba(26,26,46,0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(21, 35, 61, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -909,9 +1049,14 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   position: fixed;
   left: 0; right: 0; bottom: 0;
   z-index: 100;
-  background: var(--cream);
-  border-radius: 20px 20px 0 0;
-  box-shadow: var(--shadow-lg);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+          backdrop-filter: var(--glass-blur-strong);
+  border-top: 1px solid var(--glass-border);
+  border-radius: 24px 24px 0 0;
+  box-shadow:
+    0 -24px 60px rgba(51, 128, 193, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -923,7 +1068,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
 .sheet__grip {
   width: 42px; height: 4px;
-  background: var(--border);
+  background: rgba(51, 128, 193, 0.25);
   border-radius: 2px;
   margin: 10px auto 0;
   flex-shrink: 0;
@@ -936,18 +1081,25 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   border-bottom: 1px solid var(--border-sub);
   flex-shrink: 0;
 }
-.sheet__title { font-size: 1.2rem; font-weight: 500; letter-spacing: -0.02em; }
+.sheet__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
 .sheet__close {
-  width: 32px; height: 32px;
+  width: 34px; height: 34px;
   border-radius: 50%;
-  background: var(--warm-grey);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--glass-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s, background 0.15s;
+  transition: transform 0.12s, background 0.15s, color 0.15s;
+  color: var(--scene-blue);
 }
 .sheet__close:active { transform: scale(0.9); }
-.sheet__close:hover { background: var(--border); }
+.sheet__close:hover { background: var(--scene-blue); color: white; }
 .sheet__close svg { width: 14px; height: 14px; }
 
 .sheet__body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
@@ -956,28 +1108,28 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.25rem;
+  padding: 0.9rem 1.25rem;
   cursor: pointer;
   transition: background 0.12s;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
 }
-.sheet-option:hover { background: var(--warm-grey); }
+.sheet-option:hover { background: rgba(75, 185, 208, 0.08); }
 .sheet-option__label { display: flex; align-items: center; gap: 0.75rem; }
 .sheet-option__count {
   font-size: 0.78rem;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   margin-left: auto;
   margin-right: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 .sheet-option__check {
   width: 22px; height: 22px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border);
-  background: white;
+  border-radius: 7px;
+  border: 1.5px solid rgba(51, 128, 193, 0.30);
+  background: rgba(255, 255, 255, 0.85);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -992,15 +1144,16 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   transition: opacity 0.15s, transform 0.15s;
 }
 .sheet-option.is-selected .sheet-option__check {
-  background: var(--charcoal);
-  border-color: var(--charcoal);
+  background: var(--selected-bg);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
 }
 .sheet-option.is-selected .sheet-option__check svg { opacity: 1; transform: scale(1); }
 
-/* PRICE SLIDER — bottom-sheet body when filter kind === 'price' */
-.price-slider {
-  padding: 1.5rem 1.5rem 1rem;
-}
+/* ============================================================
+   PRICE SLIDER (sheet body when kind === 'price')
+   ============================================================ */
+.price-slider { padding: 1.5rem 1.5rem 1rem; }
 .price-slider__value-row {
   display: flex;
   align-items: baseline;
@@ -1009,19 +1162,24 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 }
 .price-slider__label {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
+  letter-spacing: 0.16em;
+  color: var(--scene-blue);
 }
 .price-slider__value {
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  background: var(--scene-gradient);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
-.price-slider__value--free { color: var(--secondary); }
+.price-slider__value--free { color: var(--scene-blue); -webkit-text-fill-color: var(--scene-blue); }
 .price-slider__range {
   width: 100%;
   height: 28px;
@@ -1036,43 +1194,43 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   border-radius: 3px;
   background: linear-gradient(
     to right,
-    var(--primary) 0%,
-    var(--primary) var(--slider-fill, 50%),
-    var(--border) var(--slider-fill, 50%),
-    var(--border) 100%
+    var(--scene-blue) 0%,
+    var(--scene-cyan) var(--slider-fill, 50%),
+    rgba(51, 128, 193, 0.14) var(--slider-fill, 50%),
+    rgba(51, 128, 193, 0.14) 100%
   );
 }
 .price-slider__range::-moz-range-track {
   height: 6px;
   border-radius: 3px;
-  background: var(--border);
+  background: rgba(51, 128, 193, 0.14);
 }
 .price-slider__range::-moz-range-progress {
   height: 6px;
   border-radius: 3px;
-  background: var(--primary);
+  background: linear-gradient(to right, var(--scene-blue), var(--scene-cyan));
 }
 .price-slider__range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--charcoal);
+  background: var(--scene-gradient);
   border: 3px solid white;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--selected-shadow);
   cursor: grab;
-  margin-top: -9px;
+  margin-top: -10px;
   transition: transform 0.1s;
 }
 .price-slider__range::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
 .price-slider__range::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--charcoal);
+  background: var(--scene-blue);
   border: 3px solid white;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--selected-shadow);
   cursor: grab;
 }
 .price-slider__ticks {
@@ -1081,9 +1239,9 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   margin-top: 0.75rem;
   padding: 0 2px;
   font-size: 0.7rem;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 600;
 }
 .price-slider__count {
   margin-top: 1.25rem;
@@ -1093,49 +1251,66 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   font-variant-numeric: tabular-nums;
 }
 .price-slider__count strong {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--scene-blue-deep);
+  font-weight: 700;
 }
 
 .sheet__footer {
   display: flex;
   gap: 0.6rem;
-  padding: 0.85rem 1.25rem calc(0.85rem + var(--safe-bot));
+  padding: 0.95rem 1.25rem calc(0.95rem + var(--safe-bot));
   border-top: 1px solid var(--border-sub);
-  background: var(--cream);
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
   flex-shrink: 0;
 }
 .btn {
   flex: 1;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem;
   border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.92rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  transition: transform 0.1s, background 0.15s;
+  transition: transform 0.1s, background 0.15s, box-shadow 0.15s, color 0.15s, border-color 0.15s;
   letter-spacing: -0.005em;
 }
 .btn:active { transform: scale(0.98); }
-.btn--primary { background: var(--charcoal); color: white; }
-.btn--primary:hover { background: var(--slate); }
+.btn--primary {
+  background: var(--selected-bg);
+  color: white;
+  box-shadow: var(--selected-shadow);
+}
+.btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 22px rgba(51, 128, 193, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
 .btn--ghost {
-  background: white;
-  color: var(--text);
-  border: 1.5px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--scene-blue);
+  border: 1.5px solid rgba(51, 128, 193, 0.30);
   flex: 0 0 auto;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
 }
-.btn--ghost:hover { border-color: var(--charcoal); }
+.btn--ghost:hover {
+  background: white;
+  border-color: var(--scene-blue);
+  color: var(--scene-blue-deep);
+}
 
-/* STATE */
+/* ============================================================
+   STATE / LOADING
+   ============================================================ */
 .state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
 .state__title {
-  font-size: 1.2rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--text);
   margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
@@ -1143,84 +1318,66 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .state__text { font-size: 0.9rem; max-width: 320px; margin: 0 auto; }
 .state__action {
   margin-top: 1rem;
-  padding: 0.6rem 1.1rem;
+  padding: 0.65rem 1.2rem;
   border-radius: var(--radius-pill);
-  background: var(--charcoal);
+  background: var(--selected-bg);
   color: white;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.005em;
+  box-shadow: var(--selected-shadow);
 }
 .spinner {
   display: inline-block;
   width: 28px; height: 28px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  border: 3px solid rgba(75, 185, 208, 0.18);
+  border-top-color: var(--scene-cyan);
+  border-right-color: var(--scene-blue);
   border-radius: 50%;
-  animation: spin 0.65s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* RESPONSIVE */
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 @media (min-width: 640px) {
   .gigs-page {
     padding: 2.5rem 1.5rem 4rem;
     padding-top: calc(2.5rem + var(--safe-top));
   }
+  .gigs-header {
+    margin: calc(-2.5rem - var(--safe-top)) -1.5rem 0;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
   .gigs-header__title { font-size: 3.25rem; }
   .gig-card__title { font-size: 1.5rem; }
-  .gig-card__body { padding: 1.25rem 1.5rem 1.5rem; }
+  .gig-card__body { padding: 1.3rem 1.55rem 1.55rem; }
   .toolbar {
     margin-left: -1.5rem;
     margin-right: -1.5rem;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
-  .tier {
-    margin-left: -1.5rem;
-    margin-right: -1.5rem;
-  }
-  .tier__header {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-  .tier__track {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-  .tier__track .gig-card {
-    flex: 0 0 62%;
-  }
-  .day-strip {
-    margin-left: -1.5rem;
-    margin-right: -1.5rem;
-  }
-  .day-strip__header {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-  .day-strip__track {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-  .day-strip__track .gig-card {
-    flex: 0 0 75%;
-  }
+  .tier { margin-left: -1.5rem; margin-right: -1.5rem; }
+  .tier__header { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .tier__track { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .tier__track .gig-card { flex: 0 0 62%; }
+  .day-strip { margin-left: -1.5rem; margin-right: -1.5rem; }
+  .day-strip__header { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .day-strip__track { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .day-strip__track .gig-card { flex: 0 0 75%; }
 }
 
 /* ============================================================
-   WEBGL HOLOGRAPHIC SHADER — per-card canvas (v4)
-   ────────────────────────────────────────────────────────────
-   v4 mounts a <canvas> as a child of each holo card so it
-   scrolls with the card naturally — no scissor math, no
-   scroll lag. The canvas sits at z-index 0 inside the card's
-   stacking context; existing `.gig-card[data-curated] > *
-   { z-index: 2 }` rule keeps the poster, text, and footer
-   above the canvas.
+   WEBGL HOLOGRAPHIC SHADER — per-card canvas (unchanged hooks)
+   holo-shader.js mounts a <canvas> as the first child of every
+   .gig-card[data-curated="3"]. The selector below must beat
+   `.gig-card[data-curated] > *` from the rule that lifts content
+   to z-index: 2 — without this the canvas would join the flex
+   flow and stretch the card.
    ============================================================ */
-/* The selector must beat `.gig-card[data-curated] > *` (specificity 0,2,0)
-   from the rule above this block, otherwise the canvas inherits
-   position:relative + z-index:2 and joins the flex flow, stretching the card. */
 .gig-card[data-curated="3"] > .holo-shader-card-canvas {
   position: absolute;
   inset: 0;
@@ -1230,179 +1387,291 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   z-index: 0;
   display: block;
 }
-
-/* Make the holo card transparent so the canvas behind shows through.
-   Hide the CSS pseudo-element fallbacks so they don't double up. */
 .gig-card[data-curated="3"].holo-shader-active {
   background: transparent;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.55),
     inset 0 -1px 0 rgba(170, 168, 160, 0.25),
-    0 2px 14px rgba(140, 138, 130, 0.15);
+    0 8px 28px rgba(140, 138, 130, 0.18);
 }
 .gig-card[data-curated="3"].holo-shader-active::before,
 .gig-card[data-curated="3"].holo-shader-active::after {
   display: none;
 }
-
-/* Lighter body wash so more of the shader shows through behind text.
-   Increase opacity if text legibility suffers; decrease for richer foil. */
 .gig-card[data-curated="3"].holo-shader-active .gig-card__body {
   background: rgba(248, 246, 240, 0.32);
 }
 
 /* ============================================================
    PROMOTER LINK — clickable name on gig card
+   Frosted glass chip per the graphics manual.
    ============================================================ */
 .gig-card__promoter-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 3px 11px 3px 3px; /* tight left for logo, matches curator-badge */
+  gap: 0.45rem;
+  padding: 3px 12px 3px 3px;
   border-radius: var(--radius-pill);
-  background: white;
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+          backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid rgba(51, 128, 193, 0.22);
   color: var(--text);
-  font-size: 0.74rem;
-  font-weight: 500;
+  font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(51, 128, 193, 0.06);
 }
 .gig-card__promoter-link:hover,
 .gig-card__promoter-link:active {
-  background: var(--warm-grey);
-  border-color: var(--text-dim);
+  background: white;
+  border-color: var(--scene-blue);
+  color: var(--scene-blue-deep);
+  box-shadow: 0 4px 10px rgba(51, 128, 193, 0.14);
 }
 .promoter-pill__logo {
-  width: 20px; height: 20px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   object-fit: cover;
-  background: var(--slate);
+  background: var(--scene-blue-soft);
   flex-shrink: 0;
 }
 .promoter-pill__logo--placeholder {
-  background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+  background: var(--scene-gradient);
+}
+/* Promoter pill inside a curated (foil) footer — flip to dark glass so
+   the white name reads against the bright metal. */
+.gig-card[data-curated="1"] .gig-card__promoter-link,
+.gig-card[data-curated="2"] .gig-card__promoter-link {
+  background: rgba(0, 0, 0, 0.22);
+  border-color: rgba(255, 255, 255, 0.30);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.gig-card[data-curated="3"] .gig-card__promoter-link {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(51, 128, 193, 0.25);
 }
 
 /* ============================================================
-   PROMOTER SHEET — bottom-sheet profile view
+   IDENTITY CARDS · graphics manual §9
+   ────────────────────────────────────────────────────────────
+   One shared dark surface vocabulary, two signal colours:
+     · Curators  → cyan-blue accent  (--id-accent: var(--scene-cyan))
+     · Promoters → success green     (--id-accent: var(--success))
+   Used in three places:
+     1. Bottom-sheet profile  (.sheet[data-mode="promoter"])
+     2. Curator URL mode page header   (?curator=slug)
+     3. Promoter URL mode page header  (?promoter=slug)
+   The base navy gradient + corner-bloom geometry are identical;
+   only the accent colour rotates.
    ============================================================ */
 
-/* In promoter mode: hide the filter footer, remove body padding */
+/* ── 1. BOTTOM-SHEET PROMOTER CARD ───────────────────────────
+   The whole sheet flips to green dark mode when data-mode="promoter".
+   This includes the grip, header, close button, and body — there is
+   no light-on-dark seam between the sheet chrome and the card itself. */
+.sheet[data-mode="promoter"] {
+  background: linear-gradient(155deg, var(--id-ink) 0%, var(--id-ink-deep) 100%);
+  color: #fff;
+  border: 1px solid rgba(34, 168, 116, 0.20);
+  border-bottom: none;
+  box-shadow:
+    0 -8px 32px rgba(15, 26, 46, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
 .sheet[data-mode="promoter"] .sheet__footer { display: none; }
 .sheet[data-mode="promoter"] .sheet__body   { padding: 0; }
+.sheet[data-mode="promoter"] .sheet__header {
+  background: transparent;
+  border-bottom: 1px solid var(--id-rule-dark);
+  -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+}
+.sheet[data-mode="promoter"] .sheet__title {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--success);
+  background: none;
+  -webkit-text-fill-color: var(--success);
+}
+.sheet[data-mode="promoter"] .sheet__close {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+.sheet[data-mode="promoter"] .sheet__close:hover {
+  background: var(--success);
+  color: #0F1A2E;
+  border-color: var(--success);
+}
+.sheet[data-mode="promoter"] .sheet__grip {
+  background: rgba(255, 255, 255, 0.22);
+}
 
-/* Loading skeleton */
 .promoter-sheet__loading {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 3rem 1rem;
 }
-
-/* Root container — --promoter-accent set inline when brand colour exists */
-.promoter-sheet {
-  --promoter-accent: var(--teal);
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 2rem;
+.sheet[data-mode="promoter"] .promoter-sheet__loading .spinner {
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: var(--success);
 }
 
-/* Header: avatar, name, bio, links — centred column */
+/* Root container — sets the green accent for descendant rules.
+   Per-promoter brand colour can still override --id-accent inline via JS
+   (the existing app.js sets --promoter-accent — we mirror it to --id-accent
+   below). The structural greens (role label, events title, rules) stay
+   locked to --success so the surface always reads as a Scene promoter card. */
+.promoter-sheet {
+  --id-accent: var(--success);
+  --promoter-accent: var(--success); /* legacy alias for any inline JS reads */
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(2rem + var(--safe-bot));
+  color: #fff;
+}
+
 .promoter-sheet__header {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.55rem;
-  padding: 1.75rem 1.5rem 1.5rem;
+  gap: 0.6rem;
+  padding: 2rem 1.5rem 1.75rem;
   overflow: hidden;
-  border-top: 3px solid var(--promoter-accent);
-  border-bottom: 1px solid var(--border-sub);
+  border-top: none;
+  border-image: none;
+  border-bottom: 1px solid var(--id-rule-dark);
+  background: transparent;
+}
+/* Override the v3 inline-brand-colour rule so brand colours don't repaint
+   the structural dark surface — they're still allowed on the avatar rim. */
+.promoter-sheet[style*="--promoter-accent"] .promoter-sheet__header {
+  border-top: none;
+  border-image: none;
 }
 
-/* Subtle brand wash behind the header — purely decorative */
+/* Top-right green radial bloom — the signature §9 treatment. The second,
+   smaller bloom in the lower-left is the secondary harmonic that gives
+   the dark surface depth without making it busy. */
 .promoter-sheet__accent-bg {
   position: absolute;
   inset: 0;
-  background: var(--promoter-accent);
-  opacity: 0.15;
+  background:
+    radial-gradient(ellipse 380px 300px at 88% 12%, rgba(34, 168, 116, 0.34), transparent 62%),
+    radial-gradient(ellipse 300px 240px at 12% 88%, rgba(34, 168, 116, 0.10), transparent 60%);
+  opacity: 1;
   pointer-events: none;
 }
 
-/* Avatar */
 .promoter-sheet__avatar {
-  width: 80px;
-  height: 80px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2.5px solid var(--promoter-accent);
+  border: 3px solid var(--success);
   flex-shrink: 0;
-  position: relative; /* sit above accent-bg */
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.42);
 }
 .promoter-sheet__avatar--placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--promoter-accent);
-  color: white;
-  font-size: 1.75rem;
-  font-weight: 600;
+  background: var(--success);
+  color: #0F1A2E;
+  font-size: 1.85rem;
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-/* Name */
+/* Role marker — small uppercase JetBrains Mono lozenge in promoter green */
+.promoter-sheet__role {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--success);
+  position: relative;
+  margin: 0;
+}
+
 .promoter-sheet__name {
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.3rem;
+  font-weight: 700;
   letter-spacing: -0.025em;
-  color: var(--charcoal);
+  color: #fff;
   position: relative;
   margin: 0;
 }
 
-/* Bio */
 .promoter-sheet__bio {
-  font-size: 0.82rem;
-  color: var(--text-muted);
+  font-size: 0.86rem;
+  color: var(--id-on-dark);
   line-height: 1.55;
-  max-width: 28ch;
+  max-width: 32ch;
   margin: 0;
   position: relative;
 }
 
-/* Website + social links */
+/* Website + socials — green mono links on dark, no pill backgrounds
+   (the v3 pills were designed for light surfaces; here the dark background
+   provides all the contrast the link needs). */
 .promoter-sheet__website,
 .promoter-sheet__social-link {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--promoter-accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--success);
   text-decoration: none;
   position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  transition: opacity 0.15s;
 }
 .promoter-sheet__website:hover,
-.promoter-sheet__social-link:hover { text-decoration: underline; }
+.promoter-sheet__social-link:hover {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .promoter-sheet__socials {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem 1.1rem;
   justify-content: center;
   position: relative;
+  margin-top: 0.35rem;
 }
 
-/* Upcoming events section */
-.promoter-sheet__events { padding: 0 1rem; }
+.promoter-sheet__events { padding: 0 1.25rem; }
 
 .promoter-sheet__events-title {
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--promoter-accent);
-  padding: 1rem 0.25rem 0.6rem;
+  letter-spacing: 0.16em;
+  color: var(--success);
+  padding: 1.25rem 0.25rem 0.75rem;
   margin: 0;
 }
 
@@ -1413,50 +1682,50 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 }
 
 .promoter-sheet__event-item {
-  border-top: 1px solid var(--border-sub);
-  padding: 0.65rem 0.25rem;
+  border-top: 1px solid var(--id-rule-dark);
+  padding: 0.75rem 0.25rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 .promoter-sheet__event-item:last-child {
-  border-bottom: 1px solid var(--border-sub);
+  border-bottom: 1px solid var(--id-rule-dark);
 }
 
 .promoter-sheet__event-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   text-decoration: none;
   color: inherit;
   width: 100%;
 }
 .promoter-sheet__event-link:hover .promoter-sheet__event-title {
-  color: var(--promoter-accent);
+  color: var(--success);
 }
 
-/* 16:9 thumbnail */
 .promoter-sheet__event-thumb {
   width: 72px;
   height: 40px;
-  border-radius: 5px;
+  border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
-  background: var(--warm-grey);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
 }
 .promoter-sheet__event-thumb--placeholder {
-  background: var(--border-sub);
+  background: linear-gradient(135deg, rgba(34, 168, 116, 0.30), rgba(34, 168, 116, 0.10));
 }
 
 .promoter-sheet__event-text {
   flex: 1;
-  min-width: 0; /* prevent title overflow */
+  min-width: 0;
 }
 
 .promoter-sheet__event-title {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--charcoal);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #fff;
   margin-bottom: 0.2rem;
   transition: color 0.15s;
   white-space: nowrap;
@@ -1465,13 +1734,125 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 }
 
 .promoter-sheet__event-meta {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--id-on-dark-mut);
+  font-variant-numeric: tabular-nums;
 }
 
 .promoter-sheet__no-events {
-  font-size: 0.82rem;
-  color: var(--text-dim);
+  font-size: 0.86rem;
+  color: var(--id-on-dark-mut);
   text-align: center;
-  padding: 1.5rem 1rem;
+  padding: 1.75rem 1rem;
+}
+
+/* ── 2 & 3. URL-MODE PAGE HEADERS ────────────────────────────
+   When the page is loaded with ?curator=slug or ?promoter=slug, the
+   .gigs-header at the top of the page becomes that entity's identity
+   card. We detect each mode by checking for the visible byline (curator
+   mode) or visible avatar (promoter mode) — no JS class toggle required.
+
+   Both modes share the deep-navy gradient base from §9. Only the accent
+   colour rotates: cyan for curators, green for promoters.
+   ──────────────────────────────────────────────────────────── */
+
+/* Shared dark-mode treatment for both URL modes */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])),
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) {
+  background: linear-gradient(155deg, var(--id-ink) 0%, var(--id-ink-deep) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: none;
+  box-shadow:
+    0 22px 50px rgba(15, 26, 46, 0.35),
+    0 2px 6px rgba(15, 26, 46, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+}
+/* Suppress the white specular sheen — wrong on dark */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden]))::before,
+.gigs-header:has(.gigs-header__curator-byline:not([hidden]))::before {
+  display: none;
+}
+
+/* Title flips from gradient text to plain white. The gradient-clip
+   technique used in v4 leaves the colour transparent in dark mode unless
+   we explicitly reset the fill colour. */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__title,
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__title {
+  background: none;
+  -webkit-background-clip: border-box;
+          background-clip: border-box;
+  -webkit-text-fill-color: #fff;
+  color: #fff;
+}
+
+/* Date subtitle goes light-on-dark in both modes */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__date,
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__date {
+  color: var(--id-on-dark);
+}
+
+/* CURATOR mode — cyan accent (manual §4: cyan-blue is the curator signal) */
+.gigs-header:has(.gigs-header__curator-byline:not([hidden]))::after {
+  background:
+    radial-gradient(ellipse 50% 60% at 100% 0%, rgba(75, 185, 208, 0.32), transparent 65%),
+    radial-gradient(ellipse 50% 60% at 0% 100%, rgba(75, 185, 208, 0.12), transparent 65%);
+}
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__subtitle {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--scene-cyan);
+  text-transform: uppercase;
+}
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__curator-byline {
+  color: var(--id-on-dark);
+  font-weight: 500;
+}
+
+/* PROMOTER mode — green accent (manual §4: green is the promoter signal) */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden]))::after {
+  background:
+    radial-gradient(ellipse 50% 60% at 100% 0%, rgba(34, 168, 116, 0.32), transparent 65%),
+    radial-gradient(ellipse 50% 60% at 0% 100%, rgba(34, 168, 116, 0.12), transparent 65%);
+}
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__subtitle {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--success);
+  text-transform: uppercase;
+}
+/* The avatar in promoter mode keeps its white rim but adds a green
+   outer ring so it reads as an identity-card avatar, not a generic logo */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__promoter-avatar {
+  border: 3px solid var(--success);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.42);
+}
+
+/* Curator byline — when JS clears the text, collapse its spacing */
+.gigs-header__curator-byline:empty {
+  margin-top: 0;
+  font-size: 0;
+}
+
+/* Curator mode: no search bar, no toolbar — minimise bottom padding */
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) {
+  padding-bottom: 1.5rem;
+}
+
+/* Promoter mode: search hidden, toolbar visible — leave just enough room */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) {
+  padding-bottom: 4.5rem;
+}
+
+/* Pull toolbar up into the promoter header panel */
+.gigs-page:has(.gigs-header__promoter-avatar:not([hidden])) .toolbar {
+  margin-top: -3.5rem;
 }

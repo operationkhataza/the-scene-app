@@ -1181,12 +1181,7 @@ async function init() {
     const dayName = dateToShow.toLocaleDateString('en-ZA', { weekday: 'long' });
     const dayNum = dateToShow.getDate();
     const month = dateToShow.toLocaleDateString('en-ZA', { month: 'long' });
-    const suffix = (n => {
-      if (n >= 11 && n <= 13) return 'th';
-      const lastDigit = n % 10;
-      return lastDigit === 1 ? 'st' : lastDigit === 2 ? 'nd' : lastDigit === 3 ? 'rd' : 'th';
-    })(dayNum);
-    headerDateEl.textContent = `${dayName} the ${dayNum}${suffix} ${month}`;
+    headerDateEl.textContent = `${dayName} ${dayNum} ${month}`;
   }
 
   try {
@@ -1210,7 +1205,7 @@ async function init() {
       const curatorBylineEl = document.getElementById('gigs-header-curator-byline');
       if (titleEl) titleEl.textContent = curator?.name || 'Curator Picks';
       if (subtitleEl) subtitleEl.textContent = 'Curated picks';
-      if (curatorBylineEl) curatorBylineEl.hidden = false;
+      if (curatorBylineEl) { curatorBylineEl.hidden = false; curatorBylineEl.textContent = ''; }
     }
 
     // ── PROMOTER HEADER ──
