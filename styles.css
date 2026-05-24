@@ -99,6 +99,9 @@ body::-webkit-scrollbar {
 img { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+/* Ensure the HTML hidden attribute always works, even when a CSS reset sets display on an element type.
+   Without this, `img { display: block }` above overrides [hidden] for any img element. */
+[hidden] { display: none !important; }
 
 .gigs-page {
   max-width: 640px;
@@ -142,9 +145,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   height: 64px;
   border-radius: 50%;
   object-fit: cover;
-  display: block;
   margin: 0 auto 0.75rem;
   border: 2px solid var(--border);
+}
+/* Only show as block when the hidden attribute is absent.
+   Without this, display:block would override the browser's UA
+   [hidden]{display:none} rule and the circle appears in all views. */
+.gigs-header__promoter-avatar:not([hidden]) {
+  display: block;
 }
 
 /* SEARCH BAR */
