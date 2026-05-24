@@ -1526,14 +1526,10 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   border-top-color: var(--success);
 }
 
-/* Root container — sets the green accent for descendant rules.
-   Per-promoter brand colour can still override --id-accent inline via JS
-   (the existing app.js sets --promoter-accent — we mirror it to --id-accent
-   below). The structural greens (role label, events title, rules) stay
-   locked to --success so the surface always reads as a Scene promoter card. */
+/* Root container — locks the green accent for all descendant rules.
+   The surface always reads as a Scene promoter card. */
 .promoter-sheet {
   --id-accent: var(--success);
-  --promoter-accent: var(--success); /* legacy alias for any inline JS reads */
   display: flex;
   flex-direction: column;
   padding-bottom: calc(2rem + var(--safe-bot));
@@ -1554,13 +1550,6 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   border-bottom: 1px solid var(--id-rule-dark);
   background: transparent;
 }
-/* Override the v3 inline-brand-colour rule so brand colours don't repaint
-   the structural dark surface — they're still allowed on the avatar rim. */
-.promoter-sheet[style*="--promoter-accent"] .promoter-sheet__header {
-  border-top: none;
-  border-image: none;
-}
-
 /* Top-right green radial bloom — the signature §9 treatment. The second,
    smaller bloom in the lower-left is the secondary harmonic that gives
    the dark surface depth without making it busy. */

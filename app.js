@@ -352,7 +352,7 @@ function closeSheet() {
 
 async function fetchPromoter(id) {
   const res = await fetch(
-    `${API}/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links,primary_color,secondary_color`
+    `${API}/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
   );
   if (!res.ok) throw new Error(`API ${res.status}`);
   const json = await res.json();
@@ -376,11 +376,6 @@ async function fetchPromoterEvents(promoterId) {
 }
 
 function renderPromoterProfile(promoter, events) {
-  // Brand accent — falls back to --teal if no primary_color set
-  const accentStyle = promoter.primary_color
-    ? ` style="--promoter-accent: ${esc(promoter.primary_color)}"`
-    : '';
-
   // Avatar — image or initial placeholder
   const avatarSrc = promoter.profile_image
     ? imgUrl(promoter.profile_image, { width: '120', height: '120', fit: 'cover' })
@@ -445,7 +440,7 @@ function renderPromoterProfile(promoter, events) {
     : `<p class="promoter-sheet__no-events">No upcoming events scheduled.</p>`;
 
   return `
-    <div class="promoter-sheet"${accentStyle}>
+    <div class="promoter-sheet">
       <div class="promoter-sheet__header">
         <div class="promoter-sheet__accent-bg"></div>
         ${avatarHtml}
