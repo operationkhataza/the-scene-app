@@ -1856,3 +1856,450 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .gigs-page:has(.gigs-header__promoter-avatar:not([hidden])) .toolbar {
   margin-top: -3.5rem;
 }
+
+/* ============================================================
+   CALENDAR VIEW
+   ────────────────────────────────────────────────────────────
+   A sibling surface to the gig guide — calendar.html + calendar.js.
+   Uses the same iridescent ice page background, the same glass
+   header, the same JetBrains-Mono-for-data type rule, and the same
+   tier colour signal (holo gradient · gold · silver). Different
+   information shape: month grid → day list, not card stream.
+   ============================================================ */
+
+/* ── Page chrome ─────────────────────────────────────────── */
+.calendar-page {
+  /* Calendar pages don't need the gig guide's deep bottom padding
+     because there's no footer ribbon below the content. */
+  padding-bottom: calc(2rem + var(--safe-bot));
+}
+
+.calendar-header {
+  /* Same glass treatment as .gigs-header (already styled above) but
+     a touch shorter — the calendar's primary feature is the grid,
+     so the header doesn't need to dominate. */
+  padding-top: calc(3.25rem + var(--safe-top));
+  padding-bottom: 2rem;
+}
+.calendar-header .gigs-header__title {
+  font-size: 2.4rem;
+  letter-spacing: -0.04em;
+}
+.calendar-header .gigs-header__date {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--scene-blue);
+}
+
+/* ── Month navigator: prev · today · next ────────────────── */
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 1.25rem 1.25rem 0.85rem;
+  padding: 0.5rem;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-sub);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+.cal-nav__chev {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(51, 128, 193, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--scene-blue);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.cal-nav__chev:hover { background: white; border-color: var(--scene-blue); }
+.cal-nav__chev:active { transform: scale(0.94); }
+.cal-nav__chev svg { width: 13px; height: 13px; }
+
+.cal-nav__today {
+  flex: 1;
+  height: 36px;
+  padding: 0 1rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.cal-nav__today:hover { color: var(--scene-blue); }
+.cal-nav__today:active { transform: scale(0.98); }
+
+/* ── Weekday header strip ────────────────────────────────── */
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 0 1.25rem;
+  margin-bottom: 0.45rem;
+}
+.cal-weekdays > span {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.35rem 0;
+}
+
+/* ── Month grid ──────────────────────────────────────────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* Row count is set dynamically by JS via --cal-rows; default 6 in
+     case the var isn't set (e.g. during the loading state). */
+  grid-auto-rows: minmax(52px, 1fr);
+  gap: 4px;
+  padding: 0 1.25rem;
+  /* When the loading state is showing, the grid collapses to one
+     centred block so the spinner sits naturally. */
+}
+.cal-grid:has(> .state) {
+  display: block;
+  padding: 3rem 1.25rem;
+}
+
+/* ── Day cell ────────────────────────────────────────────── */
+.cal-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.4rem 0.25rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(51, 128, 193, 0.08);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+  min-width: 0; /* let grid track minmax do its job */
+  aspect-ratio: 1 / 1.1;
+}
+.cal-cell:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(51, 128, 193, 0.22);
+}
+.cal-cell:active { transform: scale(0.97); }
+
+.cal-cell--out {
+  /* Days from prev/next month — show, but faded. They don't carry
+     selection paint or event signals even if the underlying data
+     would suggest them; their purpose is grid completion, not info. */
+  background: transparent;
+  border-color: transparent;
+}
+.cal-cell--out .cal-cell__num { color: var(--text-dim); }
+.cal-cell--out .cal-pip,
+.cal-cell--out .cal-cell__count { display: none; }
+/* If a previously-selected day scrolls out of view as we change months,
+   suppress the selected fill — the day panel below is already empty in
+   that state, so the visual highlight would be misleading. */
+.cal-cell--out.cal-cell--selected {
+  background: transparent;
+  box-shadow: none;
+}
+.cal-cell--out.cal-cell--selected .cal-cell__num {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.cal-cell__num {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tier pips — the dense day signal ────────────────────── */
+.cal-cell__pips {
+  display: flex;
+  gap: 3px;
+  margin-top: auto;
+  margin-bottom: 2px;
+  min-height: 6px; /* reserve space so empty days don't shrink the cell */
+}
+.cal-pip {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--scene-blue);
+  display: block;
+}
+/* Tier-specific pip colours match the manual's signal palette:
+   Silver (1), Gold (2), Holographic (3 — rainbow conic). */
+.cal-pip--t1 { background: #B8BCC4; }                          /* Silver */
+.cal-pip--t2 { background: #D49526; }                          /* Gold   */
+.cal-pip--t3 {                                                 /* Holo   */
+  background: conic-gradient(from 180deg,
+    #C9A2E0, #F4C9D6, #B7E5DC, #F0D9A4, #C9A2E0);
+}
+.cal-pip--t0 { background: var(--scene-blue-soft); }           /* Uncurated */
+
+/* Count badge — only appears when there are 2+ events on a day.
+   Sits as a superscript-style pill in the top-right corner; the day
+   number always wins for primary read. */
+.cal-cell__count {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: var(--scene-blue);
+  background: rgba(75, 185, 208, 0.18);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Today, selected — two distinct treatments ───────────── */
+.cal-cell--today {
+  /* Today: thin scene-blue ring, no fill */
+  border-color: var(--scene-blue);
+  background: rgba(255, 255, 255, 0.65);
+}
+.cal-cell--today .cal-cell__num {
+  color: var(--scene-blue-deep);
+  font-weight: 700;
+}
+
+.cal-cell--selected {
+  /* Selected: full Scene gradient fill, white text */
+  background: var(--selected-bg);
+  border-color: transparent;
+  box-shadow: var(--selected-shadow);
+}
+.cal-cell--selected .cal-cell__num { color: white; font-weight: 700; }
+.cal-cell--selected .cal-cell__count {
+  background: rgba(255, 255, 255, 0.28);
+  color: white;
+}
+.cal-cell--selected .cal-pip--t0 { background: rgba(255, 255, 255, 0.85); }
+.cal-cell--selected .cal-pip--t1 { background: white; }
+.cal-cell--selected .cal-pip--t2 { background: #FFE0A1; }
+/* Holo pip stays as-is on selected (the conic gradient still reads) */
+
+/* When a day is both today AND selected, selection wins (the gradient
+   fill already implies "this is the one") — but we keep a subtle white
+   inner ring so it's still visibly today. */
+.cal-cell--selected.cal-cell--today {
+  box-shadow:
+    var(--selected-shadow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* ── Day-detail panel below the grid ─────────────────────── */
+.cal-day {
+  margin-top: 2rem;
+  padding: 0 1.25rem;
+}
+
+.cal-day__header {
+  margin-bottom: 1.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-sub);
+}
+.cal-day__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--scene-blue);
+  margin: 0 0 0.35rem;
+}
+.cal-day__title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  color: var(--text);
+  margin: 0;
+  text-wrap: balance;
+}
+.cal-day__count {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0.45rem 0 0;
+}
+
+.cal-day__empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+.cal-day__empty p { font-size: 0.92rem; margin: 0; }
+.cal-day__empty-sub {
+  font-size: 0.8rem !important;
+  color: var(--text-dim);
+  margin-top: 0.5rem !important;
+  max-width: 28ch;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.cal-day__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ── Mini-card — graphics manual §7 line-item ────────────── */
+.mini-card {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-sub);
+  box-shadow: var(--shadow-xs);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+a.mini-card:hover {
+  border-color: rgba(51, 128, 193, 0.32);
+  box-shadow: var(--shadow-sm);
+}
+a.mini-card:active { transform: scale(0.99); }
+
+/* 48×48 square image with rounded corners */
+.mini-card__img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--scene-blue-wash);
+  flex-shrink: 0;
+}
+.mini-card__img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scene-gradient);
+  color: white;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.mini-card__body {
+  min-width: 0; /* allow text-overflow on title */
+}
+.mini-card__title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.25;
+  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-card__venue {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-bottom: 0.18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.mini-card__sep {
+  color: var(--text-dim);
+  margin: 0 0.05rem;
+}
+
+/* Curator count pill — scene-cyan tinted lozenge */
+.mini-card__curators {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: rgba(75, 185, 208, 0.14);
+  border: 1px solid rgba(51, 128, 193, 0.18);
+  color: var(--scene-blue);
+  text-transform: none;
+  white-space: nowrap;
+}
+
+/* ── Tier accents on the mini-card itself ────────────────────
+   Subtle — the mini-card's primary signal is the pips in the
+   grid above; here we just add a quiet left-edge stripe so the
+   day list still reads tier hierarchy when scanning.
+   ──────────────────────────────────────────────────────────── */
+.mini-card--t1 { border-left: 3px solid #B8BCC4; }   /* Silver */
+.mini-card--t2 { border-left: 3px solid #D49526; }   /* Gold   */
+.mini-card--t3 {
+  /* Holographic: same rainbow edge as the grid pip, but as a vertical stripe */
+  border-left: 3px solid transparent;
+  background-image:
+    linear-gradient(var(--glass-bg-strong), var(--glass-bg-strong)),
+    linear-gradient(180deg, #C9A2E0, #F4C9D6, #B7E5DC, #F0D9A4);
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+}
+
+/* ── Responsive — wider viewports get a little more breathing room ── */
+@media (min-width: 480px) {
+  .cal-grid          { padding: 0 1.5rem; gap: 6px; }
+  .cal-weekdays      { padding: 0 1.5rem; gap: 6px; }
+  .cal-nav           { margin-left: 1.5rem; margin-right: 1.5rem; }
+  .cal-day           { padding: 0 1.5rem; }
+  .cal-cell__num     { font-size: 1.05rem; }
+  .calendar-header .gigs-header__title { font-size: 2.8rem; }
+}

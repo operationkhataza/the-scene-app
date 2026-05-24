@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
+       Same viewport contract as event-guide.html so the calendar feels
+       native inside Fabrik's WebView. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F4F7FB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Cape Town's live music calendar — a scrollable month view of every event, curated by The Scene.">
+  <title>Calendar — The Scene Cape Town</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <main class="gigs-page calendar-page">
+
+    <!-- Page header — same glass treatment as the gig guide so the two
+         surfaces read as one app. Title shows the current month. -->
+    <header class="gigs-header calendar-header">
+      <p class="gigs-header__subtitle" id="calendar-eyebrow">Calendar</p>
+      <h1 class="gigs-header__title" id="calendar-title">May</h1>
+      <p class="gigs-header__date" id="calendar-year">2026</p>
+    </header>
+
+    <!-- Month navigator: prev chevron · month label · next chevron.
+         Tapping the central label returns to today. -->
+    <div class="cal-nav" id="cal-nav" role="navigation" aria-label="Month navigation">
+      <button class="cal-nav__chev" id="cal-nav-prev" type="button" aria-label="Previous month">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="cal-nav__today" id="cal-nav-today" type="button" aria-label="Jump to today">
+        <span class="cal-nav__today-label">Today</span>
+      </button>
+      <button class="cal-nav__chev" id="cal-nav-next" type="button" aria-label="Next month">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M5 2L10 7L5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Weekday header row. Stays fixed; cells below scroll if needed. -->
+    <div class="cal-weekdays" aria-hidden="true">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+      <span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+
+    <!-- Month grid. Populated by calendar.js: 7 cols × N rows, where each
+         cell carries the day number + up to 3 tier-coloured pips
+         indicating events on that day. -->
+    <section class="cal-grid" id="cal-grid" role="grid" aria-label="Month calendar">
+      <div class="state">
+        <div class="spinner"></div>
+        <p class="state__text" style="margin-top: 0.75rem;">Loading calendar…</p>
+      </div>
+    </section>
+
+    <!-- Selected day panel — shows that day's events as mini-cards stacked
+         vertically (manual §7 mini-card spec: 48px image + title + meta).
+         Initially shows today; updates on cell tap. -->
+    <section class="cal-day" id="cal-day" aria-live="polite">
+      <!-- populated by calendar.js -->
+    </section>
+
+  </main>
+
+  <script src="calendar.js"></script>
+</body>
+</html>
