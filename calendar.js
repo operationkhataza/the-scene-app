@@ -33,13 +33,11 @@ document.addEventListener('touchend', e => {
 const API = 'https://api.thescenecapetown.co.za';
 
 /* DOM */
-const TITLE_EL    = document.getElementById('calendar-title');
-const YEAR_EL     = document.getElementById('calendar-year');
 const GRID_EL     = document.getElementById('cal-grid');
 const DAY_EL      = document.getElementById('cal-day');
 const PREV_BTN    = document.getElementById('cal-nav-prev');
 const NEXT_BTN    = document.getElementById('cal-nav-next');
-const TODAY_BTN   = document.getElementById('cal-nav-today');
+const MONTH_LABEL = document.getElementById('cal-nav-month-label');
 
 /* ============================================================
    STATE — minimal. Just the focused month and the selected day,
@@ -283,35 +281,32 @@ function priceLabel(gig) {
 }
 
 /* ============================================================
-   MINI-CARD — graphics manual §7 line-item.
-     [48px square image] [title]
-                         [tier pip · curator-count · time · price]
-   The image is the poster cropped square; falls back to the
-   event's first letter on a Scene-gradient background.
+   DAY CARD — 16:9 poster card matching the manage-events style.
+     [16:9 poster thumbnail] [title · venue · time · price]
+   Preserves the poster's aspect ratio exactly as cropped.
    ============================================================ */
-function renderMiniCard(gig) {
+function renderDayCard(gig) {
   const tier = gigTier(gig);
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
 
-  const posterSrc = imgUrl(gig.poster, { width: '120', height: '120', fit: 'cover' });
+  const posterSrc = imgUrl(gig.poster, { width: '320', height: '180', fit: 'contain' });
   const imageHtml = posterSrc
-    ? `<img class="mini-card__img" src="${posterSrc}" alt="" loading="lazy">`
-    : `<div class="mini-card__img mini-card__img--placeholder">${esc(gig.title.charAt(0).toUpperCase())}</div>`;
+    ? `<img class="cal-day-card__img" src="${posterSrc}" alt="" loading="lazy">`
+    : `<div class="cal-day-card__img cal-day-card__img--placeholder">${esc(gig.title.charAt(0).toUpperCase())}</div>`;
 
   // Meta line: curator count pill (only if curated) · time · price
   const curatorPill = curators.length > 0
-    ? `<span class="mini-card__curators">${curators.length} curator${curators.length === 1 ? '' : 's'}</span>`
+    ? `<span class="cal-day-card__curators">${curators.length} curator${curators.length === 1 ? '' : 's'}</span>`
     : '';
 
   const venueName = gig.venue?.name ? esc(gig.venue.name) : '';
   const timeStr   = formatTime(gig.doors_time);
   const priceStr  = priceLabel(gig);
 
-  // Build the meta row, skipping empty segments cleanly
   const metaSegments = [curatorPill, timeStr ? `<span>${esc(timeStr)}</span>` : '', `<span>${esc(priceStr)}</span>`]
     .filter(Boolean);
   const metaHtml = metaSegments.length > 0
-    ? `<div class="mini-card__meta">${metaSegments.join('<span class="mini-card__sep">·</span>')}</div>`
+    ? `<div class="cal-day-card__meta">${metaSegments.join('<span class="cal-day-card__sep">·</span>')}</div>`
     : '';
 
   const tag = gig.ticket_url ? 'a' : 'div';
@@ -320,11 +315,13 @@ function renderMiniCard(gig) {
     : '';
 
   return `
-    <${tag} class="mini-card mini-card--t${tier}" ${attrs}>
-      ${imageHtml}
-      <div class="mini-card__body">
-        <div class="mini-card__title">${esc(gig.title)}</div>
-        ${venueName ? `<div class="mini-card__venue">${venueName}</div>` : ''}
+    <${tag} class="cal-day-card cal-day-card--t${tier}" ${attrs}>
+      <div class="cal-day-card__poster">
+        ${imageHtml}
+      </div>
+      <div class="cal-day-card__body">
+        <div class="cal-day-card__title">${esc(gig.title)}</div>
+        ${venueName ? `<div class="cal-day-card__venue">${venueName}</div>` : ''}
         ${metaHtml}
       </div>
     </${tag}>
@@ -369,7 +366,7 @@ function renderDay() {
     return;
   }
 
-  const list = events.map(renderMiniCard).join('');
+  const list = events.map(renderDayCard).join('');
   DAY_EL.innerHTML = heading + `<div class="cal-day__list">${list}</div>`;
 }
 
@@ -422,8 +419,9 @@ async function goToMonth(d) {
 }
 
 function updateHeader() {
-  TITLE_EL.textContent = formatMonth(state.viewMonth);
-  YEAR_EL.textContent  = String(state.viewMonth.getFullYear());
+  const monthName = formatMonth(state.viewMonth);
+  const year      = String(state.viewMonth.getFullYear());
+  MONTH_LABEL.textContent = `${monthName} ${year}`;
 }
 
 /* ============================================================
@@ -465,10 +463,5 @@ async function init() {
 
 PREV_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth, -1)));
 NEXT_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth,  1)));
-TODAY_BTN.addEventListener('click', () => {
-  const today = new Date();
-  state.selectedDay = isoDate(today);
-  goToMonth(today).then(renderDay);
-});
 
 init();
