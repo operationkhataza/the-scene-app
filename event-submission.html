@@ -193,6 +193,14 @@
                 </div>
                 <button class="img-upload-remove" id="poster-remove" type="button">✕</button>
               </div>
+              <div class="poster-upload-error" id="poster-error-wrap">
+                <div class="poster-error-icon">⚠</div>
+                <div class="poster-error-msg" id="poster-error-msg">Upload failed — please try again.</div>
+                <div class="poster-error-actions">
+                  <button type="button" class="poster-error-retry" id="poster-error-retry">Try again</button>
+                  <button type="button" class="poster-error-change" id="poster-error-change">Choose different image</button>
+                </div>
+              </div>
               <input type="file" id="poster-input" accept="image/*" hidden>
             </div>
             <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
@@ -264,7 +272,8 @@
               <div class="fg">
                 <label>Tags <span class="opt">(optional)</span></label>
                 <div class="tags-input-wrap" id="tags-wrap">
-                  <input type="text" class="tags-bare-input" id="tags-input" placeholder="Type and press Enter…">
+                  <input type="text" class="tags-bare-input" id="tags-input" placeholder="Type a tag…">
+                  <button type="button" class="tags-add-btn" id="tags-add-btn" aria-label="Add tag">+</button>
                 </div>
                 <div class="form-hint">e.g. outdoor, rooftop, family-friendly</div>
               </div>
@@ -491,6 +500,15 @@
       const res = await fetch(`${API_URL}/files`, { method: 'POST', body: fd });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.errors?.[0]?.message || `Upload failed (${res.status})`); }
       return (await res.json()).data.id;
+    }
+
+    async function deleteFile(fileId) {
+      // Best-effort — do not block the UI if this fails
+      try {
+        await fetch(`${API_URL}/files/${fileId}`, { method: 'DELETE' });
+      } catch (e) {
+        console.warn('[poster] Could not delete orphaned file', fileId, e);
+      }
     }
 
     /* FORM TYPE INIT — apply config to DOM before user sees anything */
@@ -758,14 +776,25 @@
     });
 
     /* TAGS */
-    const tagsInput = document.getElementById('tags-input');
-    const tagsWrap  = document.getElementById('tags-wrap');
+    const tagsInput  = document.getElementById('tags-input');
+    const tagsWrap   = document.getElementById('tags-wrap');
+    const tagsAddBtn = document.getElementById('tags-add-btn');
     tagsWrap.addEventListener('click', () => tagsInput.focus());
     tagsInput.addEventListener('keydown', e => {
       if ((e.key === 'Enter' || e.key === ',') && tagsInput.value.trim()) {
-        e.preventDefault(); addTag(tagsInput.value.replace(/,$/, '').trim()); tagsInput.value = '';
+        e.preventDefault(); addTag(tagsInput.value.replace(/,$/, '').trim()); tagsInput.value = ''; tagsAddBtn.classList.remove('is-visible');
       }
       if (e.key === 'Backspace' && !tagsInput.value && state.tags.length) { state.tags.pop(); renderTags(); }
+    });
+    // Show/hide the + button as the user types — primary commit method on mobile
+    tagsInput.addEventListener('input', () => {
+      tagsAddBtn.classList.toggle('is-visible', tagsInput.value.trim().length > 0);
+    });
+    tagsAddBtn.addEventListener('click', () => {
+      if (tagsInput.value.trim()) {
+        addTag(tagsInput.value.trim()); tagsInput.value = ''; tagsAddBtn.classList.remove('is-visible');
+        tagsInput.focus();
+      }
     });
     function addTag(tag) {
       const clean = tag.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim();
@@ -778,6 +807,7 @@
       ).join('');
       tagsWrap.innerHTML = pills;
       tagsWrap.appendChild(tagsInput);
+      tagsWrap.appendChild(tagsAddBtn);
       tagsWrap.querySelectorAll('.tag-remove').forEach(btn => {
         btn.addEventListener('click', () => { state.tags = state.tags.filter(t => t !== btn.dataset.t); renderTags(); });
       });
@@ -812,6 +842,7 @@
     /* POSTER UPLOAD — with Cropper.js 16:9 crop modal */
     const posterWrap   = document.getElementById('poster-wrap');
     const posterDrop   = document.getElementById('poster-drop');
+    const previewDiv   = document.getElementById('poster-preview');
     const posterInput  = document.getElementById('poster-input');
     const posterRemove = document.getElementById('poster-remove');
     const cropModal    = document.getElementById('crop-modal');
@@ -832,14 +863,49 @@
       if (posterInput.files[0]) openCropper(posterInput.files[0]);
     });
     posterRemove.addEventListener('click', () => {
+      // If a file was already uploaded to Directus, delete it so it doesn't orphan
+      if (state.posterFileId) { deleteFile(state.posterFileId); }
       posterWrap.dataset.state = 'empty';
-      previewDiv.style.aspectRatio        = '';
-      previewDiv.style.width              = '';
+      previewDiv.style.aspectRatio = '';
+      previewDiv.style.width       = '';
       posterInput.value          = '';
       state.posterFileId    = null;
       state.pendingFile     = null;
       state.pendingCropData = null;
       if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
+    });
+
+    // Upload-error state: retry with the same file + crop, or start over
+    document.getElementById('poster-error-retry').addEventListener('click', async () => {
+      if (!state.pendingFile || !state.pendingCropData) {
+        // pendingFile lost — fall back to letting the user re-select
+        posterWrap.dataset.state = 'empty';
+        posterInput.value = '';
+        return;
+      }
+      posterWrap.dataset.state = 'uploading';
+      try {
+        const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
+        const slugTitle = rawTitle
+          ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : 'poster';
+        const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
+        state.posterFileId = await uploadFile(namedFile);
+        state.pendingFile  = null;
+        posterWrap.dataset.state = 'uploaded';
+      } catch (err) {
+        posterWrap.dataset.state = 'upload-error';
+        document.getElementById('poster-error-msg').textContent = `Upload failed: ${err.message}`;
+      }
+    });
+    document.getElementById('poster-error-change').addEventListener('click', () => {
+      // Discard current file and crop, start fresh
+      state.pendingFile     = null;
+      state.pendingCropData = null;
+      posterInput.value     = '';
+      if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
+      posterWrap.dataset.state = 'empty';
     });
 
     /* Accepted MIME types — must match Directus allowedMimeTypes on events.poster */
@@ -973,18 +1039,32 @@
       posterInput.value = '';
     });
 
-    cropConfirm.addEventListener('click', () => {
+    cropConfirm.addEventListener('click', async () => {
       if (!cropper) return;
 
-      // getData() returns crop rectangle in natural image coordinates — zero memory overhead.
-      // File is NOT uploaded here. Upload happens in submitGig() only.
+      // Capture crop coordinates — zero memory overhead (no canvas export)
       state.pendingCropData = cropper.getData(true);
-
-      // Close modal — crop data is saved, confirmation state shown
       closeCropModal();
 
-      // Show confirmation state — no preview rendering, crop is applied server-side
-      posterWrap.dataset.state = 'uploaded';
+      // Upload the file immediately so the File object doesn't survive in memory
+      // across tab switches (where mobile OS can GC it under memory pressure).
+      posterWrap.dataset.state = 'uploading';
+      try {
+        const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
+        const slugTitle = rawTitle
+          ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : 'poster';
+        const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
+        state.posterFileId = await uploadFile(namedFile);
+        state.pendingFile  = null;   // bytes are in Directus now — no need to hold in memory
+        posterWrap.dataset.state = 'uploaded';
+      } catch (err) {
+        // Do NOT clear pendingCropData here — the crop is still valid and needed for retry
+        posterWrap.dataset.state = 'upload-error';
+        document.getElementById('poster-error-msg').textContent =
+          `Upload failed: ${err.message}`;
+      }
     });
 
     function closeCropModal() {
@@ -1065,8 +1145,8 @@
           ${esc(venue)}<br>
           ${esc(config.badge)}${formatLabel ? ' · ' + esc(formatLabel) : ''} · ${isFree ? 'Free' : 'Ticketed'}
         </div>
-        <div class="${state.pendingFile ? 'summary-poster-ok' : 'summary-poster-missing'}">
-          ${state.pendingFile ? '✓ Poster ready' : '✗ No poster — consider going back to add one'}
+        <div class="${(state.posterFileId || state.pendingFile) ? 'summary-poster-ok' : 'summary-poster-missing'}">
+          ${(state.posterFileId || state.pendingFile) ? '✓ Poster ready' : '✗ No poster — consider going back to add one'}
         </div>`;
     }
 
@@ -1101,27 +1181,23 @@
       const btn = document.getElementById('btn-next');
       btn.disabled = true; btn.textContent = 'Submitting…';
 
-      // Upload poster now — file is held in memory until this point, never uploaded early.
-      // This prevents orphaned files in Directus if the user changes or removes their poster.
-      if (state.pendingFile && state.pendingCropData) {
+      // Poster is uploaded eagerly at crop confirm — state.posterFileId is already set.
+      // Safety net: if somehow pendingFile survived (e.g. upload was never triggered), upload now.
+      if (state.pendingFile && state.pendingCropData && !state.posterFileId) {
         try {
-          const rawTitle = document.getElementById('inp-title')?.value?.trim() || '';
+          const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
           const slugTitle = rawTitle
             ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
             : 'poster';
-          const ext      = state.pendingFile.name.split('.').pop() || 'png';
+          const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
           const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
           state.posterFileId = await uploadFile(namedFile);
+          state.pendingFile  = null;
         } catch (err) {
           toast(`Poster upload failed — ${err.message}. Please try again.`, 'err');
           btn.disabled = false; btn.textContent = 'Submit gig →';
           return;
         }
-      } else if (state.pendingCropData && !state.pendingFile) {
-        // File object was lost (e.g. iOS purged WKWebView memory) — ask user to re-select
-        toast('Your poster was lost — please go back and re-select it before submitting.', 'err');
-        btn.disabled = false; btn.textContent = 'Submit gig →';
-        return;
       }
 
       const title  = document.getElementById('inp-title').value.trim();
@@ -1186,6 +1262,8 @@
       document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
       document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
       state.selectedVenueId = null; state.selectedVenueName = null;
+      // Note: do NOT delete posterFileId here — resetForm is called after successful submission,
+      // so the file is legitimately linked to the new event. Only deleteFile on explicit remove.
       state.posterFileId = null; state.pendingFile = null; state.pendingCropData = null;
       state.selectedArtists = []; state.selectedGenres = []; state.tags = [];
       venueHidden.value = '';
@@ -1201,7 +1279,7 @@
       document.getElementById('suggest-artist-panel').classList.remove('is-open');
       document.getElementById('new-artist-name').value = '';
       document.getElementById('new-artist-submitted-by').value = '';
-      tagsWrap.innerHTML = ''; tagsWrap.appendChild(tagsInput); tagsInput.value = '';
+      tagsWrap.innerHTML = ''; tagsWrap.appendChild(tagsInput); tagsWrap.appendChild(tagsAddBtn); tagsInput.value = ''; tagsAddBtn.classList.remove('is-visible');
       // Reset char counter
       charCount.textContent = '0';
       charCounter.classList.remove('is-warn', 'is-over');

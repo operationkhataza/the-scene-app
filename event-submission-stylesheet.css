@@ -762,6 +762,27 @@ select {
   width: auto;
 }
 
+.tags-add-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--scene-cyan);
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 2px 2px 2px 4px;
+  transition: background 0.15s, transform 0.1s;
+}
+.tags-add-btn:hover  { background: var(--scene-cyan-deep); }
+.tags-add-btn:active { transform: scale(0.92); }
+.tags-add-btn.is-visible { display: flex; }
+
 /* ============================================================
    TICKET TIERS
    ============================================================ */
@@ -905,11 +926,51 @@ select {
 }
 .img-upload-remove:hover { background: rgba(224, 75, 90, 0.85); }
 
-.img-upload[data-state="uploading"] .img-upload-preview { display: block; }
-.img-upload[data-state="uploading"] .img-upload-overlay { display: flex; }
-.img-upload[data-state="uploading"] .img-upload-empty   { display: none; }
-.img-upload[data-state="uploaded"]  .img-upload-preview { display: block; }
-.img-upload[data-state="uploaded"]  .img-upload-empty   { display: none; }
+.img-upload[data-state="uploading"]    .img-upload-preview  { display: block; }
+.img-upload[data-state="uploading"]    .img-upload-overlay  { display: flex; }
+.img-upload[data-state="uploading"]    .img-upload-empty    { display: none; }
+.img-upload[data-state="uploaded"]     .img-upload-preview  { display: block; }
+.img-upload[data-state="uploaded"]     .img-upload-empty    { display: none; }
+.img-upload[data-state="upload-error"] .img-upload-empty    { display: none; }
+.img-upload[data-state="upload-error"] .poster-upload-error { display: flex; }
+
+.poster-upload-error {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  text-align: center;
+}
+.poster-error-icon {
+  font-size: 1.8rem;
+  color: var(--danger);
+}
+.poster-error-msg {
+  font-size: 0.85rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+.poster-error-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.poster-error-retry,
+.poster-error-change {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.poster-error-retry  { background: var(--scene-cyan); color: #fff; }
+.poster-error-retry:hover  { background: var(--scene-cyan-deep); }
+.poster-error-change { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
+.poster-error-change:hover { background: var(--bg-input); }
 
 .spinner {
   width: 22px; height: 22px;
