@@ -39,6 +39,7 @@ const TEST_HOLO = new URLSearchParams(window.location.search).get('holo') === 't
 const LIST_EL      = document.getElementById('gig-list');
 const TOOLBAR_EL   = document.getElementById('toolbar');
 const COUNT_EL     = document.getElementById('toolbar-count');
+const CLEAR_EL     = document.getElementById('toolbar-clear');
 const BTN_TYPE     = document.getElementById('btn-type');
 const BTN_AREA     = document.getElementById('btn-area');
 const BTN_PRICE    = document.getElementById('btn-price');
@@ -306,6 +307,9 @@ function updateFilterBadges() {
     ? (state.selectedPriceMax >= PRICE_MAX ? `${PRICE_MAX}+` : `${state.selectedPriceMax}`)
     : '';
   BTN_PRICE.classList.toggle('is-active', priceActive);
+
+  const anyActive = t > 0 || a > 0 || priceActive || !!state.searchQuery;
+  if (CLEAR_EL) CLEAR_EL.hidden = !anyActive;
 }
 
 /* ============================================================
@@ -622,7 +626,7 @@ function clearSheet() {
 async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug = null }) {
   const fields = [
     'id', 'title', 'slug', 'date', 'doors_time',
-    'short_description', 'ticket_url', 'poster',
+    'short_description', 'description', 'ticket_url', 'poster',
     'is_free', 'ticket_tiers', 'age_restriction', 'tags',
     'venue.name',
     'venue.location',
@@ -771,6 +775,7 @@ function renderCard(gig, index) {
   const metaParts = [formatCardDate(gig.date)];
   const timeStr = formatTime(gig.doors_time);
   if (timeStr) metaParts.push(timeStr);
+  const metaStr = metaParts.join(' · ');
 
   // Venue + area — venue.area is a flat dropdown slug; map to display label for the card
   const AREA_LABELS = {
@@ -792,7 +797,7 @@ function renderCard(gig, index) {
     ? `<p class="gig-card__artists"><span class="gig-card__artists-label">Featuring</span>${esc(artistNames.join(', '))}</p>`
     : '';
 
-  // Description
+  // Short description (front face)
   const descHtml = gig.short_description
     ? `<p class="gig-card__desc">${esc(gig.short_description)}</p>`
     : '';
@@ -811,7 +816,7 @@ function renderCard(gig, index) {
       </div>`
     : '';
 
-  // Curators — count determines card treatment (1=holographic, 2=gold, 3+=silver)
+  // Curators — count determines card treatment (1=silver, 2=gold, 3+=holographic)
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
   const curatedLevel = TEST_HOLO ? 3
                      : curators.length >= 3 ? 3
@@ -855,38 +860,70 @@ function renderCard(gig, index) {
     : '';
 
   const hasTickets = !!gig.ticket_url;
-  const footer = `
+  const ticketUrl  = hasTickets ? esc(gig.ticket_url) : '';
+
+  // ── Front face footer: price + subtle ticket pill + "Read more →" ──
+  const frontFooter = `
     <div class="gig-card__footer">
-      ${priceMarkup(gig)}
-      ${hasTickets
-        ? '<span class="cta">Get tickets<span class="cta__arrow">→</span></span>'
-        : '<span style="font-size: 0.75rem; color: var(--text-muted);">At the door</span>'}
+      <div class="gig-card__footer-row">
+        ${priceMarkup(gig)}
+        ${hasTickets ? `<a class="gig-card__ticket-pill" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>` : ''}
+      </div>
+      <button type="button" class="gig-card__read-more">Read more →</button>
     </div>`;
 
-  const tag = hasTickets ? 'a' : 'div';
-  const attrs = hasTickets
-    ? `href="${esc(gig.ticket_url)}" target="_blank" rel="noopener noreferrer"`
-    : '';
-  const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
+  // ── Back face: full description (plain text, pre-wrap) ──
+  const backDesc = gig.description
+    ? `<div class="gig-card__back-desc">${esc(gig.description)}</div>`
+    : `<div class="gig-card__back-desc gig-card__back-desc--empty">No description added yet.</div>`;
 
+  // Back face meta row: date · time [· price summary]
+  const backMetaParts = [metaStr];
+  if (gig.is_free) {
+    backMetaParts.push('Free entry');
+  } else if (Array.isArray(gig.ticket_tiers) && gig.ticket_tiers.length > 0) {
+    const prices = gig.ticket_tiers.map(t => parseFloat(t.price)).filter(p => !isNaN(p) && p > 0);
+    if (prices.length > 0) backMetaParts.push(`From R${Math.min(...prices)}`);
+  }
+
+  // Back face CTA
+  const backCta = hasTickets
+    ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
+    : '';
+
+  const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
   const delay = Math.min(index, 8) * 40;
 
   return `
-    <${tag} class="gig-card"${curatedAttr} ${attrs} style="animation-delay: ${delay}ms;">
-      ${poster}
-      <div class="gig-card__body">
-        <div class="gig-card__meta">${esc(metaParts.join(' · '))}</div>
-        <h2 class="gig-card__title">${esc(gig.title)}</h2>
-        ${venueHtml}
-        ${artistsHtml}
-        ${descHtml}
-        ${tagsHtml}
-        ${curatorHtml}
-        ${promoterHtml}
-        ${footer}
+    <div class="gig-card"${curatedAttr} style="animation-delay: ${delay}ms;">
+      <div class="gig-card__inner">
+
+        <div class="gig-card__front">
+          ${poster}
+          <div class="gig-card__body">
+            <div class="gig-card__meta">${esc(metaStr)}</div>
+            <h2 class="gig-card__title">${esc(gig.title)}</h2>
+            ${venueHtml}
+            ${artistsHtml}
+            ${descHtml}
+            ${tagsHtml}
+            ${curatorHtml}
+            ${promoterHtml}
+            ${frontFooter}
+          </div>
+        </div>
+
+        <div class="gig-card__back">
+          <button type="button" class="gig-card__close" aria-label="Close">✕</button>
+          <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
+          <div class="gig-card__back-divider"></div>
+          ${backDesc}
+          <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
+          ${backCta}
+        </div>
+
       </div>
-    </${tag}>
-  `;
+    </div>`;
 }
 
 /* ============================================================
@@ -1094,6 +1131,8 @@ function refreshRefractionRefs() {
   const cards = document.querySelectorAll('.gig-card[data-curated]');
   cards.forEach(c => holoObserver.observe(c));
   if (window.HoloShader) window.HoloShader.refresh();
+
+
 }
 
 // Keep old no-op for any stale callers
@@ -1259,32 +1298,89 @@ SHEET_CLOSE.addEventListener('click', closeSheet);
 SHEET_BD.addEventListener('click', closeSheet);
 SHEET_CLEAR.addEventListener('click', clearSheet);
 SHEET_APPLY.addEventListener('click', applySheet);
+
+// "Clear all" toolbar button — resets every filter and the search query
+if (CLEAR_EL) {
+  CLEAR_EL.addEventListener('click', () => {
+    state.selectedTypes.clear();
+    state.selectedAreas.clear();
+    state.selectedPriceMax = null;
+    state.searchQuery = '';
+    if (SEARCH_INPUT) SEARCH_INPUT.value = '';
+    updateFilterBadges();
+    renderFromState();
+  });
+}
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && state.currentSheet) closeSheet();
 });
 
 // Search input — filter by event name on every keystroke
 const SEARCH_INPUT = document.getElementById('gig-search');
+const SEARCH_CLEAR = document.getElementById('search-clear');
 if (SEARCH_INPUT) {
   SEARCH_INPUT.addEventListener('input', e => {
     state.searchQuery = e.target.value.trim();
+    if (SEARCH_CLEAR) SEARCH_CLEAR.hidden = !state.searchQuery;
+    updateFilterBadges();
     renderFromState();
   });
-  // Clear search on × button inside the input (if any)
   SEARCH_INPUT.addEventListener('search', () => {
     state.searchQuery = '';
+    if (SEARCH_CLEAR) SEARCH_CLEAR.hidden = true;
+    updateFilterBadges();
+    renderFromState();
+  });
+}
+if (SEARCH_CLEAR) {
+  SEARCH_CLEAR.addEventListener('click', () => {
+    state.searchQuery = '';
+    if (SEARCH_INPUT) { SEARCH_INPUT.value = ''; SEARCH_INPUT.focus(); }
+    SEARCH_CLEAR.hidden = true;
+    updateFilterBadges();
     renderFromState();
   });
 }
 // Promoter link — delegated to LIST_EL because cards are built via innerHTML.
-// stopPropagation + preventDefault together prevent the parent <a> card from
-// navigating to the ticket URL when the promoter name is clicked.
 LIST_EL.addEventListener('click', e => {
   const link = e.target.closest('.gig-card__promoter-link');
   if (!link) return;
   e.stopPropagation();
   e.preventDefault();
   openPromoterSheet(Number(link.dataset.promoterId));
+});
+
+/* ============================================================
+   CARD FLIP
+   ============================================================ */
+
+// Runtime 3D capability test — runs once on page load (~2ms).
+// CSS @supports catches browsers with no 3D support; this catches browsers
+// that report support but render it incorrectly (known WKWebView failure mode).
+// Flip a card to front or back.
+// inner = .gig-card__inner element; toBack = true → show back, false → show front.
+function flipCard(inner, toBack) {
+  inner.classList.toggle('is-flipped', toBack);
+}
+
+// Flip delegation — entire front face is the click target.
+// Exemptions: ticket pill, back-face CTA, and promoter link all pass through.
+// Tapping the ✕ close button on the back face flips to front.
+// Any other tap while the back face is showing does nothing (lets content be readable).
+LIST_EL.addEventListener('click', e => {
+  if (e.target.closest('.gig-card__ticket-pill'))   return;
+  if (e.target.closest('.gig-card__back-cta'))      return;
+  if (e.target.closest('.gig-card__promoter-link')) return;
+
+  const closeBtn = e.target.closest('.gig-card__close');
+  if (closeBtn) {
+    flipCard(closeBtn.closest('.gig-card__inner'), false);
+    return;
+  }
+
+  const inner = e.target.closest('.gig-card__inner');
+  if (!inner || inner.classList.contains('is-flipped')) return;
+  flipCard(inner, true);
 });
 
 window.addEventListener('scroll', () => {

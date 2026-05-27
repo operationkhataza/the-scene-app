@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles-v2.css">
+  <link rel="stylesheet" href="styles-v3.css">
 
   <style>
     /* Inline header override — guarantees correct rendering even if styles.css is cached stale.
@@ -91,6 +91,7 @@
         spellcheck="false"
         aria-label="Search events by name"
       >
+      <button class="search-bar__clear" id="search-clear" type="button" hidden aria-label="Clear search">×</button>
     </div>
 
     <!-- Sticky filter toolbar -->
@@ -116,6 +117,7 @@
           <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
+      <button class="toolbar__clear" id="toolbar-clear" type="button" hidden aria-label="Clear all filters">Clear all</button>
       <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
     </div>
 

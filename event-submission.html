@@ -76,6 +76,12 @@
               </div>
               <div class="form-error" id="short-desc-error">Please add a short description.</div>
             </div>
+            <div class="fg" id="fg-description">
+              <label>Full description <span class="req">*</span></label>
+              <textarea id="inp-description" rows="4" placeholder="More context, lineup details, special guests, what to expect…"></textarea>
+              <div class="form-hint">Shown on the back of the event card when someone taps "Read more".</div>
+              <div class="form-error" id="desc-error">Please add an event description — this appears on the event card.</div>
+            </div>
             <!-- Format selector: only shown for community events -->
             <div class="fg" id="fg-format" style="display:none;">
               <label>Format <span class="req">*</span></label>
@@ -204,17 +210,6 @@
               <input type="file" id="poster-input" accept="image/*" hidden>
             </div>
             <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
-          </div>
-        </div>
-
-        <!-- DESCRIPTION -->
-        <div class="card">
-          <div class="card-header"><h3>Full description</h3></div>
-          <div class="card-body">
-            <div class="fg">
-              <label>Description <span class="opt">(optional)</span></label>
-              <textarea id="inp-description" rows="4" placeholder="More context, lineup details, special guests, what to expect…"></textarea>
-            </div>
           </div>
         </div>
 
@@ -1103,6 +1098,16 @@
           ok = false;
         } else {
           sdFg.classList.remove('has-error');
+        }
+
+        // Full description — required
+        const descVal = document.getElementById('inp-description').value.trim();
+        const descFg  = document.getElementById('fg-description');
+        if (!descVal) {
+          descFg.classList.add('has-error');
+          ok = false;
+        } else {
+          descFg.classList.remove('has-error');
         }
       }
       if (page === 2) {
