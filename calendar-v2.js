@@ -38,6 +38,8 @@ const DAY_EL      = document.getElementById('cal-day');
 const PREV_BTN    = document.getElementById('cal-nav-prev');
 const NEXT_BTN    = document.getElementById('cal-nav-next');
 const MONTH_LABEL = document.getElementById('cal-nav-month-label');
+const MODAL_EL    = document.getElementById('cal-modal');
+const MODAL_CARD  = document.getElementById('cal-modal-card');
 
 /* ============================================================
    STATE — minimal. Just the focused month and the selected day,
@@ -129,12 +131,19 @@ async function fetchMonth(d) {
 
   const fields = [
     'id', 'title', 'slug', 'date', 'doors_time',
-    'short_description', 'ticket_url', 'poster',
-    'is_free', 'ticket_tiers',
+    'short_description', 'description', 'ticket_url', 'poster',
+    'is_free', 'ticket_tiers', 'age_restriction', 'tags',
     'venue.name',
     'venue.location',
+    'event_category.id',
+    'event_category.name',
+    'event_category.slug',
+    'artists.artists_id.name',
     'curators.curators_id.name',
     'curators.curators_id.logo',
+    'promoters.promoters_id.id',
+    'promoters.promoters_id.name',
+    'promoters.promoters_id.profile_image',
   ].join(',');
 
   const params = new URLSearchParams({
@@ -309,13 +318,10 @@ function renderDayCard(gig) {
     ? `<div class="cal-day-card__meta">${metaSegments.join('<span class="cal-day-card__sep">·</span>')}</div>`
     : '';
 
-  const tag = gig.ticket_url ? 'a' : 'div';
-  const attrs = gig.ticket_url
-    ? `href="${esc(gig.ticket_url)}" target="_blank" rel="noopener noreferrer"`
-    : '';
-
+  // Always render as a button — tapping opens the event detail modal,
+  // not a direct navigation to ticket_url. The modal's back face has the CTA.
   return `
-    <${tag} class="cal-day-card cal-day-card--t${tier}" ${attrs}>
+    <button class="cal-day-card cal-day-card--t${tier}" type="button" data-event-id="${esc(String(gig.id))}">
       <div class="cal-day-card__poster">
         ${imageHtml}
       </div>
@@ -324,9 +330,323 @@ function renderDayCard(gig) {
         ${venueName ? `<div class="cal-day-card__venue">${venueName}</div>` : ''}
         ${metaHtml}
       </div>
-    </${tag}>
+    </button>
   `;
 }
+
+/* formatCardDate — matches app.js exactly */
+function formatCardDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/* priceMarkup — exact copy of app.js priceMarkup so the price
+   HTML structure (price / price__prefix / price__value) is identical. */
+function priceMarkup(gig) {
+  if (gig.is_free) {
+    return `
+      <div class="price price--free">
+        <span class="price__prefix">Entry</span>
+        <span class="price__value">Free</span>
+      </div>`;
+  }
+  if (Array.isArray(gig.ticket_tiers) && gig.ticket_tiers.length > 0) {
+    const prices = gig.ticket_tiers
+      .map(t => parseFloat(t.price))
+      .filter(p => !isNaN(p) && p > 0);
+    if (prices.length > 0) {
+      const low    = Math.min(...prices);
+      const prefix = prices.length > 1 ? 'From' : 'Tickets';
+      return `
+        <div class="price">
+          <span class="price__prefix">${prefix}</span>
+          <span class="price__value">R${low}</span>
+        </div>`;
+    }
+  }
+  return `
+    <div class="price">
+      <span class="price__prefix">Tickets</span>
+      <span class="price__value">TBA</span>
+    </div>`;
+}
+
+/* ============================================================
+   EVENT DETAIL MODAL — hero-expand from tapped cal-day-card.
+   Opens a full gig-card (front + flippable back) in a centred
+   modal overlay. Origin point tracks the tapped card's rect so
+   the card appears to expand from where the user touched.
+   ============================================================ */
+
+/* Build the full gig-card HTML for the modal.
+   Mirrors app.js renderCard() exactly — same HTML structure, same CSS
+   class names, same data shape — so all tier/foil/curator styles apply
+   identically. (No animation-delay needed since this is a single card.) */
+function renderModalCard(gig) {
+  const AREA_LABELS = {
+    'southern-suburbs':   'Southern Suburbs',
+    'northern-suburbs':   'Northern Suburbs',
+    'southern-peninsula': 'Southern Peninsula',
+    'cbd':                'CBD',
+    'cape-flats':         'Cape Flats',
+    'atlantic-seaboard':  'Atlantic Seaboard',
+  };
+
+  // Poster
+  const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
+  const poster = posterSrc
+    ? `<img class="gig-card__poster" src="${posterSrc}" alt="${esc(gig.title)} poster" loading="lazy">`
+    : `<div class="gig-card__poster-placeholder">The Scene</div>`;
+
+  // Meta line: DATE · DOORS TIME  (matches app.js exactly)
+  const metaParts = gig.date ? [formatCardDate(gig.date)] : [];
+  const timeStr = formatTime(gig.doors_time);
+  if (timeStr) metaParts.push(timeStr);
+  const metaStr = metaParts.join(' · ');
+
+  // Venue + area
+  const areaName = gig.venue?.location ? (AREA_LABELS[gig.venue.location] || gig.venue.location) : null;
+  const venueHtml = gig.venue?.name
+    ? `<p class="gig-card__venue"><span class="gig-card__venue-name">${esc(gig.venue.name)}</span>${areaName ? `<span class="gig-card__venue-area">${esc(areaName)}</span>` : ''}</p>`
+    : '';
+
+  // Artists
+  const artistNames = (gig.artists || []).map(a => a.artists_id?.name).filter(Boolean);
+  const artistsHtml = artistNames.length > 0
+    ? `<p class="gig-card__artists"><span class="gig-card__artists-label">Featuring</span>${esc(artistNames.join(', '))}</p>`
+    : '';
+
+  // Short description (front face)
+  const descHtml = gig.short_description
+    ? `<p class="gig-card__desc">${esc(gig.short_description)}</p>`
+    : '';
+
+  // Tags: category (teal) + freeform tags + age restriction (neutral)
+  // event_category arrives as an expanded object { id, name, slug } because
+  // the fields query requests event_category.name etc.
+  const catName = gig.event_category?.name || null;
+  const freeformTags = Array.isArray(gig.tags) ? gig.tags : [];
+  const ageTag = gig.age_restriction && gig.age_restriction !== 'all-ages'
+    ? [gig.age_restriction.replace(/-/g, ' ')]
+    : [];
+  const allNeutral = [...freeformTags, ...ageTag];
+  const tagsHtml = (catName || allNeutral.length > 0)
+    ? `<div class="gig-card__tags">
+        ${catName ? `<span class="tag">${esc(catName)}</span>` : ''}
+        ${allNeutral.map(t => `<span class="tag tag--neutral">${esc(t)}</span>`).join('')}
+      </div>`
+    : '';
+
+  // Curators — exact match to app.js curatorHtml structure
+  const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
+  const curatedLevel = curators.length >= 3 ? 3
+                     : curators.length === 2 ? 2
+                     : curators.length === 1 ? 1
+                     : 0;
+  const curatorHtml = curators.length > 0
+    ? `<div class="curators">
+        <span class="curators__label">Curated by</span>
+        ${curators.map(c => {
+          const logo = imgUrl(c.logo, { width: '60', height: '60', fit: 'cover' });
+          const logoEl = logo
+            ? `<img class="curator-badge__logo" src="${logo}" alt="">`
+            : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
+          return `<span class="curator-badge">${logoEl}${esc(c.name)}</span>`;
+        }).join('')}
+      </div>`
+    : '';
+
+  // Promoters — "Presented by" line, no tap logic for now
+  const promoterObjs = (gig.promoters || []).map(p => {
+    const pid = p.promoters_id;
+    if (!pid) return null;
+    const id            = typeof pid === 'object' ? pid.id            : null;
+    const name          = typeof pid === 'object' ? pid.name          : null;
+    const profile_image = typeof pid === 'object' ? pid.profile_image : null;
+    return (id && name) ? { id, name, profile_image } : null;
+  }).filter(Boolean);
+  const promoterHtml = promoterObjs.length > 0
+    ? `<p class="promoter"><span class="promoter__label">Presented by</span>${
+        promoterObjs.map(p => {
+          const logoSrc = p.profile_image
+            ? imgUrl(p.profile_image, { width: '40', height: '40', fit: 'cover' })
+            : null;
+          const logoEl = logoSrc
+            ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
+            : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
+          return `<span class="gig-card__promoter-link">${logoEl}${esc(p.name)}</span>`;
+        }).join(', ')
+      }</p>`
+    : '';
+
+  // Ticket URL
+  const hasTickets = !!gig.ticket_url;
+  const ticketUrl  = hasTickets ? esc(gig.ticket_url) : '';
+
+  // Front face footer — exact match to app.js frontFooter
+  const frontFooter = `
+    <div class="gig-card__footer">
+      <div class="gig-card__footer-row">
+        ${priceMarkup(gig)}
+        ${hasTickets ? `<a class="gig-card__ticket-pill" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>` : ''}
+      </div>
+      <button type="button" class="gig-card__read-more">Read more →</button>
+    </div>`;
+
+  // Back face description
+  const backDesc = gig.description
+    ? `<div class="gig-card__back-desc">${esc(gig.description)}</div>`
+    : `<div class="gig-card__back-desc gig-card__back-desc--empty">No description added yet.</div>`;
+
+  // Back face meta — exact match to app.js backMetaParts
+  const backMetaParts = [metaStr];
+  if (gig.is_free) {
+    backMetaParts.push('Free entry');
+  } else if (Array.isArray(gig.ticket_tiers) && gig.ticket_tiers.length > 0) {
+    const prices = gig.ticket_tiers.map(t => parseFloat(t.price)).filter(p => !isNaN(p) && p > 0);
+    if (prices.length > 0) backMetaParts.push(`From R${Math.min(...prices)}`);
+  }
+
+  // Back face CTA
+  const backCta = hasTickets
+    ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
+    : '';
+
+  const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
+
+  return `
+    <div class="gig-card"${curatedAttr}>
+      <div class="gig-card__inner">
+
+        <div class="gig-card__front">
+          ${poster}
+          <div class="gig-card__body">
+            <div class="gig-card__meta">${esc(metaStr)}</div>
+            <h2 class="gig-card__title">${esc(gig.title)}</h2>
+            ${venueHtml}
+            ${artistsHtml}
+            ${descHtml}
+            ${tagsHtml}
+            ${curatorHtml}
+            ${promoterHtml}
+            ${frontFooter}
+          </div>
+        </div>
+
+        <div class="gig-card__back">
+          <button type="button" class="gig-card__close" aria-label="Close">✕</button>
+          <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
+          <div class="gig-card__back-divider"></div>
+          ${backDesc}
+          <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
+          ${backCta}
+        </div>
+
+      </div>
+    </div>`;
+}
+
+/* Open the modal, animating from the origin of the tapped card element. */
+function openCardModal(gig, originEl) {
+  // Compute transform-origin as percentages from the viewport centre
+  // so the card appears to grow out of the tapped card's position.
+  if (originEl) {
+    const rect   = originEl.getBoundingClientRect();
+    const vw     = window.innerWidth;
+    const vh     = window.innerHeight;
+    const cardCX = rect.left + rect.width  / 2;
+    const cardCY = rect.top  + rect.height / 2;
+    // Express origin relative to the modal card's own centre (which is
+    // centred in the viewport). We use viewport percentages clamped to
+    // something sensible so the animation always looks grounded.
+    const ox = Math.round((cardCX / vw) * 100);
+    const oy = Math.round((cardCY / vh) * 100);
+    MODAL_CARD.style.setProperty('--origin-x', `${ox}%`);
+    MODAL_CARD.style.setProperty('--origin-y', `${oy}%`);
+  } else {
+    MODAL_CARD.style.setProperty('--origin-x', '50%');
+    MODAL_CARD.style.setProperty('--origin-y', '50%');
+  }
+
+  MODAL_CARD.innerHTML = renderModalCard(gig);
+  MODAL_EL.classList.remove('is-closing');
+  MODAL_EL.classList.add('is-open');
+
+  // Mount holographic shader on tier-3 cards. We wait two rAF ticks so the
+  // modal is fully painted and getBoundingClientRect() returns real dimensions
+  // before the canvas is sized and the first frame is drawn.
+  if (window.HoloShader) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.HoloShader.refresh();
+      window.HoloShader.forceRender();
+    }));
+  }
+
+  // Store current gig on the modal element so the delegated flip handler
+  // can check whether there's content to flip to. Avoids stacking listeners.
+  MODAL_EL._activeGig = gig;
+}
+
+function closeCardModal() {
+  if (!MODAL_EL.classList.contains('is-open')) return;
+  MODAL_EL.classList.add('is-closing');
+  MODAL_EL.classList.remove('is-open');
+
+  // Clear card content after the exit animation finishes (130ms)
+  setTimeout(() => {
+    if (!MODAL_EL.classList.contains('is-open')) {
+      // Refresh shader to tear down any canvas on the departing card
+      // before we wipe the HTML, so the Map/observer don't hold stale refs.
+      if (window.HoloShader) window.HoloShader.refresh();
+      MODAL_CARD.innerHTML = '';
+      MODAL_EL.classList.remove('is-closing');
+    }
+  }, 160);
+}
+
+// Close when tapping outside the card — the scroll container fills
+// the viewport so we check whether the click landed on the .gig-card
+// itself or on the surrounding padding area.
+MODAL_CARD.addEventListener('click', e => {
+  if (!MODAL_EL.classList.contains('is-open')) return;
+  if (!e.target.closest('.gig-card')) closeCardModal();
+}, true); // capture phase so it fires before the flip handler
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCardModal();
+});
+
+// Flip delegation — wired once on the card container. Avoids stacking
+// listeners every time a new card is opened.
+MODAL_CARD.addEventListener('click', e => {
+  if (!MODAL_EL.classList.contains('is-open')) return;
+  // Pass-through: links and the close button handle themselves
+  if (e.target.closest('.gig-card__back-cta'))   return;
+  if (e.target.closest('.gig-card__ticket-pill')) return;
+
+  const inner    = MODAL_CARD.querySelector('.gig-card__inner');
+  const closeBtn = e.target.closest('.gig-card__close');
+  if (!inner) return;
+
+  if (closeBtn) {
+    // ✕ on the back face: flip back to front (don't close modal)
+    e.stopPropagation();
+    inner.classList.remove('is-flipped');
+    return;
+  }
+
+  if (inner.classList.contains('is-flipped')) {
+    // Anywhere on the back face (not CTA): flip back
+    inner.classList.remove('is-flipped');
+  } else {
+    // Anywhere on the front face: flip to back if there's content
+    const gig = MODAL_EL._activeGig;
+    if (gig && (gig.description || gig.short_description)) {
+      inner.classList.add('is-flipped');
+    }
+  }
+});
 
 /* ============================================================
    DAY PANEL RENDER — the stack of mini-cards below the grid.
@@ -368,6 +688,15 @@ function renderDay() {
 
   const list = events.map(renderDayCard).join('');
   DAY_EL.innerHTML = heading + `<div class="cal-day__list">${list}</div>`;
+
+  // Delegate card taps to open the event detail modal
+  DAY_EL.querySelectorAll('.cal-day-card[data-event-id]').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const id = parseInt(cardEl.dataset.eventId, 10);
+      const gig = events.find(e => e.id === id);
+      if (gig) openCardModal(gig, cardEl);
+    });
+  });
 }
 
 /* ============================================================
@@ -463,5 +792,7 @@ async function init() {
 
 PREV_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth, -1)));
 NEXT_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth,  1)));
+
+if (window.HoloShader) window.HoloShader.init();
 
 init();

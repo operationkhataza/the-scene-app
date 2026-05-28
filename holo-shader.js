@@ -323,6 +323,20 @@ void main() {
     console.log('[HoloShader] refresh:', cards.size, 'card(s) total,', added, 'added');
   }
 
+  /* Force one render frame for all known cards, ignoring intersection state.
+     Used when cards are injected into fixed/modal containers where the
+     IntersectionObserver may not fire (e.g. WKWebView fixed stacking context). */
+  function forceRender() {
+    if (cards.size === 0) return;
+    const time = (performance.now() - initStartTime) / 1000;
+    const vh = window.innerHeight || 1;
+    for (const [, card] of cards) {
+      visible.add(card.el);
+      renderOne(card, time, vh);
+    }
+    scheduleRender();
+  }
+
   function destroy() {
     if (cardObserver) cardObserver.disconnect();
     cardObserver = null;
@@ -335,5 +349,5 @@ void main() {
     initialised = false;
   }
 
-  window.HoloShader = { init, refresh, destroy };
+  window.HoloShader = { init, refresh, forceRender, destroy };
 })();

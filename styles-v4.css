@@ -2212,6 +2212,12 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
 /* ── Day card — 16:9 poster card (mirrors manage-events style) ── */
 .cal-day-card {
+  /* Button reset — card is now always a <button> */
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  text-align: left;
+  /* Card styles */
   display: grid;
   grid-template-columns: 120px 1fr;
   gap: 0.85rem;
@@ -2225,16 +2231,18 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   box-shadow: var(--shadow-xs);
   text-decoration: none;
   color: inherit;
+  width: 100%;
   position: relative;
   overflow: hidden;
   transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-a.cal-day-card:hover {
+.cal-day-card:hover {
   border-color: rgba(51, 128, 193, 0.32);
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
 }
-a.cal-day-card:active { transform: scale(0.99); }
+.cal-day-card:active { transform: scale(0.99); }
 
 /* 16:9 poster thumbnail */
 .cal-day-card__poster {
@@ -2614,3 +2622,102 @@ a.cal-day-card:active { transform: scale(0.99); }
   box-shadow: var(--selected-shadow);
 }
 .gig-card__back-cta:hover { opacity: 0.9; }
+
+/* ================================================================
+   CALENDAR — EVENT DETAIL MODAL (hero-expand)
+   Opens when the user taps a cal-day-card. The card scales up from
+   its origin position into a centred full-width panel, with a
+   frosted-glass backdrop fade underneath.
+
+   Animation contract (fast — should not delay the user):
+     Open:  backdrop fades in 120ms; card scales + fades in 160ms
+     Close: card fades + scales down 130ms; backdrop fades 100ms
+   ================================================================ */
+
+/* ── Outer shell: frosted backdrop, fixed to viewport ──────── */
+.cal-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  visibility: hidden;
+}
+.cal-modal.is-open {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Frosted backdrop — fills the fixed shell */
+.cal-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 35, 61, 0.48);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+.cal-modal.is-open .cal-modal__backdrop {
+  opacity: 1;
+}
+.cal-modal.is-closing .cal-modal__backdrop {
+  opacity: 0;
+  transition: opacity 0.10s ease-in;
+}
+
+/* ── Card container — scrollable, centred, above backdrop ──── */
+/* This is the element that actually scrolls. It sits above the
+   backdrop (z-index:1), fills the fixed shell, and lets the card
+   inside scroll vertically when taller than the viewport.
+   align-items:flex-start + padding ensures the card starts at the
+   top with breathing room rather than being centred off-screen. */
+.cal-modal__card {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1.25rem 4rem;
+  /* Animation: scale up from the tapped card's origin */
+  transform-origin: var(--origin-x, 50%) var(--origin-y, 50%);
+  opacity: 0;
+  transform: scale(0.88);
+  transition: opacity 0.14s ease-out, transform 0.16s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.cal-modal.is-open .cal-modal__card {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.16s ease-out, transform 0.16s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.cal-modal.is-closing .cal-modal__card {
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.13s ease-in, transform 0.13s ease-in;
+}
+
+/* ── The actual .gig-card inside the scroll container ──────── */
+.cal-modal__card .gig-card {
+  width: 100%;
+  max-width: 420px;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+/* Back face: allow scroll if the description is very long. */
+.cal-modal__card .gig-card__back {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Reduced motion: skip the scale, just fade ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .cal-modal__card,
+  .cal-modal.is-open .cal-modal__card,
+  .cal-modal.is-closing .cal-modal__card {
+    transform: none !important;
+    transition: opacity 0.12s ease !important;
+  }
+}
