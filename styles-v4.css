@@ -573,6 +573,24 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: grid;
   grid-template-rows: auto 1fr; /* poster row / body row */
 }
+/* Non-curated footers are pinned mid-card by the base footer rule's
+   margin-top:1.25rem (further down this file), which overrides the intended
+   margin-top:auto on equal specificity. Curated footers escape this via the
+   more-specific .gig-card[data-curated] .gig-card__footer rule, which is why
+   only uncurated cards float their footer below the tags. Restore auto in the
+   stretched day strip so the footer drops to the bottom like the tiered cards.
+   This selector (0,2,0) beats the base rule (0,1,0) but stays weaker than the
+   curated rule (0,3,0), so tiered cards are untouched. */
+.day-strip__track .gig-card__footer { margin-top: auto; }
+/* margin-top:auto above collapses to 0 on a day-strip card with no free space
+   (e.g. days with no tiered events), leaving the footer border flush against the
+   tags or promoter above it. Give the element directly above the footer a constant
+   bottom gap — works for tags→footer and promoter→footer alike. 1.25rem matches
+   the footer's original margin-top so the tight case looks as it did before.
+   Scoped to non-curated cards so tiered footers stay untouched. */
+.day-strip__track .gig-card:not([data-curated]) .gig-card__body > *:has(+ .gig-card__footer) {
+  margin-bottom: 1.25rem;
+}
 
 /* ============================================================
    GIG CARD — frosted glass
