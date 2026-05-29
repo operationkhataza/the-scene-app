@@ -2246,18 +2246,45 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   -webkit-backdrop-filter: var(--glass-blur);
           backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border-sub);
-  box-shadow: var(--shadow-xs);
+  /* drop-shadow (NOT box-shadow) so the shadow hugs the notched ticket
+     silhouette instead of staying a full rectangle behind the cut-outs. */
+  filter: drop-shadow(0 2px 8px rgba(51, 128, 193, 0.10));
   text-decoration: none;
   color: inherit;
   width: 100%;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  transition: border-color 0.15s, transform 0.12s, filter 0.15s;
   -webkit-tap-highlight-color: transparent;
+
+  /* ── Ticket "cinema notch" — a real semicircle cut-out on each long
+       edge at mid-height, so the page gradient shows through.
+       --tear is the poster-stub | body boundary used by the dashed
+       perforation: padding-left (0.65rem) + poster width (120px) + half the gap. ── */
+  --tear: calc(0.65rem + 120px + 0.425rem);
+  --notch: 11px;
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at 0 50%,    transparent var(--notch), #000 calc(var(--notch) + 0.5px)),
+    radial-gradient(circle var(--notch) at 100% 50%, transparent var(--notch), #000 calc(var(--notch) + 0.5px));
+  -webkit-mask-composite: source-in;
+          mask:
+    radial-gradient(circle var(--notch) at 0 50%,    transparent var(--notch), #000 calc(var(--notch) + 0.5px)),
+    radial-gradient(circle var(--notch) at 100% 50%, transparent var(--notch), #000 calc(var(--notch) + 0.5px));
+          mask-composite: intersect;
+}
+/* Faint dashed "perforation" between the poster stub and the body. */
+.cal-day-card::after {
+  content: '';
+  position: absolute;
+  top: 11px;
+  bottom: 11px;
+  left: var(--tear);
+  border-left: 1.5px dashed rgba(21, 35, 61, 0.28);
+  pointer-events: none;
 }
 .cal-day-card:hover {
   border-color: rgba(51, 128, 193, 0.32);
-  box-shadow: var(--shadow-sm);
+  filter: drop-shadow(0 4px 14px rgba(51, 128, 193, 0.16));
   cursor: pointer;
 }
 .cal-day-card:active { transform: scale(0.99); }
