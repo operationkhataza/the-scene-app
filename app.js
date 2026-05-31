@@ -10,7 +10,8 @@
 
    URL routing (unchanged from v1):
      ?day=today | tomorrow | monday | ... | 2026-04-25
-     ?view=week  | month     (default: week)
+     ?curator=slug | ?promoter=slug   entity-filtered feeds
+   With no params the guide shows the upcoming 7-day week feed.
    ============================================================ */
 
 /* Native-webview zoom lock.
@@ -1144,7 +1145,6 @@ function updateRefraction() { /* replaced by scheduleRefractUpdate */ }
    ============================================================ */
 async function init() {
   const day = getParam('day');
-  const view = getParam('view') || 'week';
   const curatorSlug = getParam('curator');
   const promoterSlug = getParam('promoter');
   const today = new Date();
@@ -1171,10 +1171,6 @@ async function init() {
       toDate = isoDate(addDays(today, 6));
       renderOptions = { groupByDate: true, singleDay: null };
     }
-  } else if (view === 'month') {
-    fromDate = isoDate(today);
-    toDate = isoDate(addDays(today, 29));
-    renderOptions = { groupByDate: true, singleDay: null };
   } else {
     fromDate = isoDate(today);
     toDate = isoDate(addDays(today, 6));

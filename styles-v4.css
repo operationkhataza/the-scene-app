@@ -2034,6 +2034,28 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   padding: 3rem 1.25rem;
 }
 
+/* ── Month slide animation (swipe / chevron navigation) ──────
+   The old month slides out in the travel direction; the new month
+   slides in from the opposite side. Transform + opacity only, so
+   it stays cheap on the WebView target. Durations are mirrored in
+   calendar-v2.js (SLIDE_OUT_MS). */
+@keyframes cal-slide-out-left  { to   { transform: translateX(-16px); opacity: 0; } }
+@keyframes cal-slide-out-right { to   { transform: translateX( 16px); opacity: 0; } }
+@keyframes cal-slide-in-right  { from { transform: translateX( 16px); opacity: 0; } }
+@keyframes cal-slide-in-left   { from { transform: translateX(-16px); opacity: 0; } }
+
+/* Going forward: exit left, enter from the right. */
+.cal-grid--out-next { animation: cal-slide-out-left  0.14s ease forwards; }
+.cal-grid--in-next  { animation: cal-slide-in-right  0.16s ease; }
+/* Going back: exit right, enter from the left. */
+.cal-grid--out-prev { animation: cal-slide-out-right 0.14s ease forwards; }
+.cal-grid--in-prev  { animation: cal-slide-in-left   0.16s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-grid--out-next, .cal-grid--in-next,
+  .cal-grid--out-prev, .cal-grid--in-prev { animation: none; }
+}
+
 /* ── Day cell ────────────────────────────────────────────── */
 .cal-cell {
   position: relative;
@@ -2172,6 +2194,13 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .cal-day {
   margin-top: 2rem;
   padding: 0 1.25rem;
+  /* Fades out when changing month (not on same-month day taps — those
+     replace content while opacity is already 1, so they appear instantly). */
+  transition: opacity 0.16s ease;
+}
+.cal-day--fading { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .cal-day { transition: none; }
 }
 
 .cal-day__header {
@@ -2638,6 +2667,10 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 }
 .gig-card__back-desc::-webkit-scrollbar { display: none; }
 .gig-card__back-desc--empty {
+  font-style: italic;
+  color: var(--text-dim);
+}
+.gig-card__back-desc--loading {
   font-style: italic;
   color: var(--text-dim);
 }

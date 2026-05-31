@@ -53,6 +53,11 @@ const state = {
   monthsLoaded: new Set(), // YYYY-MM keys we've already fetched
 };
 
+/* In-flight guard for month navigation — blocks overlapping swipes/taps
+   from skipping months or interleaving renders while a change is animating
+   or fetching. */
+let navigating = false;
+
 /* ============================================================
    DATE HELPERS — mirror app.js's contract so anything that
    formats a date elsewhere in the app reads the same.
@@ -129,9 +134,13 @@ async function fetchMonth(d) {
   const fromDate = isoDate(startOfMonth(d));
   const toDate   = isoDate(endOfMonth(d));
 
+  // NOTE: `description` is deliberately NOT requested here — it's the heaviest
+  // field and is only shown on the modal's flipped back face. It's hydrated
+  // lazily per-day (see hydrateDescriptions). Loaded events therefore have
+  // description === undefined, the sentinel for "not yet fetched".
   const fields = [
     'id', 'title', 'slug', 'date', 'doors_time',
-    'short_description', 'description', 'ticket_url', 'poster',
+    'short_description', 'ticket_url', 'poster',
     'is_free', 'ticket_tiers', 'age_restriction', 'tags',
     'venue.name',
     'venue.location',
@@ -146,13 +155,20 @@ async function fetchMonth(d) {
     'promoters.promoters_id.profile_image',
   ].join(',');
 
+  // Generous base limit as a sanity bound. We intentionally avoid limit=-1:
+  // if Directus has QUERY_LIMIT_MAX set, -1 is silently clamped server-side,
+  // which would reintroduce the very silent-truncation bug we're guarding
+  // against. meta=filter_count returns the TOTAL matching rows (ignoring the
+  // limit) so we can detect — and self-heal — any overflow.
+  const PAGE = 500;
   const params = new URLSearchParams({
     'filter[status][_eq]': 'published',
     'filter[date][_gte]':  fromDate,
     'filter[date][_lte]':  toDate,
     'sort':   'date,doors_time',
     'fields': fields,
-    'limit':  '300',
+    'limit':  String(PAGE),
+    'meta':   'filter_count',
   });
 
   try {
@@ -163,7 +179,32 @@ async function fetchMonth(d) {
       return;
     }
     const json = await res.json();
-    const events = json.data || [];
+    let events = json.data || [];
+
+    // Overflow self-heal: if more rows match than we received, page through
+    // the remainder and concatenate. This loop only runs in the (currently
+    // impossible) case of a month exceeding PAGE events, so it costs nothing
+    // on normal months — but it guarantees no day ever loses a pip silently.
+    const total = json.meta?.filter_count ?? events.length;
+    if (total > events.length) {
+      console.warn(`[Calendar] ${key}: ${total} events exceed page size ${PAGE}; paginating remainder`);
+      let offset = events.length;
+      while (events.length < total) {
+        const pageParams = new URLSearchParams(params);
+        pageParams.set('offset', String(offset));
+        pageParams.delete('meta'); // only need the count once
+        const pageRes = await fetch(`${API}/items/events?${pageParams}`);
+        if (!pageRes.ok) {
+          console.error(`[Calendar] Directus ${pageRes.status} while paginating ${key}`);
+          break;
+        }
+        const pageJson = await pageRes.json();
+        const pageData = pageJson.data || [];
+        if (pageData.length === 0) break; // defensive: avoid infinite loop
+        events = events.concat(pageData);
+        offset += pageData.length;
+      }
+    }
 
     // Bucket by ISO date
     for (const ev of events) {
@@ -178,6 +219,46 @@ async function fetchMonth(d) {
   } catch (err) {
     console.error('[Calendar] fetch failed', err);
     state.monthsLoaded.add(key);
+  }
+}
+
+/* ============================================================
+   DESCRIPTION HYDRATION — `description` is omitted from the month
+   fetch (it's the heaviest field and only the modal back face uses
+   it). We fetch it lazily for a small set of events and merge it
+   back onto the same cached objects the modal reads, so by the time
+   a user flips a card the text is already there.
+
+   Sentinel: description === undefined → not yet fetched.
+             description === null/''   → fetched, genuinely empty.
+   ============================================================ */
+async function hydrateDescriptions(events) {
+  const pending = (events || []).filter(e => e && e.description === undefined);
+  if (pending.length === 0) return;
+
+  const ids = pending.map(e => e.id);
+  const params = new URLSearchParams({
+    'filter[id][_in]': ids.join(','),
+    'fields':          'id,description',
+    'limit':           String(ids.length),
+  });
+
+  try {
+    const res = await fetch(`${API}/items/events?${params}`);
+    if (!res.ok) {
+      console.error(`[Calendar] description hydrate ${res.status}`);
+      return;
+    }
+    const json = await res.json();
+    const byId = new Map((json.data || []).map(r => [r.id, r.description ?? null]));
+    // Merge onto the live cached objects (same references the modal holds).
+    for (const ev of pending) {
+      ev.description = byId.has(ev.id) ? byId.get(ev.id) : null;
+    }
+  } catch (err) {
+    console.error('[Calendar] description hydrate failed', err);
+    // Leave description === undefined; the modal renders its loading copy and
+    // a later open will retry. Non-fatal.
   }
 }
 
@@ -493,10 +574,14 @@ function renderModalCard(gig) {
       <button type="button" class="gig-card__read-more">Read more →</button>
     </div>`;
 
-  // Back face description
+  // Back face description. description === undefined means it hasn't been
+  // hydrated yet (see hydrateDescriptions) — show a brief loading state rather
+  // than a false "empty" so a fast flip mid-fetch never misreads as no content.
   const backDesc = gig.description
     ? `<div class="gig-card__back-desc">${esc(gig.description)}</div>`
-    : `<div class="gig-card__back-desc gig-card__back-desc--empty">No description added yet.</div>`;
+    : gig.description === undefined
+      ? `<div class="gig-card__back-desc gig-card__back-desc--loading">Loading…</div>`
+      : `<div class="gig-card__back-desc gig-card__back-desc--empty">No description added yet.</div>`;
 
   // Back face meta — exact match to app.js backMetaParts
   const backMetaParts = [metaStr];
@@ -585,6 +670,24 @@ function openCardModal(gig, originEl) {
   // Store current gig on the modal element so the delegated flip handler
   // can check whether there's content to flip to. Avoids stacking listeners.
   MODAL_EL._activeGig = gig;
+
+  // Race guard: if the description hasn't been hydrated yet (the day-select
+  // prefetch may not have landed, or was skipped), fetch it now and patch the
+  // back face in place — but only if the modal is still showing this gig.
+  if (gig.description === undefined) {
+    hydrateDescriptions([gig]).then(() => {
+      if (MODAL_EL._activeGig !== gig) return; // user already moved on
+      const descEl = MODAL_CARD.querySelector('.gig-card__back-desc');
+      if (!descEl) return;
+      if (gig.description) {
+        descEl.className = 'gig-card__back-desc';
+        descEl.textContent = gig.description; // textContent — no HTML injection
+      } else {
+        descEl.className = 'gig-card__back-desc gig-card__back-desc--empty';
+        descEl.textContent = 'No description added yet.';
+      }
+    });
+  }
 }
 
 function closeCardModal() {
@@ -640,9 +743,11 @@ MODAL_CARD.addEventListener('click', e => {
     // Anywhere on the back face (not CTA): flip back
     inner.classList.remove('is-flipped');
   } else {
-    // Anywhere on the front face: flip to back if there's content
+    // Anywhere on the front face: flip to back if there's content.
+    // description === undefined means it's still hydrating — allow the flip
+    // optimistically; the back face shows its loading state until it lands.
     const gig = MODAL_EL._activeGig;
-    if (gig && (gig.description || gig.short_description)) {
+    if (gig && (gig.description || gig.short_description || gig.description === undefined)) {
       inner.classList.add('is-flipped');
     }
   }
@@ -717,33 +822,105 @@ async function selectDay(iso) {
   renderGrid();
   renderDay();
 
+  // Prefetch this day's descriptions so a card flip is instant. Fire-and-forget
+  // — runs while the user is still looking at the day panel's front faces.
+  hydrateDescriptions(state.eventsByDate.get(iso) || []);
+
   // Update URL without reloading — bookmarkable / shareable links
   const url = new URL(window.location);
   url.searchParams.set('day', iso);
   window.history.replaceState({}, '', url);
 }
 
-async function goToMonth(d) {
-  state.viewMonth = startOfMonth(d);
-  updateHeader();
-  // Show the spinner while fetching if this month isn't cached
-  if (!state.monthsLoaded.has(isoMonth(d))) {
-    GRID_EL.innerHTML = `
-      <div class="state">
-        <div class="spinner"></div>
-        <p class="state__text" style="margin-top: 0.75rem;">Loading ${esc(formatMonth(d))}…</p>
-      </div>
-    `;
-  }
-  await fetchMonth(state.viewMonth);
-  renderGrid();
-  // If the selected day isn't visible in this month, clear the day panel
-  if (state.selectedDay) {
-    const sel = new Date(state.selectedDay + 'T00:00:00');
-    if (sel.getMonth() !== state.viewMonth.getMonth()
-        || sel.getFullYear() !== state.viewMonth.getFullYear()) {
-      DAY_EL.innerHTML = '';
+/* Slide-out duration — must match the .cal-grid--out-* animation in CSS. */
+const SLIDE_OUT_MS = 140;
+
+function prefersReducedMotion() {
+  return window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* direction: +1 = forward (next), -1 = back (prev), 0 = no slide animation.
+   Animate only when moving directionally AND the target month is already
+   cached — an uncached month shows the loading spinner instead of sliding,
+   which keeps the spinner visible during the fetch (the slide would fade it
+   out). The next month is prefetched on init, so forward swipes animate. */
+async function goToMonth(d, direction = 0) {
+  if (navigating) return;
+  navigating = true;
+  try {
+    state.viewMonth = startOfMonth(d);
+    updateHeader();
+
+    const animate = direction !== 0
+      && !prefersReducedMotion()
+      && state.monthsLoaded.has(isoMonth(d));
+
+    // Directional navigation deselects the day and fades its panel out — a
+    // same-month day tap goes through selectDay()/renderDay() and is untouched.
+    // Capture whether there's a panel to fade BEFORE clearing the selection.
+    const fadingDay = direction !== 0
+      && !prefersReducedMotion()
+      && state.selectedDay
+      && DAY_EL.innerHTML.trim() !== '';
+    if (direction !== 0) state.selectedDay = null;
+
+    // Begin exit animations (grid slide + day-panel fade run concurrently).
+    if (animate) {
+      // Old content exits in the travel direction.
+      GRID_EL.classList.add(direction > 0 ? 'cal-grid--out-next' : 'cal-grid--out-prev');
+    } else if (!state.monthsLoaded.has(isoMonth(d))) {
+      // Show the spinner while fetching if this month isn't cached
+      GRID_EL.innerHTML = `
+        <div class="state">
+          <div class="spinner"></div>
+          <p class="state__text" style="margin-top: 0.75rem;">Loading ${esc(formatMonth(d))}…</p>
+        </div>
+      `;
     }
+    if (fadingDay) DAY_EL.classList.add('cal-day--fading');
+
+    // Hold for the exit animation if either the grid or the day panel is
+    // animating out, so the fade is visible even when the grid shows a spinner.
+    if (animate || fadingDay) await wait(SLIDE_OUT_MS);
+
+    await fetchMonth(state.viewMonth);
+    renderGrid();
+
+    if (animate) {
+      // Swap the exit class for the enter class in the same synchronous tick
+      // (before any paint) so the grid never flashes at centre between the
+      // two animations. New content arrives from the opposite side.
+      GRID_EL.classList.remove('cal-grid--out-next', 'cal-grid--out-prev');
+      const inClass = direction > 0 ? 'cal-grid--in-next' : 'cal-grid--in-prev';
+      GRID_EL.classList.add(inClass);
+      GRID_EL.addEventListener('animationend',
+        () => GRID_EL.classList.remove(inClass), { once: true });
+    }
+
+    // Directional navigation cleared the selection above, so empty the panel
+    // and reset its opacity (removing the fade class) for the next selection.
+    if (direction !== 0) {
+      DAY_EL.innerHTML = '';
+      DAY_EL.classList.remove('cal-day--fading');
+    } else if (state.selectedDay) {
+      // Fallback (direction === 0): clear only if the selected day is off-view.
+      const sel = new Date(state.selectedDay + 'T00:00:00');
+      if (sel.getMonth() !== state.viewMonth.getMonth()
+          || sel.getFullYear() !== state.viewMonth.getFullYear()) {
+        DAY_EL.innerHTML = '';
+      }
+    }
+
+    // Silently prefetch the next month in the travel direction so a second
+    // consecutive swipe lands on a cached month and stays animated (rather
+    // than dropping to the spinner). Mirrors the init-time prefetch.
+    if (direction !== 0) {
+      fetchMonth(addMonths(state.viewMonth, direction)).catch(() => {});
+    }
+  } finally {
+    navigating = false;
   }
 }
 
@@ -790,8 +967,47 @@ async function init() {
   renderDay();
 }
 
-PREV_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth, -1)));
-NEXT_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth,  1)));
+PREV_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth, -1), -1));
+NEXT_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth,  1),  1));
+
+/* ============================================================
+   SWIPE NAVIGATION — horizontal flick on the grid changes month.
+     swipe left  → next month   (forward)
+     swipe right → previous month (back)
+   Attached to the grid only, so the weekday strip and the day
+   panel below keep their normal behaviour. Passive listeners —
+   we never preventDefault, so vertical scroll and the global
+   double-tap guard are untouched. The axis-lock + threshold below
+   ensures a vertical drag never triggers a month change.
+   ============================================================ */
+const SWIPE_THRESHOLD = 50;   // px of horizontal travel to count as a swipe
+const SWIPE_MAX_MS    = 600;  // a flick, not a slow drag / long-press
+let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0, swipeTracking = false;
+
+GRID_EL.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) { swipeTracking = false; return; }
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeStartTime = Date.now();
+  swipeTracking = true;
+}, { passive: true });
+
+GRID_EL.addEventListener('touchend', e => {
+  if (!swipeTracking) return;
+  swipeTracking = false;
+  const t = e.changedTouches[0];
+  if (!t) return;
+  const dx = t.clientX - swipeStartX;
+  const dy = t.clientY - swipeStartY;
+  const elapsed = Date.now() - swipeStartTime;
+  if (elapsed > SWIPE_MAX_MS) return;
+  if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+  if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // mostly-vertical → ignore
+  if (dx < 0) goToMonth(addMonths(state.viewMonth,  1),  1); // left → next
+  else        goToMonth(addMonths(state.viewMonth, -1), -1); // right → prev
+}, { passive: true });
+
+GRID_EL.addEventListener('touchcancel', () => { swipeTracking = false; }, { passive: true });
 
 if (window.HoloShader) window.HoloShader.init();
 
