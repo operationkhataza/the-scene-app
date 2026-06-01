@@ -124,6 +124,36 @@ function gigTier(gig) {
 }
 
 /* ============================================================
+   THEATRE PARENT-CHILD COALESCING — identical contract to app.js.
+   A theatre night inherits production-wide fields from its
+   `parent_run`; per-instance + per-night relations stay on the child.
+   Applied once when events are bucketed, so grid pips, day cards and
+   the modal all read one uniform shape. Ordinary gigs pass through.
+   NOTE: unlike app.js, the calendar lazy-loads `description` — but we
+   DO request `parent_run.description` so a theatre night arrives with
+   its blurb already coalesced (hydrateDescriptions then skips it).
+   ============================================================ */
+function resolveGig(event) {
+  const run = event && event.parent_run;
+  if (!run || typeof run !== 'object') return event;   // ordinary gig
+  return {
+    ...event,
+    title:             run.title             ?? event.title,
+    slug:              run.slug              ?? event.slug,
+    short_description: run.short_description ?? event.short_description,
+    description:       run.description       ?? event.description,
+    poster:            run.poster            ?? event.poster,
+    ticket_url:        run.ticket_url        ?? event.ticket_url,
+    is_free:           run.is_free           ?? event.is_free,
+    ticket_tiers:      run.ticket_tiers      ?? event.ticket_tiers,
+    age_restriction:   run.age_restriction   ?? event.age_restriction,
+    tags:              run.tags              ?? event.tags,
+    venue:             run.venue             ?? event.venue,
+    _isRun: true,
+  };
+}
+
+/* ============================================================
    DIRECTUS FETCH — same fields as app.js so the data is
    interchangeable across the two surfaces.
    ============================================================ */
@@ -153,6 +183,23 @@ async function fetchMonth(d) {
     'promoters.promoters_id.id',
     'promoters.promoters_id.name',
     'promoters.promoters_id.profile_image',
+    // Theatre parent run — production-wide fields a night inherits (see resolveGig).
+    // `description` IS requested here (unlike for gigs) so theatre nights arrive
+    // with their blurb already coalesced; ordinary gigs still lazy-load it.
+    'parent_run.id',
+    'parent_run.status',
+    'parent_run.title',
+    'parent_run.slug',
+    'parent_run.short_description',
+    'parent_run.description',
+    'parent_run.ticket_url',
+    'parent_run.poster',
+    'parent_run.is_free',
+    'parent_run.ticket_tiers',
+    'parent_run.age_restriction',
+    'parent_run.tags',
+    'parent_run.venue.name',
+    'parent_run.venue.location',
   ].join(',');
 
   // Generous base limit as a sanity bound. We intentionally avoid limit=-1:
@@ -170,6 +217,11 @@ async function fetchMonth(d) {
     'limit':  String(PAGE),
     'meta':   'filter_count',
   });
+  // Parent-status guard (same as app.js): show a child only if it has no parent
+  // run, OR its parent run is published — so a published theatre night under a
+  // draft/pending parent never leaks as a blank pip/card.
+  params.set('filter[_or][0][parent_run][_null]', 'true');
+  params.set('filter[_or][1][parent_run][status][_eq]', 'published');
 
   try {
     const res = await fetch(`${API}/items/events?${params}`);
@@ -206,13 +258,14 @@ async function fetchMonth(d) {
       }
     }
 
-    // Bucket by ISO date
+    // Bucket by ISO date. Normalize theatre nights (parent_run → coalesced
+    // fields) here so grid pips, day cards and the modal all read one shape.
     for (const ev of events) {
       if (!ev.date) continue;
       if (!state.eventsByDate.has(ev.date)) {
         state.eventsByDate.set(ev.date, []);
       }
-      state.eventsByDate.get(ev.date).push(ev);
+      state.eventsByDate.get(ev.date).push(resolveGig(ev));
     }
     state.monthsLoaded.add(key);
     console.log(`[Calendar] loaded ${events.length} events for ${key}`);

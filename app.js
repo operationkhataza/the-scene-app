@@ -622,6 +622,41 @@ function clearSheet() {
 }
 
 /* ============================================================
+   THEATRE PARENT-CHILD COALESCING
+   ────────────────────────────────────────────────────────────
+   A theatre performance is a normal `events` row that points at a
+   shared `theatre_runs` parent via `parent_run`. The child carries
+   only per-instance data (date/time/status) and per-night relations
+   (artists/curators/promoters); production-wide fields (title, poster,
+   venue, blurb, pricing…) live on the parent.
+
+   resolveGig() runs once at ingestion so every downstream consumer
+   (filters, search, sort, day-grouping, renderCard) sees one uniform
+   shape. Parent wins for production fields; the child keeps its own
+   id/date/time/status/category and curators/promoters (curation is
+   per-night, exactly like a gig). Ordinary gigs pass through untouched.
+   ============================================================ */
+function resolveGig(event) {
+  const run = event && event.parent_run;
+  if (!run || typeof run !== 'object') return event;   // ordinary gig
+  return {
+    ...event,
+    title:             run.title             ?? event.title,
+    slug:              run.slug              ?? event.slug,
+    short_description: run.short_description ?? event.short_description,
+    description:       run.description       ?? event.description,
+    poster:            run.poster            ?? event.poster,
+    ticket_url:        run.ticket_url        ?? event.ticket_url,
+    is_free:           run.is_free           ?? event.is_free,
+    ticket_tiers:      run.ticket_tiers      ?? event.ticket_tiers,
+    age_restriction:   run.age_restriction   ?? event.age_restriction,
+    tags:              run.tags              ?? event.tags,
+    venue:             run.venue             ?? event.venue,
+    _isRun: true,   // marker for any run-aware UI later (e.g. a "multi-night" hint)
+  };
+}
+
+/* ============================================================
    DIRECTUS FETCH
    ============================================================ */
 async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug = null }) {
@@ -637,7 +672,24 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
     'curators.curators_id.logo',
     'promoters.promoters_id.id',
     'promoters.promoters_id.name',
-    'promoters.promoters_id.profile_image'
+    'promoters.promoters_id.profile_image',
+    // Theatre parent run — production-wide fields a theatre night inherits.
+    // resolveGig() coalesces these over the (empty) child fields at ingestion.
+    // Per-night relations (artists/curators/promoters) and date/time stay on the child.
+    'parent_run.id',
+    'parent_run.status',
+    'parent_run.title',
+    'parent_run.slug',
+    'parent_run.short_description',
+    'parent_run.description',
+    'parent_run.ticket_url',
+    'parent_run.poster',
+    'parent_run.is_free',
+    'parent_run.ticket_tiers',
+    'parent_run.age_restriction',
+    'parent_run.tags',
+    'parent_run.venue.name',
+    'parent_run.venue.location'
   ].join(',');
 
   const params = new URLSearchParams({
@@ -648,6 +700,14 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
     'fields': fields,
     'limit': '200'
   });
+
+  // Parent-status guard: show a child only if it has no parent run, OR its parent
+  // run is itself published. Prevents a published theatre night whose parent is
+  // still draft/pending from leaking onto the guide as a blank card.
+  // ([parent_run][_null] checks the raw FK, so theatre children with a hidden
+  //  (non-published) parent fail both branches and are excluded entirely.)
+  params.set('filter[_or][0][parent_run][_null]', 'true');
+  params.set('filter[_or][1][parent_run][status][_eq]', 'published');
 
   // Curator mode: filter to only events this curator has endorsed
   if (curatorSlug) {
@@ -1226,7 +1286,9 @@ async function init() {
     ]);
     state.categories = categories;
     state.areas = areas;
-    state.allGigs = gigs;
+    // Normalize theatre nights (parent_run → coalesced fields) once, up front,
+    // so filters/search/sort/render all operate on a single uniform shape.
+    state.allGigs = gigs.map(resolveGig);
 
     // ── CURATOR HEADER ──
     if (curatorSlug) {
