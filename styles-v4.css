@@ -2712,6 +2712,10 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
      Close: card fades + scales down 130ms; backdrop fades 100ms
    ================================================================ */
 
+/* Promoter sheet must stack above the event modal in the calendar */
+#promoter-backdrop { z-index: 940; }
+#promoter-sheet    { z-index: 950; }
+
 /* ── Outer shell: frosted backdrop, fixed to viewport ──────── */
 .cal-modal {
   position: fixed;

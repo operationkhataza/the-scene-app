@@ -80,6 +80,26 @@
     <div class="cal-modal__card" id="cal-modal-card"></div>
   </div>
 
+  <!-- Promoter profile sheet — slides up over the event modal when a
+       promoter pill is tapped. Reuses the .sheet component from the gig
+       guide; data-mode="promoter" gives it the dark-green styling. -->
+  <div class="sheet-backdrop" id="promoter-backdrop" aria-hidden="true"></div>
+  <aside class="sheet" id="promoter-sheet" data-mode="promoter"
+         role="dialog" aria-modal="true" aria-labelledby="promoter-sheet-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <header class="sheet__header">
+      <h2 class="sheet__title" id="promoter-sheet-title">Promoter</h2>
+      <button class="sheet__close" id="promoter-sheet-close" type="button" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </header>
+    <div class="sheet__body" id="promoter-sheet-body"></div>
+  </aside>
+
   <script src="holo-shader.js?v=7"></script>
   <script src="calendar-v2.js"></script>
 </body>

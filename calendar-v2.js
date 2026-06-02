@@ -17,7 +17,6 @@
    What's NOT here:
      • Filters — calendar's job is overview, not filtering
      • Search — same reason
-     • The bottom-sheet promoter card — that lives in the gig guide
    ============================================================ */
 
 document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
@@ -40,6 +39,11 @@ const NEXT_BTN    = document.getElementById('cal-nav-next');
 const MONTH_LABEL = document.getElementById('cal-nav-month-label');
 const MODAL_EL    = document.getElementById('cal-modal');
 const MODAL_CARD  = document.getElementById('cal-modal-card');
+const PROMO_BD    = document.getElementById('promoter-backdrop');
+const PROMO_SHEET = document.getElementById('promoter-sheet');
+const PROMO_TITLE = document.getElementById('promoter-sheet-title');
+const PROMO_BODY  = document.getElementById('promoter-sheet-body');
+const PROMO_CLOSE = document.getElementById('promoter-sheet-close');
 
 /* ============================================================
    STATE — minimal. Just the focused month and the selected day,
@@ -590,7 +594,7 @@ function renderModalCard(gig) {
       </div>`
     : '';
 
-  // Promoters — "Presented by" line, no tap logic for now
+  // Promoters — "Presented by" line with tappable pill
   const promoterObjs = (gig.promoters || []).map(p => {
     const pid = p.promoters_id;
     if (!pid) return null;
@@ -608,8 +612,8 @@ function renderModalCard(gig) {
           const logoEl = logoSrc
             ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
             : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<span class="gig-card__promoter-link">${logoEl}${esc(p.name)}</span>`;
-        }).join(', ')
+          return `<button class="gig-card__promoter-link" type="button" data-promoter-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
+        }).join('')
       }</p>`
     : '';
 
@@ -768,18 +772,19 @@ MODAL_CARD.addEventListener('click', e => {
   if (!e.target.closest('.gig-card')) closeCardModal();
 }, true); // capture phase so it fires before the flip handler
 
-// Close on Escape key
+// Close on Escape key — only if the promoter sheet isn't on top
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeCardModal();
+  if (e.key === 'Escape' && !PROMO_SHEET.classList.contains('is-open')) closeCardModal();
 });
 
 // Flip delegation — wired once on the card container. Avoids stacking
 // listeners every time a new card is opened.
 MODAL_CARD.addEventListener('click', e => {
   if (!MODAL_EL.classList.contains('is-open')) return;
-  // Pass-through: links and the close button handle themselves
+  // Pass-through: links, the close button and the promoter pill handle themselves
   if (e.target.closest('.gig-card__back-cta'))   return;
   if (e.target.closest('.gig-card__ticket-pill')) return;
+  if (e.target.closest('.gig-card__promoter-link')) return;
 
   const inner    = MODAL_CARD.querySelector('.gig-card__inner');
   const closeBtn = e.target.closest('.gig-card__close');
@@ -1063,5 +1068,147 @@ GRID_EL.addEventListener('touchend', e => {
 GRID_EL.addEventListener('touchcancel', () => { swipeTracking = false; }, { passive: true });
 
 if (window.HoloShader) window.HoloShader.init();
+
+/* ============================================================
+   PROMOTER PROFILE SHEET — mirrors the gig guide implementation.
+   Opens on top of the event detail modal when a promoter pill is
+   tapped. Fetches promoter bio/socials + upcoming events list.
+   ============================================================ */
+async function fetchPromoter(id) {
+  const res = await fetch(
+    `${API}/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
+  );
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return (await res.json()).data;
+}
+
+async function fetchPromoterEvents(promoterId) {
+  const today = isoDate(new Date());
+  const params = new URLSearchParams({
+    'filter[promoters][promoters_id][_eq]': promoterId,
+    'filter[status][_eq]':                 'published',
+    'filter[date][_gte]':                  today,
+    'fields':                              'id,title,date,doors_time,poster,venue.name,ticket_url',
+    'sort':                                'date,doors_time',
+    'limit':                               '20'
+  });
+  const res = await fetch(`${API}/items/events?${params}`);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return (await res.json()).data || [];
+}
+
+function renderPromoterProfile(promoter, events) {
+  const avatarSrc  = promoter.profile_image
+    ? imgUrl(promoter.profile_image, { width: '120', height: '120', fit: 'cover' })
+    : null;
+  const avatarHtml = avatarSrc
+    ? `<img class="promoter-sheet__avatar" src="${avatarSrc}" alt="${esc(promoter.name)} logo">`
+    : `<div class="promoter-sheet__avatar promoter-sheet__avatar--placeholder">${esc(promoter.name.charAt(0).toUpperCase())}</div>`;
+
+  const bioHtml     = promoter.bio
+    ? `<p class="promoter-sheet__bio">${esc(promoter.bio)}</p>`
+    : '';
+  const websiteHtml = promoter.website
+    ? `<a class="promoter-sheet__website" href="${esc(promoter.website)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+    : '';
+
+  const PLATFORM_LABELS = {
+    instagram: 'Instagram', facebook: 'Facebook',
+    x: 'X', youtube: 'YouTube', tiktok: 'TikTok',
+    soundcloud: 'SoundCloud', spotify: 'Spotify', bandcamp: 'Bandcamp'
+  };
+  const socials    = Array.isArray(promoter.social_links) ? promoter.social_links : [];
+  const socialHtml = socials.length > 0
+    ? `<div class="promoter-sheet__socials">
+        ${socials.map(s => {
+          const rawPlatform = s.Platforms || s.platform || '';
+          const url         = s.URL       || s.url      || '';
+          if (!url) return '';
+          const label = PLATFORM_LABELS[rawPlatform.toLowerCase()]
+            || (rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1))
+            || url;
+          return `<a class="promoter-sheet__social-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+        }).filter(Boolean).join('')}
+      </div>`
+    : '';
+
+  const eventsHtml = events.length > 0
+    ? `<div class="promoter-sheet__events">
+        <p class="promoter-sheet__events-title">Upcoming Events</p>
+        <ul class="promoter-sheet__event-list">
+          ${events.map(ev => {
+            const timeStr   = formatTime(ev.doors_time);
+            const meta      = [formatCardDate(ev.date), timeStr, ev.venue?.name].filter(Boolean).join(' · ');
+            const thumbSrc  = ev.poster ? imgUrl(ev.poster, { width: '144', fit: 'contain' }) : null;
+            const thumbHtml = thumbSrc
+              ? `<img class="promoter-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
+              : `<div class="promoter-sheet__event-thumb promoter-sheet__event-thumb--placeholder"></div>`;
+            const textHtml  = `
+              <div class="promoter-sheet__event-text">
+                <div class="promoter-sheet__event-title">${esc(ev.title)}</div>
+                <div class="promoter-sheet__event-meta">${esc(meta)}</div>
+              </div>`;
+            return ev.ticket_url
+              ? `<li class="promoter-sheet__event-item"><a href="${esc(ev.ticket_url)}" target="_blank" rel="noopener noreferrer" class="promoter-sheet__event-link">${thumbHtml}${textHtml}</a></li>`
+              : `<li class="promoter-sheet__event-item">${thumbHtml}${textHtml}</li>`;
+          }).join('')}
+        </ul>
+      </div>`
+    : `<p class="promoter-sheet__no-events">No upcoming events scheduled.</p>`;
+
+  return `
+    <div class="promoter-sheet">
+      <div class="promoter-sheet__header">
+        <div class="promoter-sheet__accent-bg"></div>
+        ${avatarHtml}
+        <h3 class="promoter-sheet__name">${esc(promoter.name)}</h3>
+        ${bioHtml}
+        ${websiteHtml}
+        ${socialHtml}
+      </div>
+      ${eventsHtml}
+    </div>`;
+}
+
+function openPromoterSheet(promoterId) {
+  PROMO_TITLE.textContent = 'Loading…';
+  PROMO_BODY.innerHTML    = `<div class="promoter-sheet__loading"><div class="spinner"></div></div>`;
+  PROMO_SHEET.classList.add('is-open');
+  PROMO_BD.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+
+  fetchPromoter(promoterId)
+    .then(async promoter => {
+      PROMO_TITLE.textContent = promoter.name;
+      let events = [];
+      try { events = await fetchPromoterEvents(promoterId); } catch (_) {}
+      PROMO_BODY.innerHTML = renderPromoterProfile(promoter, events);
+    })
+    .catch(err => {
+      console.error('[Scene] fetchPromoter failed:', err);
+      PROMO_BODY.innerHTML    = `<div class="state" style="padding:2rem 1rem;"><p class="state__text">Couldn't load promoter details.</p></div>`;
+      PROMO_TITLE.textContent = 'Promoter';
+    });
+}
+
+function closePromoterSheet() {
+  PROMO_SHEET.classList.remove('is-open');
+  PROMO_BD.classList.remove('is-open');
+  document.body.style.overflow = '';
+}
+
+// Tap a promoter pill inside the event modal card
+MODAL_CARD.addEventListener('click', e => {
+  const pill = e.target.closest('.gig-card__promoter-link[data-promoter-id]');
+  if (!pill) return;
+  e.stopPropagation();
+  openPromoterSheet(Number(pill.dataset.promoterId));
+});
+
+PROMO_CLOSE.addEventListener('click', closePromoterSheet);
+PROMO_BD.addEventListener('click', closePromoterSheet);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && PROMO_SHEET.classList.contains('is-open')) closePromoterSheet();
+});
 
 init();
