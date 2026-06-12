@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="event-submission-stylesheet.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 
@@ -88,6 +89,13 @@
               <select id="inp-format"><option value="">Loading…</option></select>
               <div class="form-error">Required.</div>
             </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="display:flex; flex-direction:column; gap:10px; align-items:flex-start;">
+            <div class="form-hint">Quick human check — helps us keep spam off the gig guide.</div>
+            <div id="turnstile-container"></div>
           </div>
         </div>
 
@@ -385,6 +393,8 @@
 
   <script type="module">
     const API_URL = 'https://api.thescenecapetown.co.za';
+    const SUBMIT_URL = `${API_URL}/submit-gate`;
+    const TURNSTILE_SITE_KEY = '0x4AAAAAADjhF56NyKfNadij';
 
     /* FORM TYPE — read from URL param, default to live-music if missing/unrecognised */
     const FORM_TYPE = (() => {
@@ -477,24 +487,21 @@
       if (!res.ok) throw new Error(`API ${res.status}`);
       return res.json();
     }
-    async function apiPost(path, body) {
-      const res = await fetch(`${API_URL}${path}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.errors?.[0]?.message || `API ${res.status}`); }
-      const text = await res.text();
-      return text ? JSON.parse(text) : {};
-    }
     async function uploadFile(file) {
-      const fd = new FormData();
-      fd.append('file', file, file.name || 'upload.jpg');
-      // Set title so Directus File Library shows the slugified event name
-      if (file.name && file.name !== 'upload.jpg') {
-        fd.append('title', file.name.replace(/\.png$/, '').replace(/-/g, ' '));
-      }
-      const res = await fetch(`${API_URL}/files`, { method: 'POST', body: fd });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.errors?.[0]?.message || `Upload failed (${res.status})`); }
-      return (await res.json()).data.id;
+      // Poster now uploads through the submit-gate endpoint (base64 in JSON), not
+      // straight to Directus /files. Server re-checks type/size and stores it.
+      const data = await fileToBase64(file);
+      // Title shown in the Directus File Library — slugified event name (or filename)
+      const title = (file.name && file.name !== 'upload.jpg')
+        ? file.name.replace(/\.[a-z0-9]+$/i, '').replace(/-/g, ' ')
+        : 'poster';
+      const d = await gatedPost('/file', {
+        type: file.type,
+        filename: file.name || 'upload.jpg',
+        title,
+        data,
+      });
+      return d.data.id;
     }
 
     async function deleteFile(fileId) {
@@ -504,6 +511,85 @@
       } catch (e) {
         console.warn('[poster] Could not delete orphaned file', fileId, e);
       }
+    }
+
+    /* ───────────────── TURNSTILE + WRISTBAND (submit-gate gateway) ─────────────────
+       The form no longer writes to Directus directly. On load, Turnstile produces a
+       token; we trade it once for a short-lived "wristband" (see the submit-gate
+       extension). Every write (poster, venue, artist, event) goes through SUBMIT_URL
+       carrying that wristband in its body. On a 403 (expired) we re-challenge + retry. */
+    let wristband = null;
+    let wristbandResolve;
+    let wristbandReady = new Promise(r => { wristbandResolve = r; });
+
+    async function onTurnstile(token) {
+      try {
+        const res = await fetch(`${SUBMIT_URL}/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (res.ok && d.wristband) { wristband = d.wristband; wristbandResolve(wristband); }
+        else console.error('[submit-gate] session exchange failed', d);
+      } catch (e) { console.error('[submit-gate] session exchange error', e); }
+    }
+
+    function renderTurnstile() {
+      const el = document.getElementById('turnstile-container');
+      if (window.turnstile && el) {
+        window.turnstile.render(el, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: onTurnstile,
+          'error-callback': () => console.warn('[submit-gate] turnstile error'),
+        });
+      } else {
+        setTimeout(renderTurnstile, 200);   // wait for the async Turnstile script to load
+      }
+    }
+
+    async function ensureWristband() {
+      if (wristband) return wristband;
+      await wristbandReady;
+      return wristband;
+    }
+
+    async function refreshWristband() {
+      wristband = null;
+      wristbandReady = new Promise(r => { wristbandResolve = r; });
+      try { if (window.turnstile) window.turnstile.reset(); } catch (e) {}
+      return ensureWristband();
+    }
+
+    /* gatedPost — POST JSON to a submit-gate route with the wristband attached.
+       Retries once if the wristband has expired (403). Returns parsed JSON. */
+    async function gatedPost(path, body, isRetry = false) {
+      const wb = await ensureWristband();
+      const res = await fetch(`${SUBMIT_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, wristband: wb }),
+      });
+      if (res.status === 403 && !isRetry) {
+        await refreshWristband();
+        return gatedPost(path, body, true);
+      }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.errors?.[0]?.message || `API ${res.status}`);
+      }
+      const text = await res.text();
+      return text ? JSON.parse(text) : {};
+    }
+
+    /* Read a File as base64 (without the data: prefix) for the /file route. */
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Could not read file'));
+        reader.readAsDataURL(file);
+      });
     }
 
     /* FORM TYPE INIT — apply config to DOM before user sees anything */
@@ -643,7 +729,7 @@
       const btn = document.getElementById('submit-venue-btn');
       btn.disabled = true; btn.textContent = 'Submitting…';
       try {
-        const res = await apiPost('/items/venues', {
+        const res = await gatedPost('/venue', {
           name, address,
           location: document.getElementById('new-venue-location').value || null,
           submitted_by_name: document.getElementById('new-venue-submitted-by')?.value?.trim() || document.getElementById('inp-submitter-name')?.value?.trim() || null,
@@ -727,7 +813,7 @@
     }
     async function createAndAddArtist(name, submittedByName) {
       try {
-        await apiPost('/items/artists', {
+        await gatedPost('/artist', {
           name,
           slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           status: 'pending',
@@ -1234,7 +1320,7 @@
         payload[config.genreJunction] = state.selectedGenres.map(g => ({ [config.genreIdKey]: g.id }));
       }
       try {
-        await apiPost('/items/events', payload);
+        await gatedPost('/event', payload);
         showSuccess();
       } catch (err) {
         console.error('Submit failed:', err);
@@ -1300,6 +1386,7 @@
 
     /* INIT */
     initFormType();
+    renderTurnstile();
     loadLookups();
   </script>
 </body>
