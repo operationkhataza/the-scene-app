@@ -30,7 +30,11 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-const API = 'https://api.thescenecapetown.co.za';
+import { API, apiGet } from './api-v1.js';
+import {
+  esc, isoDate, addDays, formatCardDate, formatLongDate,
+  formatTime, dateForDayName, getParam, imgUrl
+} from './utils-v1.js';
 
 // Dev preview: ?holo=test forces every event card into the holographic tier
 // so the WebGL shader is visible regardless of curator count in Directus.
@@ -83,66 +87,9 @@ const state = {
 };
 
 /* ============================================================
-   URL / QUERY STATE
+   HELPERS — esc / imgUrl / date helpers / getParam now live in
+   utils-v1.js (imported at top). Only app-specific helpers remain.
    ============================================================ */
-function getParam(key) {
-  return new URLSearchParams(window.location.search).get(key);
-}
-
-/* ============================================================
-   DATE HELPERS
-   ============================================================ */
-function isoDate(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-function formatCardDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-function formatLongDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-function formatTime(timeStr) {
-  if (!timeStr) return '';
-  const [h, m] = timeStr.split(':');
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'pm' : 'am';
-  const h12 = hour % 12 || 12;
-  return m === '00' ? `${h12}${ampm}` : `${h12}:${m}${ampm}`;
-}
-function dateForDayName(dayName) {
-  const map = {sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
-  const target = map[dayName.toLowerCase()];
-  if (target === undefined) return null;
-  const today = new Date();
-  let daysAhead = target - today.getDay();
-  if (daysAhead < 0) daysAhead += 7;
-  return addDays(today, daysAhead);
-}
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
-function imgUrl(fileId, opts = {}) {
-  if (!fileId) return null;
-  const params = new URLSearchParams({ format: 'webp', quality: '80', ...opts });
-  return `${API}/assets/${fileId}?${params.toString()}`;
-}
-function esc(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
 function slugify(str) {
   return String(str || '').toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -356,11 +303,9 @@ function closeSheet() {
    ============================================================ */
 
 async function fetchPromoter(id) {
-  const res = await fetch(
-    `${API}/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
+  const json = await apiGet(
+    `/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
   );
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  const json = await res.json();
   return json.data;
 }
 
@@ -374,9 +319,7 @@ async function fetchPromoterEvents(promoterId) {
     'sort':                                'date,doors_time',
     'limit':                               '20'
   });
-  const res = await fetch(`${API}/items/events?${params}`);
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  const json = await res.json();
+  const json = await apiGet('/items/events', params);
   return json.data || [];
 }
 
@@ -738,9 +681,7 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
    ============================================================ */
 async function loadCategories() {
   try {
-    const res = await fetch(`${API}/items/event_category?fields=id,name,slug&sort=name`);
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await apiGet('/items/event_category?fields=id,name,slug&sort=name');
     return json.data || [];
   } catch (err) {
     console.warn('Could not load event categories; Type filter will be empty', err);
@@ -765,9 +706,7 @@ async function loadAreas() {
    ============================================================ */
 async function loadCurator(slug) {
   try {
-    const res = await fetch(`${API}/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug&limit=1`);
-    if (!res.ok) return null;
-    const json = await res.json();
+    const json = await apiGet(`/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load curator:', err);
@@ -781,9 +720,7 @@ async function loadCurator(slug) {
    ============================================================ */
 async function loadPromoter(slug) {
   try {
-    const res = await fetch(`${API}/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
-    if (!res.ok) return null;
-    const json = await res.json();
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load promoter:', err);

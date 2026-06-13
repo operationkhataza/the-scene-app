@@ -29,7 +29,11 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-const API = 'https://api.thescenecapetown.co.za';
+import { API, apiGet } from './api-v1.js';
+import {
+  esc, isoDate, formatCardDate, formatLongDate,
+  formatTime, getParam, imgUrl
+} from './utils-v1.js';
 
 /* DOM */
 const GRID_EL     = document.getElementById('cal-grid');
@@ -63,15 +67,10 @@ const state = {
 let navigating = false;
 
 /* ============================================================
-   DATE HELPERS — mirror app.js's contract so anything that
-   formats a date elsewhere in the app reads the same.
+   DATE HELPERS — month-grid specific. The shared date/format
+   helpers (isoDate, formatCardDate, formatLongDate, formatTime,
+   getParam, imgUrl, esc) now live in utils-v1.js, imported above.
    ============================================================ */
-function isoDate(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
 function isoMonth(d) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -83,33 +82,6 @@ function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, 1)
 
 function formatMonth(d) {
   return d.toLocaleDateString('en-ZA', { month: 'long' });
-}
-function formatLongDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-function formatTime(timeStr) {
-  if (!timeStr) return '';
-  const [h, m] = timeStr.split(':');
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'pm' : 'am';
-  const h12 = hour % 12 || 12;
-  return m === '00' ? `${h12}${ampm}` : `${h12}:${m}${ampm}`;
-}
-
-function imgUrl(fileId, opts = {}) {
-  if (!fileId) return null;
-  const params = new URLSearchParams({ format: 'webp', quality: '80', ...opts });
-  return `${API}/assets/${fileId}?${params.toString()}`;
-}
-function esc(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function getParam(key) {
-  return new URLSearchParams(window.location.search).get(key);
 }
 
 /* ============================================================
@@ -228,13 +200,9 @@ async function fetchMonth(d) {
   params.set('filter[_or][1][parent_run][status][_eq]', 'published');
 
   try {
-    const res = await fetch(`${API}/items/events?${params}`);
-    if (!res.ok) {
-      console.error(`[Calendar] Directus ${res.status}`);
-      state.monthsLoaded.add(key); // don't retry endlessly on error
-      return;
-    }
-    const json = await res.json();
+    // apiGet throws on a bad response; the catch below logs it and marks the
+    // month loaded (so we don't retry endlessly), same as the old inline guard.
+    const json = await apiGet('/items/events', params);
     let events = json.data || [];
 
     // Overflow self-heal: if more rows match than we received, page through
@@ -301,12 +269,7 @@ async function hydrateDescriptions(events) {
   });
 
   try {
-    const res = await fetch(`${API}/items/events?${params}`);
-    if (!res.ok) {
-      console.error(`[Calendar] description hydrate ${res.status}`);
-      return;
-    }
-    const json = await res.json();
+    const json = await apiGet('/items/events', params);
     const byId = new Map((json.data || []).map(r => [r.id, r.description ?? null]));
     // Merge onto the live cached objects (same references the modal holds).
     for (const ev of pending) {
@@ -472,11 +435,8 @@ function renderDayCard(gig) {
   `;
 }
 
-/* formatCardDate — matches app.js exactly */
-function formatCardDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
-}
+/* formatCardDate now imported from utils-v1.js (was a byte-identical
+   copy of app.js's). */
 
 /* priceMarkup — exact copy of app.js priceMarkup so the price
    HTML structure (price / price__prefix / price__value) is identical. */
@@ -1075,11 +1035,10 @@ if (window.HoloShader) window.HoloShader.init();
    tapped. Fetches promoter bio/socials + upcoming events list.
    ============================================================ */
 async function fetchPromoter(id) {
-  const res = await fetch(
-    `${API}/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
+  const json = await apiGet(
+    `/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
   );
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return (await res.json()).data;
+  return json.data;
 }
 
 async function fetchPromoterEvents(promoterId) {
@@ -1092,9 +1051,8 @@ async function fetchPromoterEvents(promoterId) {
     'sort':                                'date,doors_time',
     'limit':                               '20'
   });
-  const res = await fetch(`${API}/items/events?${params}`);
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return (await res.json()).data || [];
+  const json = await apiGet('/items/events', params);
+  return json.data || [];
 }
 
 function renderPromoterProfile(promoter, events) {
