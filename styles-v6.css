@@ -909,8 +909,10 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
   line-height: 1.5;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  /* 4 lines so a full 120-char short_description (the form limit) shows in full
+     even on a narrow phone; it's a max, so shorter descriptions don't add height. */
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   overflow: hidden;
 }
 

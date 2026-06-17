@@ -844,6 +844,7 @@ select {
 }
 
 .img-upload-empty {
+  display: none;            /* hidden by default — shown ONLY in the empty state (see below) */
   padding: 32px 20px;
   text-align: center;
   cursor: pointer;
@@ -926,12 +927,13 @@ select {
 }
 .img-upload-remove:hover { background: rgba(224, 75, 90, 0.85); }
 
+/* The empty drop zone shows ONLY in the empty state. Every other element
+   (preview, error) is hidden by default and shown for its own state, so no two
+   states can ever render together — including a stale empty zone behind an error. */
+.img-upload[data-state="empty"]        .img-upload-empty    { display: block; }
 .img-upload[data-state="uploading"]    .img-upload-preview  { display: block; }
 .img-upload[data-state="uploading"]    .img-upload-overlay  { display: flex; }
-.img-upload[data-state="uploading"]    .img-upload-empty    { display: none; }
 .img-upload[data-state="uploaded"]     .img-upload-preview  { display: block; }
-.img-upload[data-state="uploaded"]     .img-upload-empty    { display: none; }
-.img-upload[data-state="upload-error"] .img-upload-empty    { display: none; }
 .img-upload[data-state="upload-error"] .poster-upload-error { display: flex; }
 
 .poster-upload-error {

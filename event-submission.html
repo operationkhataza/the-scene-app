@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="event-submission-stylesheet.css">
+  <link rel="stylesheet" href="event-submission-stylesheet-v2.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -813,16 +813,19 @@
     }
     async function createAndAddArtist(name, submittedByName) {
       try {
-        await gatedPost('/artist', {
+        const res = await gatedPost('/artist', {
           name,
           slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           status: 'pending',
           artist_type: [],
           submitted_by_name: submittedByName || document.getElementById('inp-submitter-name')?.value?.trim() || null,
         });
-        // Public policy returns 204 — use a negative temp ID (never a valid DB integer)
-        const tempId = -(Date.now() % 1000000);
-        addArtist(tempId, name);
+        // The submit-gate returns the real new artist id ({ data: { id } }) even though
+        // it's pending. Use it so the artist survives the id > 0 save filter and is linked
+        // to the event. Fall back to a negative temp id (never a valid DB integer) if the
+        // gate returns no id — the band still shows as a tag, it just won't link.
+        const id = res?.data?.id || -(Date.now() % 1000000);
+        addArtist(id, name);
         toast(`Artist "${name}" added.`, 'ok');
       } catch (err) { toast(`Couldn't add artist: ${err.message}`, 'err'); }
       artistDropdown.style.display = 'none'; artistSearch.value = '';
