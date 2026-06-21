@@ -612,6 +612,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   isolation: isolate;
   box-shadow: var(--shadow-sm);
 }
+/* ===== TEMP: cache-test marker — DELETE after Immedia screen recording =====
+   Makes all normal (non-curated) gig cards loud pink so the difference between
+   the live site and the stale app webview is unmissable on camera. Targets
+   :not([data-curated]) so the curator tiers are left alone. Remove this block
+   (and redeploy under the SAME filename, styles-v6.css) once recorded. */
+.gig-card:not([data-curated]) {
+  background: #ff2d9b !important;
+  border: 3px solid #ff0080 !important;
+}
+/* ===== END TEMP cache-test marker ===== */
 /* Soft top-left specular highlight on every card */
 .gig-card::before {
   content: '';
