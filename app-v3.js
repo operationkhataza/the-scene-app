@@ -867,7 +867,7 @@ function renderCard(gig, index) {
         ${priceMarkup(gig)}
         ${hasTickets ? `<a class="gig-card__ticket-pill" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>` : ''}
       </div>
-      <button type="button" class="gig-card__read-more">Read more →</button>
+      <button type="button" class="gig-card__read-more">JS CACHE TEST →</button>
     </div>`;
 
   // ── Back face: full description (plain text, pre-wrap) ──
