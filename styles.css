@@ -428,7 +428,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 0.55rem 0.95rem;
   border: 1px solid rgba(51, 128, 193, 0.22);
   border-radius: var(--radius-pill);
-  background: #ff0000; /* TEMP cache-bust test 21 Jun 2026 — revert to: rgba(255, 255, 255, 0.72) */
+  background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: blur(8px) saturate(140%);
           backdrop-filter: blur(8px) saturate(140%);
   font-size: 0.84rem;

@@ -30,11 +30,11 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-import { API, apiGet } from './api-v1.js';
+import { API, apiGet } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
   formatTime, dateForDayName, getParam, imgUrl
-} from './utils-v1.js';
+} from './utils.js';
 
 // Dev preview: ?holo=test forces every event card into the holographic tier
 // so the WebGL shader is visible regardless of curator count in Directus.
@@ -88,7 +88,7 @@ const state = {
 
 /* ============================================================
    HELPERS — esc / imgUrl / date helpers / getParam now live in
-   utils-v1.js (imported at top). Only app-specific helpers remain.
+   utils.js (imported at top). Only app-specific helpers remain.
    ============================================================ */
 function slugify(str) {
   return String(str || '').toLowerCase().trim()

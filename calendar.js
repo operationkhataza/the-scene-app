@@ -29,11 +29,11 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-import { API, apiGet } from './api-v1.js';
+import { API, apiGet } from './api.js';
 import {
   esc, isoDate, formatCardDate, formatLongDate,
   formatTime, getParam, imgUrl
-} from './utils-v1.js';
+} from './utils.js';
 
 /* DOM */
 const GRID_EL     = document.getElementById('cal-grid');
@@ -69,7 +69,7 @@ let navigating = false;
 /* ============================================================
    DATE HELPERS — month-grid specific. The shared date/format
    helpers (isoDate, formatCardDate, formatLongDate, formatTime,
-   getParam, imgUrl, esc) now live in utils-v1.js, imported above.
+   getParam, imgUrl, esc) now live in utils.js, imported above.
    ============================================================ */
 function isoMonth(d) {
   const yyyy = d.getFullYear();
@@ -435,7 +435,7 @@ function renderDayCard(gig) {
   `;
 }
 
-/* formatCardDate now imported from utils-v1.js (was a byte-identical
+/* formatCardDate now imported from utils.js (was a byte-identical
    copy of app.js's). */
 
 /* priceMarkup — exact copy of app.js priceMarkup so the price

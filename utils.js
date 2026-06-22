@@ -7,7 +7,7 @@
    strings, dates, and URL building.
    ============================================================ */
 
-import { API } from './api-v1.js';
+import { API } from './api.js';
 
 /* ---- URL / query ---- */
 export function getParam(key) {
