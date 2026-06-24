@@ -83,7 +83,13 @@
               <div class="form-hint">Shown on the back of the event card when someone taps "Read more".</div>
               <div class="form-error" id="desc-error">Please add an event description — this appears on the event card.</div>
             </div>
-            <!-- Format selector: only shown for community events -->
+            <!-- Category selector: shown on the open/general form (no ?type= param) -->
+            <div class="fg" id="fg-category" style="display:none;">
+              <label>Category <span class="req">*</span></label>
+              <select id="inp-category"><option value="">Loading…</option></select>
+              <div class="form-error">Required.</div>
+            </div>
+            <!-- Format selector: shown for community + the open/general form -->
             <div class="fg" id="fg-format" style="display:none;">
               <label>Format <span class="req">*</span></label>
               <select id="inp-format"><option value="">Loading…</option></select>
@@ -399,7 +405,7 @@
     /* FORM TYPE — read from URL param, default to live-music if missing/unrecognised */
     const FORM_TYPE = (() => {
       const p = new URLSearchParams(window.location.search).get('type') || '';
-      return ['live-music', 'djs-and-parties', 'comedy', 'community'].includes(p) ? p : 'live-music';
+      return ['live-music', 'djs-and-parties', 'comedy', 'community', 'general'].includes(p) ? p : 'general';
     })();
 
     /* Per-type configuration — pre-set values and which sections to show */
@@ -456,13 +462,35 @@
         genreJunction:   null,
         genreIdKey:      null,
       },
+      'general': {
+        badge:          'Submit an Event',
+        heroTitle:      'Tell us about<br>your event',
+        heroSub:        'Submissions are reviewed by our editorial team before going live — we aim to turn things around within 48 hours.',
+        showCategory:   true,   // user picks the category; it drives artists/genres below
+        categoryId:     null,   // set when a category is chosen (applyCategoryBehaviour)
+        formatId:       null,   // user selects format
+        showFormat:     true,
+        showArtists:    false,  // driven by the selected category
+        showGenres:     false,  // driven by the selected category
+        genreCollection: null,
+        genreJunction:   null,
+        genreIdKey:      null,
+      },
     };
+
+    /* General-mode category behaviour — mirrors the Scene Studio submit form.
+       Slugs MUST match the live event_category.slug values (DJs is "djs-parties"). */
+    const CATEGORY_BEHAVIOUR = {
+      'live-music':  { showArtists: true, showGenres: true, genreCollection: 'genres',    genreJunction: 'genre',     genreIdKey: 'genres_id' },
+      'djs-parties': { showArtists: true, showGenres: true, genreCollection: 'dj_genres', genreJunction: 'dj_genres', genreIdKey: 'dj_genres_id' },
+    };
+    const CATEGORY_BEHAVIOUR_DEFAULT = { showArtists: false, showGenres: false, genreCollection: null, genreJunction: null, genreIdKey: null };
 
     const config = FORM_CONFIG[FORM_TYPE];
 
     const state = {
       currentPage: 1, totalPages: 4,
-      venues: [], formats: [], genres: [],
+      venues: [], formats: [], genres: [], categories: [],
       selectedVenueId: null, selectedVenueName: null,
       posterFileId: null,
       pendingFile: null,      // original File object — uploaded directly, no canvas
@@ -603,8 +631,10 @@
       document.getElementById('card-artists').style.display = config.showArtists ? '' : 'none';
       document.getElementById('card-genres').style.display  = config.showGenres  ? '' : 'none';
 
-      // Show/hide format selector (community only)
+      // Show/hide format selector (community + general)
       document.getElementById('fg-format').style.display = config.showFormat ? '' : 'none';
+      // Show/hide category selector (open/general form only)
+      document.getElementById('fg-category').style.display = config.showCategory ? '' : 'none';
     }
 
     /* LOOKUPS — each collection fetched independently so one failure doesn't block the rest */
@@ -626,25 +656,69 @@
         } catch (err) { console.error('Formats load failed:', err); }
       }
 
-      // Genres — only for live music and DJs, fetched from the correct collection per form type
-      if (config.showGenres && config.genreCollection) {
+      // Categories — only the open/general form lets the submitter choose one
+      if (config.showCategory) {
         try {
-          const gR = await apiGet(`/items/${config.genreCollection}`, { 'fields': 'id,name', 'sort': 'name', 'limit': '200' });
-          state.genres = gR.data || [];
-          const gc = document.getElementById('genre-chips');
-          gc.innerHTML = state.genres.map(g =>
-            `<button type="button" class="chip" data-gid="${esc(g.id)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
-          ).join('');
-          gc.querySelectorAll('.chip').forEach(c => {
-            c.addEventListener('click', () => {
-              const id = parseInt(c.dataset.gid), name = c.dataset.gname;
-              const idx = state.selectedGenres.findIndex(g => g.id === id);
-              if (idx === -1) { state.selectedGenres.push({ id, name }); c.classList.add('is-on'); }
-              else            { state.selectedGenres.splice(idx, 1); c.classList.remove('is-on'); }
-            });
-          });
-        } catch (err) { console.error('Genres load failed:', err); }
+          const cR = await apiGet('/items/event_category', { 'fields': 'id,name,slug', 'sort': 'name', 'limit': '100' });
+          state.categories = cR.data || [];
+          const cs = document.getElementById('inp-category');
+          cs.innerHTML = '<option value="">Select a category…</option>' +
+            state.categories.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+          cs.addEventListener('change', applyCategoryBehaviour);
+        } catch (err) { console.error('Categories load failed:', err); }
       }
+
+      // Genres — typed live-music / DJ forms populate chips up front.
+      // (On the general form, chips are (re)loaded when the category changes.)
+      if (config.showGenres && config.genreCollection) {
+        await renderGenreChips(config.genreCollection);
+      }
+    }
+
+    /* Genre chips — fetch (cached per collection) + render, resetting any selection. */
+    let genreCache = {};
+    async function renderGenreChips(collection) {
+      const gc = document.getElementById('genre-chips');
+      state.selectedGenres = [];
+      if (!collection) { gc.innerHTML = ''; return; }
+      try {
+        if (!genreCache[collection]) {
+          const gR = await apiGet(`/items/${collection}`, { 'fields': 'id,name', 'sort': 'name', 'limit': '200' });
+          genreCache[collection] = gR.data || [];
+        }
+        state.genres = genreCache[collection];
+        gc.innerHTML = state.genres.map(g =>
+          `<button type="button" class="chip" data-gid="${esc(g.id)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
+        ).join('');
+        gc.querySelectorAll('.chip').forEach(c => {
+          c.addEventListener('click', () => {
+            const id = parseInt(c.dataset.gid), name = c.dataset.gname;
+            const idx = state.selectedGenres.findIndex(g => g.id === id);
+            if (idx === -1) { state.selectedGenres.push({ id, name }); c.classList.add('is-on'); }
+            else            { state.selectedGenres.splice(idx, 1); c.classList.remove('is-on'); }
+          });
+        });
+      } catch (err) { console.error('Genres load failed:', err); }
+    }
+
+    /* General form — recompute artists/genres behaviour from the chosen category
+       (slug-keyed, same rules as the Scene Studio submit form). */
+    async function applyCategoryBehaviour() {
+      const sel = document.getElementById('inp-category');
+      const id  = parseInt(sel.value || '', 10);
+      config.categoryId = id || null;
+      const cat = (state.categories || []).find(c => Number(c.id) === id);
+      const beh = (cat && CATEGORY_BEHAVIOUR[cat.slug]) || CATEGORY_BEHAVIOUR_DEFAULT;
+      config.showArtists     = beh.showArtists;
+      config.showGenres      = beh.showGenres;
+      config.genreCollection = beh.genreCollection;
+      config.genreJunction   = beh.genreJunction;
+      config.genreIdKey      = beh.genreIdKey;
+      document.getElementById('card-artists').style.display = beh.showArtists ? '' : 'none';
+      document.getElementById('card-genres').style.display  = beh.showGenres  ? '' : 'none';
+      if (!beh.showArtists) { state.selectedArtists = []; renderArtistPills(); }
+      if (beh.showGenres)   { await renderGenreChips(beh.genreCollection); }
+      else                  { state.selectedGenres = []; document.getElementById('genre-chips').innerHTML = ''; }
     }
 
     /* SHORT DESCRIPTION — 120-char counter */
@@ -1170,8 +1244,10 @@
       if (page === 1) {
         req('fg-title', 'inp-title');
 
-        // Format only required when visible (community form)
+        // Format only required when visible (community + general forms)
         if (config.showFormat) { req('fg-format', 'inp-format'); }
+        // Category only required on the open/general form
+        if (config.showCategory) { req('fg-category', 'inp-category'); }
 
         // Short description — required + 120-char hard limit
         const sdVal = document.getElementById('inp-short-desc').value.trim();
@@ -1231,13 +1307,15 @@
       const isFree = document.getElementById('chk-free').checked;
       const formatEl = document.getElementById('inp-format');
       const formatLabel = config.showFormat ? (formatEl.options[formatEl.selectedIndex]?.text || '—') : null;
+      const catEl = document.getElementById('inp-category');
+      const catLabel = config.showCategory ? (catEl.options[catEl.selectedIndex]?.text || '—') : null;
       const dateStr = date ? new Date(date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'long', year:'numeric' }) : '—';
       document.getElementById('summary-content').innerHTML = `
         <div class="summary-title">${esc(title)}</div>
         <div class="summary-meta">
           ${esc(dateStr)}${doors ? ' · ' + esc(doors.slice(0,5)) : ''}<br>
           ${esc(venue)}<br>
-          ${esc(config.badge)}${formatLabel ? ' · ' + esc(formatLabel) : ''} · ${isFree ? 'Free' : 'Ticketed'}
+          ${esc(catLabel || config.badge)}${formatLabel ? ' · ' + esc(formatLabel) : ''} · ${isFree ? 'Free' : 'Ticketed'}
         </div>
         <div class="${(state.posterFileId || state.pendingFile) ? 'summary-poster-ok' : 'summary-poster-missing'}">
           ${(state.posterFileId || state.pendingFile) ? '✓ Poster ready' : '✗ No poster — consider going back to add one'}
