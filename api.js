@@ -32,3 +32,61 @@ export async function apiGet(path, params) {
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json(); // full envelope: { data, meta }
 }
+
+/* ============================================================
+   FEATURED EVENTS — the paid/curated spotlight carousel
+   ────────────────────────────────────────────────────────────
+   One source for both surfaces. Reads `featured_slots` (one row =
+   one event featured for one week) and returns the expanded event
+   objects that are featured RIGHT NOW: status=active AND the current
+   moment falls inside [week_start, week_end]. Expiry is therefore
+   read-time — a slot whose week has passed simply stops matching, so
+   no cron is needed to "unfeature" anything.
+
+   Returns RAW event objects (not slots). Each caller runs its own
+   resolveGig() for theatre coalescing — kept out of here so this stays
+   DOM/state-free. `description` is requested eagerly (only a handful of
+   events) so the calendar modal needs no lazy hydrate for these.
+   ============================================================ */
+const FEATURED_EVENT_SUBFIELDS = [
+  'id', 'title', 'slug', 'date', 'doors_time',
+  'short_description', 'description', 'ticket_url', 'poster',
+  'is_free', 'ticket_tiers', 'age_restriction', 'tags',
+  'venue.name', 'venue.location',
+  'event_category.id', 'event_category.name', 'event_category.slug',
+  'artists.artists_id.name',
+  'curators.curators_id.name', 'curators.curators_id.logo',
+  'promoters.promoters_id.id', 'promoters.promoters_id.name', 'promoters.promoters_id.profile_image',
+  // Theatre parent run — production-wide fields a night inherits (resolveGig coalesces).
+  'parent_run.id', 'parent_run.status', 'parent_run.title', 'parent_run.slug',
+  'parent_run.short_description', 'parent_run.description', 'parent_run.ticket_url',
+  'parent_run.poster', 'parent_run.is_free', 'parent_run.ticket_tiers',
+  'parent_run.age_restriction', 'parent_run.tags',
+  'parent_run.venue.name', 'parent_run.venue.location',
+];
+
+export async function fetchFeatured() {
+  const nowIso = new Date().toISOString();
+  const fields = ['id', 'sort', 'week_start', 'week_end',
+    ...FEATURED_EVENT_SUBFIELDS.map(f => `event.${f}`)].join(',');
+
+  const params = new URLSearchParams({
+    'filter[status][_eq]':      'active',
+    'filter[week_start][_lte]': nowIso,
+    'filter[week_end][_gte]':   nowIso,
+    'filter[event][status][_eq]': 'published', // never spotlight a hidden event
+    'fields': fields,
+    'sort':   'sort',
+    'limit':  '12',
+  });
+
+  try {
+    const json = await apiGet('/items/featured_slots', params);
+    // Map slots → their event; drop any slot whose event the public can't read
+    // (e.g. unpublished) — Directus returns those nested objects as null.
+    return (json.data || []).map(s => s.event).filter(Boolean);
+  } catch (err) {
+    console.warn('[Scene] featured fetch failed (carousel hidden):', err);
+    return [];
+  }
+}

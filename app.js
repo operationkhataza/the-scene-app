@@ -30,7 +30,7 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-import { API, apiGet } from './api.js';
+import { API, apiGet, fetchFeatured } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
   formatTime, dateForDayName, getParam, imgUrl
@@ -1138,6 +1138,61 @@ let refractionCards = [];
 function updateRefraction() { /* replaced by scheduleRefractUpdate */ }
 
 /* ============================================================
+   FEATURED CAROUSEL — paid/curated spotlight below the toolbar.
+   Reuses the feed's own flippable gig cards (renderCard) so featured
+   cards behave exactly like the feed (flip for detail, Buy tickets on
+   the back). Shown only in the default guide view — curator/promoter
+   deep-link modes are filtered single-entity feeds, so the carousel
+   stays hidden there. Fire-and-forget from init().
+   ============================================================ */
+async function renderFeatured() {
+  const section = document.getElementById('featured-carousel');
+  const track   = document.getElementById('featured-carousel-track');
+  if (!section || !track) return;
+
+  // Curator / promoter modes are bespoke filtered feeds — no spotlight.
+  if (getParam('curator') || getParam('promoter')) { section.hidden = true; return; }
+
+  let events = [];
+  try { events = (await fetchFeatured()).map(resolveGig); } catch (_) { /* helper already logs */ }
+
+  if (!events.length) { section.hidden = true; return; }
+
+  track.innerHTML = events.map((g, i) => renderCard(g, i)).join('');
+  section.hidden = false;
+
+  // Re-observe curated cards (incl. these) for the scroll-tied sheen/holo.
+  refreshRefractionRefs();
+}
+
+/* Flip + promoter-pill delegation for a gig-card container. Mirrors the inline
+   LIST_EL handlers below; used for the featured carousel track, whose cards live
+   outside LIST_EL and so aren't covered by those handlers. */
+function wireCardContainer(el) {
+  if (!el) return;
+  // Promoter pill → bottom sheet
+  el.addEventListener('click', e => {
+    const link = e.target.closest('.gig-card__promoter-link');
+    if (!link) return;
+    e.stopPropagation();
+    e.preventDefault();
+    openPromoterSheet(Number(link.dataset.promoterId));
+  });
+  // Flip front↔back (same exemptions as the feed)
+  el.addEventListener('click', e => {
+    if (e.target.closest('.gig-card__ticket-pill'))   return;
+    if (e.target.closest('.gig-card__back-cta'))      return;
+    if (e.target.closest('.gig-card__promoter-link')) return;
+    const closeBtn = e.target.closest('.gig-card__close');
+    if (closeBtn) { flipCard(closeBtn.closest('.gig-card__inner'), false); return; }
+    const inner = e.target.closest('.gig-card__inner');
+    if (!inner || inner.classList.contains('is-flipped')) return;
+    flipCard(inner, true);
+  });
+}
+wireCardContainer(document.getElementById('featured-carousel-track'));
+
+/* ============================================================
    ROUTING & INIT
    ============================================================ */
 async function init() {
@@ -1277,6 +1332,9 @@ async function init() {
     });
 
     renderFromState();
+
+    // Featured spotlight — independent of the feed query, so fire-and-forget.
+    renderFeatured();
   } catch (err) {
     console.error('Failed to fetch gigs:', err);
     renderError();

@@ -29,7 +29,7 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-import { API, apiGet } from './api.js';
+import { API, apiGet, fetchFeatured } from './api.js';
 import {
   esc, isoDate, formatCardDate, formatLongDate,
   formatTime, getParam, imgUrl
@@ -949,6 +949,35 @@ function updateHeader() {
 }
 
 /* ============================================================
+   FEATURED CAROUSEL — paid/curated spotlight above the month nav.
+   Reuses the same 16:9 ticket card as the day panel (renderDayCard)
+   and the same event modal (openCardModal). Hidden when there are
+   no active featured slots. Fire-and-forget from init().
+   ============================================================ */
+async function renderFeatured() {
+  const section = document.getElementById('featured-carousel');
+  const track   = document.getElementById('featured-carousel-track');
+  if (!section || !track) return;
+
+  let events = [];
+  try { events = (await fetchFeatured()).map(resolveGig); } catch (_) { /* helper already logs */ }
+
+  if (!events.length) { section.hidden = true; return; }
+
+  track.innerHTML = events.map(renderDayCard).join('');
+  section.hidden = false;
+
+  // Tap a featured card → open the full event modal (same as a day-panel card).
+  track.querySelectorAll('.cal-day-card[data-event-id]').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const id  = parseInt(cardEl.dataset.eventId, 10);
+      const gig = events.find(e => e.id === id);
+      if (gig) openCardModal(gig, cardEl);
+    });
+  });
+}
+
+/* ============================================================
    BOOT
    ============================================================ */
 async function init() {
@@ -983,6 +1012,9 @@ async function init() {
 
   renderGrid();
   renderDay();
+
+  // Featured spotlight — independent of the month data, so fire-and-forget.
+  renderFeatured();
 }
 
 PREV_BTN.addEventListener('click', () => goToMonth(addMonths(state.viewMonth, -1), -1));

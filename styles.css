@@ -593,6 +593,68 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 /* ============================================================
+   FEATURED CAROUSEL — paid / curated spotlight rail
+   ────────────────────────────────────────────────────────────
+   Shared shell for the gig guide + calendar. Sits at the top of
+   the content (gig guide: under the filter toolbar — the header's
+   -8rem search-bar overlap blocks placing it higher; calendar:
+   between header and month nav). The CARDS inside are each
+   surface's OWN card type (.gig-card on the gig guide, .cal-day-card
+   on the calendar) so they look native and reuse all tier styling —
+   only this shell is shared. Hidden until populated by JS (and on
+   the gig guide, hidden entirely in curator/promoter modes).
+   ============================================================ */
+.featured-carousel { margin: 0 -1rem 1.75rem; }
+.featured-carousel[hidden] { display: none; }
+.featured-carousel__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0 1rem 0.65rem;
+}
+.featured-carousel__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.featured-carousel__star { color: var(--scene-blue); font-size: 0.9em; }
+.featured-carousel__track {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding: 0.25rem 1rem 0.85rem;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 1rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.featured-carousel__track::-webkit-scrollbar { display: none; }
+/* Card sizing inside the rail — each surface's own card type. The gig-card
+   rules mirror .day-strip__track exactly so featured cards stretch + pin their
+   footer identically to the feed. */
+.featured-carousel__track .gig-card {
+  flex: 0 0 87.5%;
+  scroll-snap-align: start;
+  margin-bottom: 0;
+}
+.featured-carousel__track .gig-card__front {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.featured-carousel__track .gig-card__footer { margin-top: auto; }
+.featured-carousel__track .gig-card:not([data-curated]) .gig-card__body > *:has(+ .gig-card__footer) {
+  margin-bottom: 1.25rem;
+}
+.featured-carousel__track .cal-day-card {
+  flex: 0 0 88%;
+  scroll-snap-align: start;
+}
+
+/* ============================================================
    GIG CARD — frosted glass
    ============================================================ */
 .gig-card {
@@ -1437,6 +1499,11 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   .day-strip__header { padding-left: 1.5rem; padding-right: 1.5rem; }
   .day-strip__track { padding-left: 1.5rem; padding-right: 1.5rem; }
   .day-strip__track .gig-card { flex: 0 0 75%; }
+  .featured-carousel { margin-left: -1.5rem; margin-right: -1.5rem; }
+  .featured-carousel__header { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .featured-carousel__track { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .featured-carousel__track .gig-card { flex: 0 0 75%; }
+  .featured-carousel__track .cal-day-card { flex: 0 0 70%; }
 }
 
 /* ============================================================

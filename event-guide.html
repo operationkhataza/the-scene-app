@@ -121,6 +121,18 @@
       <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
     </div>
 
+    <!-- Featured events carousel — paid/curated spotlight. Hidden until app.js
+         finds active featured slots (and hidden entirely in curator/promoter
+         modes). Cards are the same flippable gig cards as the feed. Placed below
+         the toolbar because the header pulls the search bar up by -8rem, leaving
+         no clean room above. -->
+    <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
+      <div class="featured-carousel__header">
+        <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
+      </div>
+      <div class="featured-carousel__track" id="featured-carousel-track"></div>
+    </section>
+
     <section id="gig-list" aria-live="polite">
       <div class="state">
         <div class="spinner"></div>
