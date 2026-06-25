@@ -1199,6 +1199,43 @@ async function renderFeatured() {
       if (gig?.ticket_url) window.open(gig.ticket_url, '_blank', 'noopener');
     });
   });
+
+  startFeaturedAutoscroll(track);
+}
+
+/* Auto-advance the featured carousel one card every 3s, looping back to the
+   start after the last. Pauses while the user is interacting and resumes from
+   wherever they left it. No-op for a single card or under reduced-motion. */
+function startFeaturedAutoscroll(track) {
+  if (!track) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (track.querySelectorAll('.featured-card').length < 2) return;
+  clearInterval(track._autoscroll);
+
+  let paused = false, resumeTimer = null;
+  const pause      = () => { paused = true; clearTimeout(resumeTimer); };
+  const resumeSoon = () => { clearTimeout(resumeTimer); resumeTimer = setTimeout(() => { paused = false; }, 4000); };
+  track.addEventListener('pointerdown', pause,      { passive: true });
+  track.addEventListener('pointerup',   resumeSoon, { passive: true });
+  track.addEventListener('touchstart',  pause,      { passive: true });
+  track.addEventListener('touchend',    resumeSoon, { passive: true });
+
+  track._autoscroll = setInterval(() => {
+    if (paused) return;
+    const cards = track.querySelectorAll('.featured-card');
+    if (cards.length < 2) return;
+    const padLeft = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+    const anchor  = track.getBoundingClientRect().left + padLeft;
+    // Current card = the one whose left edge sits nearest the rail's start.
+    let curIdx = 0, best = Infinity;
+    cards.forEach((c, i) => {
+      const d = Math.abs(c.getBoundingClientRect().left - anchor);
+      if (d < best) { best = d; curIdx = i; }
+    });
+    const next  = (curIdx + 1) % cards.length;
+    const delta = cards[next].getBoundingClientRect().left - anchor;
+    track.scrollBy({ left: delta, behavior: 'smooth' });   // wraps: next=0 scrolls back to start
+  }, 3000);
 }
 
 /* ============================================================
