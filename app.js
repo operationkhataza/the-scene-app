@@ -1138,13 +1138,43 @@ let refractionCards = [];
 function updateRefraction() { /* replaced by scheduleRefractUpdate */ }
 
 /* ============================================================
-   FEATURED CAROUSEL — paid/curated spotlight below the toolbar.
-   Reuses the feed's own flippable gig cards (renderCard) so featured
-   cards behave exactly like the feed (flip for detail, Buy tickets on
-   the back). Shown only in the default guide view — curator/promoter
-   deep-link modes are filtered single-entity feeds, so the carousel
-   stays hidden there. Fire-and-forget from init().
+   FEATURED CAROUSEL — paid/curated spotlight above the search bar.
+   Flyer-forward cards (poster fills the card; date/time/venue/artist
+   as frosted pills) — dressier than the feed's gig cards, mirroring the
+   calendar. Shown only in the default guide view (curator/promoter
+   deep-link modes are filtered single-entity feeds, so it stays hidden
+   there). Tapping a card opens the ticket link for now; a detail modal
+   is a planned upgrade (see Briefs/featured-events-build-plan.md).
+   Fire-and-forget from init().
    ============================================================ */
+function renderFeaturedCard(gig) {
+  const tier = curatorTier(gig);
+  const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
+  const img = posterSrc
+    ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
+    : `<div class="featured-card__img featured-card__img--placeholder">${esc((gig.title || '?').charAt(0).toUpperCase())}</div>`;
+
+  // Meta as pills: date · time · venue · artist (first artist, if any).
+  const artistName = (gig.artists || []).map(a => a.artists_id?.name).filter(Boolean)[0] || '';
+  const pill = txt => txt ? `<span class="featured-pill">${esc(txt)}</span>` : '';
+  const pills = [
+    pill(gig.date ? formatCardDate(gig.date) : ''),
+    pill(formatTime(gig.doors_time)),
+    pill(gig.venue?.name || ''),
+    pill(artistName),
+  ].filter(Boolean).join('');
+
+  return `
+    <button class="featured-card featured-card--t${tier}" type="button" data-event-id="${esc(String(gig.id))}">
+      ${img}
+      <div class="featured-card__scrim"></div>
+      <div class="featured-card__overlay">
+        <span class="featured-card__title">${esc(gig.title)}</span>
+        <div class="featured-card__pills">${pills}</div>
+      </div>
+    </button>`;
+}
+
 async function renderFeatured() {
   const section = document.getElementById('featured-carousel');
   const track   = document.getElementById('featured-carousel-track');
@@ -1158,39 +1188,18 @@ async function renderFeatured() {
 
   if (!events.length) { section.hidden = true; return; }
 
-  track.innerHTML = events.map((g, i) => renderCard(g, i)).join('');
+  track.innerHTML = events.map(renderFeaturedCard).join('');
   section.hidden = false;
 
-  // Re-observe curated cards (incl. these) for the scroll-tied sheen/holo.
-  refreshRefractionRefs();
-}
-
-/* Flip + promoter-pill delegation for a gig-card container. Mirrors the inline
-   LIST_EL handlers below; used for the featured carousel track, whose cards live
-   outside LIST_EL and so aren't covered by those handlers. */
-function wireCardContainer(el) {
-  if (!el) return;
-  // Promoter pill → bottom sheet
-  el.addEventListener('click', e => {
-    const link = e.target.closest('.gig-card__promoter-link');
-    if (!link) return;
-    e.stopPropagation();
-    e.preventDefault();
-    openPromoterSheet(Number(link.dataset.promoterId));
-  });
-  // Flip front↔back (same exemptions as the feed)
-  el.addEventListener('click', e => {
-    if (e.target.closest('.gig-card__ticket-pill'))   return;
-    if (e.target.closest('.gig-card__back-cta'))      return;
-    if (e.target.closest('.gig-card__promoter-link')) return;
-    const closeBtn = e.target.closest('.gig-card__close');
-    if (closeBtn) { flipCard(closeBtn.closest('.gig-card__inner'), false); return; }
-    const inner = e.target.closest('.gig-card__inner');
-    if (!inner || inner.classList.contains('is-flipped')) return;
-    flipCard(inner, true);
+  // Tap → open the ticket link in a new tab (no detail modal on the gig guide yet).
+  track.querySelectorAll('.featured-card[data-event-id]').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const id  = parseInt(cardEl.dataset.eventId, 10);
+      const gig = events.find(e => e.id === id);
+      if (gig?.ticket_url) window.open(gig.ticket_url, '_blank', 'noopener');
+    });
   });
 }
-wireCardContainer(document.getElementById('featured-carousel-track'));
 
 /* ============================================================
    ROUTING & INIT

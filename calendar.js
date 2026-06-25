@@ -949,11 +949,40 @@ function updateHeader() {
 }
 
 /* ============================================================
-   FEATURED CAROUSEL — paid/curated spotlight above the month nav.
-   Reuses the same 16:9 ticket card as the day panel (renderDayCard)
-   and the same event modal (openCardModal). Hidden when there are
-   no active featured slots. Fire-and-forget from init().
+   FEATURED CAROUSEL — paid/curated spotlight inside the header.
+   A flyer-forward card (poster fills the card; date/time/venue/artist
+   ride on top as frosted pills) — dressier than the day-panel cards.
+   Tapping opens the same event modal (openCardModal). Hidden when
+   there are no active featured slots. Fire-and-forget from init().
    ============================================================ */
+function renderFeaturedCard(gig) {
+  const tier = gigTier(gig);
+  const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
+  const img = posterSrc
+    ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
+    : `<div class="featured-card__img featured-card__img--placeholder">${esc((gig.title || '?').charAt(0).toUpperCase())}</div>`;
+
+  // Meta as pills: date · time · venue · artist (first artist, if any).
+  const artistName = (gig.artists || []).map(a => a.artists_id?.name).filter(Boolean)[0] || '';
+  const pill = txt => txt ? `<span class="featured-pill">${esc(txt)}</span>` : '';
+  const pills = [
+    pill(gig.date ? formatCardDate(gig.date) : ''),
+    pill(formatTime(gig.doors_time)),
+    pill(gig.venue?.name || ''),
+    pill(artistName),
+  ].filter(Boolean).join('');
+
+  return `
+    <button class="featured-card featured-card--t${tier}" type="button" data-event-id="${esc(String(gig.id))}">
+      ${img}
+      <div class="featured-card__scrim"></div>
+      <div class="featured-card__overlay">
+        <span class="featured-card__title">${esc(gig.title)}</span>
+        <div class="featured-card__pills">${pills}</div>
+      </div>
+    </button>`;
+}
+
 async function renderFeatured() {
   const section = document.getElementById('featured-carousel');
   const track   = document.getElementById('featured-carousel-track');
@@ -964,11 +993,11 @@ async function renderFeatured() {
 
   if (!events.length) { section.hidden = true; return; }
 
-  track.innerHTML = events.map(renderDayCard).join('');
+  track.innerHTML = events.map(renderFeaturedCard).join('');
   section.hidden = false;
 
-  // Tap a featured card → open the full event modal (same as a day-panel card).
-  track.querySelectorAll('.cal-day-card[data-event-id]').forEach(cardEl => {
+  // Tap a featured card → open the full event modal.
+  track.querySelectorAll('.featured-card[data-event-id]').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
       const id  = parseInt(cardEl.dataset.eventId, 10);
       const gig = events.find(e => e.id === id);

@@ -75,6 +75,17 @@
       <p class="gigs-header__date" id="gigs-header-date"></p>
     </header>
 
+    <!-- Featured events carousel — paid/curated spotlight, sits above the search
+         bar + filters. Hidden until app.js finds active slots (and hidden entirely
+         in curator/promoter modes). Flyer-forward cards; tapping opens the ticket
+         link (a detail modal is a planned upgrade — see the build tracker). -->
+    <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
+      <div class="featured-carousel__header">
+        <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
+      </div>
+      <div class="featured-carousel__track" id="featured-carousel-track"></div>
+    </section>
+
     <!-- Search bar -->
     <div class="search-bar">
       <svg class="search-bar__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -120,18 +131,6 @@
       <button class="toolbar__clear" id="toolbar-clear" type="button" hidden aria-label="Clear all filters">Clear all</button>
       <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
     </div>
-
-    <!-- Featured events carousel — paid/curated spotlight. Hidden until app.js
-         finds active featured slots (and hidden entirely in curator/promoter
-         modes). Cards are the same flippable gig cards as the feed. Placed below
-         the toolbar because the header pulls the search bar up by -8rem, leaving
-         no clean room above. -->
-    <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
-      <div class="featured-carousel__header">
-        <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
-      </div>
-      <div class="featured-carousel__track" id="featured-carousel-track"></div>
-    </section>
 
     <section id="gig-list" aria-live="polite">
       <div class="state">

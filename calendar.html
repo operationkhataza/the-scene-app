@@ -29,18 +29,17 @@
          surfaces read as one app. Title shows the current month. -->
     <header class="gigs-header calendar-header">
       <h1 class="gigs-header__title" id="calendar-eyebrow">Cape Town Cultural Calendar</h1>
-    </header>
 
-    <!-- Featured events carousel — paid/curated spotlight. Hidden until
-         calendar.js finds active featured slots for the current week. Cards
-         are the same 16:9 ticket cards as the day panel; tapping opens the
-         event modal. -->
-    <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
-      <div class="featured-carousel__header">
-        <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
-      </div>
-      <div class="featured-carousel__track" id="featured-carousel-track"></div>
-    </section>
+      <!-- Featured events carousel — sits INSIDE the header panel, filling the
+           space under the title. Hidden until calendar.js finds active slots for
+           the current week. Flyer-forward cards; tapping opens the event modal. -->
+      <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
+        <div class="featured-carousel__header">
+          <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
+        </div>
+        <div class="featured-carousel__track" id="featured-carousel-track"></div>
+      </section>
+    </header>
 
     <!-- Month navigator: prev chevron · month label · next chevron.
          Tapping the central label returns to today. -->
