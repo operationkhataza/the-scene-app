@@ -176,7 +176,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   max-width: 640px;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
-  padding-top: calc(1.5rem + var(--safe-top));
+  padding-top: 1.5rem;
   position: relative;
   z-index: 1;
 }
@@ -191,12 +191,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
    ============================================================ */
 .gigs-page > .gigs-header,
 .gigs-header {
-  margin: calc(-1.5rem - var(--safe-top)) -1rem 0;
+  margin: -1.5rem -1rem 0;
   /* Default mode: a snug title panel that ALSO wraps the featured carousel (the
      carousel sits inside this header on both surfaces); the search bar + toolbar
      flow BELOW it (no negative-margin nesting). Curator/promoter modes override
      this padding-bottom via the higher-specificity :has() rules further down. */
-  padding: calc(2.4rem + var(--safe-top)) 1.4rem 1.5rem;
+  padding: 1.5rem 1.4rem 1.5rem;
   text-align: center;
   position: relative;
   isolation: isolate;
@@ -2085,7 +2085,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   /* Same glass treatment as .gigs-header (already styled above) but
      a touch shorter — the calendar's primary feature is the grid,
      so the header doesn't need to dominate. */
-  padding-top: calc(3.25rem + var(--safe-top));
+  padding-top: 1.5rem;
   padding-bottom: 2rem;
 }
 /* The base `.gigs-page > .gigs-header` shorthand (specificity 0,2,0) carries a
@@ -2094,7 +2094,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
    equal specificity (later in the file → wins) so the title panel is snug and
    the featured carousel below it sits right under the title. */
 .gigs-page > .calendar-header {
-  padding-top: calc(2.6rem + var(--safe-top));
+  padding-top: 1.5rem;
   padding-bottom: 1.1rem;
 }
 /* Featured carousel lives INSIDE the header glass panel on BOTH surfaces (so the
@@ -2435,7 +2435,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   display: grid;
   grid-template-columns: 120px 1fr;
   gap: 0.85rem;
-  align-items: start;
+  align-items: center;
   padding: 0.65rem;
   border-radius: var(--radius-sm);
   background: var(--glass-bg-strong);
@@ -2517,7 +2517,6 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
 .cal-day-card__body {
   min-width: 0;
-  padding-top: 2px;
 }
 .cal-day-card__title {
   font-size: 0.9rem;

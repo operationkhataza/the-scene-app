@@ -962,14 +962,11 @@ function renderFeaturedCard(gig) {
     ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
     : `<div class="featured-card__img featured-card__img--placeholder">${esc((gig.title || '?').charAt(0).toUpperCase())}</div>`;
 
-  // Meta as pills: date · time · venue · artist (first artist, if any).
-  const artistName = (gig.artists || []).map(a => a.artists_id?.name).filter(Boolean)[0] || '';
+  // Meta as pills: date · time.
   const pill = txt => txt ? `<span class="featured-pill">${esc(txt)}</span>` : '';
   const pills = [
     pill(gig.date ? formatCardDate(gig.date) : ''),
     pill(formatTime(gig.doors_time)),
-    pill(gig.venue?.name || ''),
-    pill(artistName),
   ].filter(Boolean).join('');
 
   return `
