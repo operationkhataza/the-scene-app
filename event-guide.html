@@ -81,7 +81,7 @@
            — see the build tracker). -->
       <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
         <div class="featured-carousel__header">
-          <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
+          <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">★</span>Featured this week</span>
         </div>
         <div class="featured-carousel__track" id="featured-carousel-track"></div>
       </section>
@@ -133,12 +133,10 @@
       <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
     </div>
 
-    <section id="gig-list" aria-live="polite">
-      <div class="state">
-        <div class="spinner"></div>
-        <p class="state__text" style="margin-top: 0.75rem;">Loading gigs…</p>
-      </div>
-    </section>
+    <!-- Loading state: app.js fills this with a skeleton (renderSkeleton) on
+         the first line of init(), before the fetch. renderList() overwrites it
+         when data arrives. Left empty so JS owns the loading shape. -->
+    <section id="gig-list" aria-live="polite"></section>
 
   </main>
 

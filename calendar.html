@@ -35,7 +35,7 @@
            the current week. Flyer-forward cards; tapping opens the event modal. -->
       <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
         <div class="featured-carousel__header">
-          <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">✦</span>Featured</span>
+          <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">★</span>Featured this week</span>
         </div>
         <div class="featured-carousel__track" id="featured-carousel-track"></div>
       </section>
@@ -66,12 +66,10 @@
     <!-- Month grid. Populated by calendar.js: 7 cols × N rows, where each
          cell carries the day number + up to 3 tier-coloured pips
          indicating events on that day. -->
-    <section class="cal-grid" id="cal-grid" role="grid" aria-label="Month calendar">
-      <div class="state">
-        <div class="spinner"></div>
-        <p class="state__text" style="margin-top: 0.75rem;">Loading calendar…</p>
-      </div>
-    </section>
+    <!-- Loading state: calendar.js fills this with a skeleton grid
+         (renderGridSkeleton) at the top of init(), before the first
+         fetchMonth. renderGrid() overwrites it when data arrives. -->
+    <section class="cal-grid" id="cal-grid" role="grid" aria-label="Month calendar"></section>
 
     <!-- Selected day panel — shows that day's events as mini-cards stacked
          vertically (manual §7 mini-card spec: 48px image + title + meta).

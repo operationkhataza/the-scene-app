@@ -621,7 +621,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: -0.02em;
   color: var(--text);
 }
-.featured-carousel__star { color: var(--scene-blue); font-size: 0.9em; }
+.featured-carousel__star { color: var(--scene-blue); font-size: 0.82em; }
 .featured-carousel__track {
   display: flex;
   gap: 0.85rem;
@@ -1553,6 +1553,107 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
+   SKELETON LOADING — placeholder shapes painted on first load
+   while data fetches, then overwritten by the real render. Plain
+   neutral tints + a light shimmer sweep (NO glass/backdrop-filter
+   on the public app). Reduced-motion drops the sweep to a flat tint.
+   The shaped helpers mirror the real card/cell dimensions so the
+   layout doesn't jump when content swaps in.
+   ============================================================ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(51, 128, 193, 0.09);
+  border-radius: 6px;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { display: none; }
+}
+
+/* ── Gig card skeleton (gig guide) — mirrors .gig-card ── */
+.sk-card {
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 1.1rem;
+}
+.sk-card__poster {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+}
+.sk-card__body {
+  /* matches .gig-card__body padding (1.15rem 1.3rem 1.3rem) */
+  padding: 1.15rem 1.3rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sk-line { height: 0.7rem; border-radius: 4px; }
+.sk-line--title { height: 1.1rem; width: 80%; }
+.sk-line--meta  { height: 0.6rem; width: 45%; }
+.sk-line--full  { width: 100%; }
+.sk-line--short { width: 60%; }
+
+/* ── Day-strip skeleton (weekly view) — mirrors .day-strip ── */
+.sk-daystrip { margin: 0 -1rem 1.75rem; }
+.sk-daystrip__header {
+  height: 1rem;
+  width: 38%;
+  margin: 0 1rem 0.65rem;
+  border-radius: 4px;
+}
+.day-strip__track > .sk-card {
+  flex: 0 0 87.5%;
+  margin-bottom: 0;
+}
+
+/* ── Single-day-view skeleton header — mirrors .date-header--day-view ── */
+.sk-date-header {
+  height: 1.35rem;
+  width: 55%;
+  margin: 0.25rem 0 1.4rem;
+  border-radius: 4px;
+}
+
+/* ── Calendar grid skeleton — mirrors .cal-cell, reuses .cal-grid ── */
+.sk-cell { border-radius: var(--radius-sm); min-height: 52px; }
+
+/* ── Calendar day-panel skeleton — mirrors .cal-day-card ── */
+.sk-day__header {
+  height: 1.4rem;
+  width: 60%;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+}
+.sk-day-card {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.65rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  margin-bottom: 0.7rem;
+}
+.sk-day-card__poster { width: 120px; aspect-ratio: 16 / 9; border-radius: 4px; }
+.sk-day-card__lines { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (min-width: 640px) {
@@ -1581,7 +1682,8 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   .day-strip { margin-left: -1.5rem; margin-right: -1.5rem; }
   .day-strip__header { padding-left: 1.5rem; padding-right: 1.5rem; }
   .day-strip__track { padding-left: 1.5rem; padding-right: 1.5rem; }
-  .day-strip__track .gig-card { flex: 0 0 75%; }
+  .day-strip__track .gig-card,
+  .day-strip__track > .sk-card { flex: 0 0 75%; }
   .featured-carousel { margin-left: -1.5rem; margin-right: -1.5rem; }
   .featured-carousel__header { padding-left: 1.5rem; padding-right: 1.5rem; }
   .featured-carousel__track { padding-left: 1.5rem; padding-right: 1.5rem; }

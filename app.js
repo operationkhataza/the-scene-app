@@ -1049,6 +1049,40 @@ function renderError() {
 }
 
 /* ============================================================
+   SKELETON — placeholder shapes painted before the feed fetch
+   completes. Matches the view about to render (weekly day-strips
+   vs single-day vertical list), so renderList() can overwrite it
+   with zero layout jump. Reads renderOptions, which init() has
+   already finalized by the time this is called.
+   ============================================================ */
+function renderSkeleton() {
+  const card = `
+    <div class="sk-card">
+      <div class="skeleton sk-card__poster"></div>
+      <div class="sk-card__body">
+        <div class="skeleton sk-line sk-line--meta"></div>
+        <div class="skeleton sk-line sk-line--title"></div>
+        <div class="skeleton sk-line sk-line--full"></div>
+        <div class="skeleton sk-line sk-line--short"></div>
+      </div>
+    </div>`;
+
+  if (renderOptions.singleDay) {
+    // Single-day view: a date header + a vertical stack of cards.
+    LIST_EL.innerHTML = `<div class="skeleton sk-date-header"></div>` + card.repeat(4);
+    return;
+  }
+
+  // Weekly view: a few day-strips, each a header + a horizontal track of cards.
+  const strip = `
+    <div class="sk-daystrip">
+      <div class="skeleton sk-daystrip__header"></div>
+      <div class="day-strip__track">${card.repeat(2)}</div>
+    </div>`;
+  LIST_EL.innerHTML = strip.repeat(3);
+}
+
+/* ============================================================
    RENDER FROM STATE — reruns filter + render without refetching
    ============================================================ */
 let renderOptions = { groupByDate: true, singleDay: null };
@@ -1177,8 +1211,9 @@ async function renderFeatured() {
   const track   = document.getElementById('featured-carousel-track');
   if (!section || !track) return;
 
-  // Curator / promoter modes are bespoke filtered feeds — no spotlight.
-  if (getParam('curator') || getParam('promoter')) { section.hidden = true; return; }
+  // Featured lives only on the main weekly guide. The single-day view (?day=)
+  // and curator / promoter filtered feeds are bespoke — no spotlight there.
+  if (getParam('day') || getParam('curator') || getParam('promoter')) { section.hidden = true; return; }
 
   let events = [];
   try { events = (await fetchFeatured()).map(resolveGig); } catch (_) { /* helper already logs */ }
@@ -1308,6 +1343,10 @@ async function init() {
     const month = dateToShow.toLocaleDateString('en-ZA', { month: 'long' });
     headerDateEl.textContent = `${dayName} ${dayNum} ${month}`;
   }
+
+  // Paint the loading skeleton in the shape of the view we're about to render,
+  // before awaiting the fetch (renderOptions is finalized above).
+  renderSkeleton();
 
   try {
     // Load curator/promoter metadata in parallel with taxonomies + events.

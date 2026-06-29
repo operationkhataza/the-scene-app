@@ -1043,6 +1043,28 @@ function startFeaturedAutoscroll(track) {
 /* ============================================================
    BOOT
    ============================================================ */
+/* ============================================================
+   SKELETON — placeholder month grid + day-panel cards painted on
+   first load while the month fetches. renderGrid() / renderDay()
+   overwrite these when data arrives, so there's no layout jump.
+   Initial load only — month navigation keeps its own spinner.
+   ============================================================ */
+function renderGridSkeleton() {
+  let cells = '';
+  for (let i = 0; i < 42; i++) cells += '<div class="skeleton sk-cell"></div>';
+  GRID_EL.innerHTML = cells;
+
+  const dayCard = `
+    <div class="sk-day-card">
+      <div class="skeleton sk-day-card__poster"></div>
+      <div class="sk-day-card__lines">
+        <div class="skeleton sk-line sk-line--title"></div>
+        <div class="skeleton sk-line sk-line--short"></div>
+      </div>
+    </div>`;
+  DAY_EL.innerHTML = `<div class="skeleton sk-day__header"></div>` + dayCard.repeat(3);
+}
+
 async function init() {
   const today = new Date();
 
@@ -1067,6 +1089,10 @@ async function init() {
   state.selectedDay = selected;
 
   updateHeader();
+
+  // Paint the loading skeleton before awaiting the month fetch.
+  renderGridSkeleton();
+
   await fetchMonth(state.viewMonth);
 
   // Prefetch next month silently — most people who land on a calendar
