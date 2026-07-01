@@ -121,12 +121,18 @@
             <div class="fg-row">
               <div class="fg" id="fg-doors">
                 <label>Doors / Start <span class="req">*</span></label>
-                <input type="time" id="inp-doors">
+                <div class="time-field">
+                  <input type="time" id="inp-doors" class="is-empty">
+                  <span class="time-placeholder" aria-hidden="true">--:--</span>
+                </div>
                 <div class="form-error">Required.</div>
               </div>
               <div class="fg">
                 <label>End time <span class="opt">(optional)</span></label>
-                <input type="time" id="inp-end">
+                <div class="time-field">
+                  <input type="time" id="inp-end" class="is-empty">
+                  <span class="time-placeholder" aria-hidden="true">--:--</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1431,6 +1437,7 @@
       btnNext.disabled = false;
       btnNext.textContent = 'Next →';
       document.querySelectorAll('input[type="text"], input[type="url"], input[type="date"], input[type="time"], textarea').forEach(el => el.value = '');
+      document.querySelectorAll('input[type="time"]').forEach(syncTimePlaceholder);
       document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
       document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
       state.selectedVenueId = null; state.selectedVenueName = null;
@@ -1464,6 +1471,21 @@
       if (str == null) return '';
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
+
+    /* Native <input type="time"> paints its own empty-state text, and that
+       differs by browser (Windows Chrome/Edge show "--:--"; Safari paints a
+       greyed sample time that reads as an already-filled value) — see the
+       .time-field / .is-empty CSS in event-submission-stylesheet.css. This
+       keeps that toggle in sync with the field's actual value; user typing
+       is covered by the delegated listener below. */
+    function syncTimePlaceholder(el) {
+      if (el) el.classList.toggle('is-empty', el.value === '');
+    }
+    ['input', 'change'].forEach(evt => {
+      document.addEventListener(evt, e => {
+        if (e.target.matches?.('input[type="time"]')) syncTimePlaceholder(e.target);
+      });
+    });
 
     /* INIT */
     initFormType();

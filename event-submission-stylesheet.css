@@ -417,6 +417,34 @@ input::placeholder, textarea::placeholder {
   font-weight: 500;
 }
 
+/* Time-input empty state, normalised across browsers — see the
+   syncTimePlaceholder helper in the page script. The wrapper positions our
+   own "--:--" behind the native control's text, which is hidden (not the
+   control itself) while empty and unfocused, so the native picker/typing
+   UX is untouched. Native <input type="time"> paints its own empty-state
+   text, and that differs by browser (Windows Chrome/Edge show "--:--";
+   Safari paints a greyed sample time that reads as an already-filled
+   value) — this makes every browser show the same thing at rest. */
+.time-field { position: relative; }
+
+.time-field input[type="time"].is-empty:not(:focus) { color: transparent; }
+
+.time-placeholder {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.94rem;
+  font-weight: 500;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.time-field input[type="time"]:not(.is-empty) ~ .time-placeholder,
+.time-field input[type="time"]:focus ~ .time-placeholder {
+  display: none;
+}
+
 input:hover, select:hover, textarea:hover {
   border-color: rgba(51, 128, 193, 0.35);
   background: white;
