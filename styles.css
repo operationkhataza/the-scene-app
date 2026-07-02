@@ -2984,6 +2984,11 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 #promoter-backdrop { z-index: 940; }
 #promoter-sheet    { z-index: 950; }
 
+/* Gig guide reuses one sheet (#sheet) for both filters and promoter info —
+   it must also stack above the event modal there, same reasoning as above. */
+#sheet-backdrop { z-index: 940; }
+#sheet          { z-index: 950; }
+
 /* ── Outer shell: frosted backdrop, fixed to viewport ──────── */
 .cal-modal {
   position: fixed;

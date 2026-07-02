@@ -77,8 +77,7 @@
       <!-- Featured events carousel — INSIDE the header so the frosted-glass panel
            wraps it; the search bar + filters flow below. Hidden until app.js finds
            active slots (and hidden entirely in curator/promoter modes). Flyer-forward
-           cards; tapping opens the ticket link (a detail modal is a planned upgrade
-           — see the build tracker). -->
+           cards; tapping opens the event detail modal (#cal-modal below). -->
       <section class="featured-carousel" id="featured-carousel" hidden aria-label="Featured events">
         <div class="featured-carousel__header">
           <span class="featured-carousel__label"><span class="featured-carousel__star" aria-hidden="true">★</span>Featured this week</span>
@@ -139,6 +138,15 @@
     <section id="gig-list" aria-live="polite"></section>
 
   </main>
+
+  <!-- Event detail modal — reuses the calendar's .cal-modal shell/CSS (shared
+       styles.css, no gig-guide-specific styling needed). Opened only from a
+       tap on a featured carousel card (see renderFeatured() in app.js); the
+       regular feed's gig cards flip in place instead. -->
+  <div class="cal-modal" id="cal-modal" role="dialog" aria-modal="true" aria-label="Event details">
+    <div class="cal-modal__backdrop"></div>
+    <div class="cal-modal__card" id="cal-modal-card"></div>
+  </div>
 
   <!-- Bottom sheet for filter selection -->
   <div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true"></div>
