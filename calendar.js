@@ -496,11 +496,17 @@ function renderModalCard(gig) {
     ? `<img class="gig-card__poster" src="${posterSrc}" alt="${esc(gig.title)} poster" loading="lazy">`
     : `<div class="gig-card__poster-placeholder">The Scene</div>`;
 
-  // Meta line: DATE · DOORS TIME  (matches app.js exactly)
-  const metaParts = gig.date ? [formatCardDate(gig.date)] : [];
-  const timeStr = formatTime(gig.doors_time);
-  if (timeStr) metaParts.push(timeStr);
-  const metaStr = metaParts.join(' · ');
+  // Meta line: DATE · DOORS TIME  (matches app.js exactly). A featured whole
+  // run has no single date/time — show its date range instead.
+  let metaStr;
+  if (gig._isFeaturedRun) {
+    metaStr = gig.dateRange || '';
+  } else {
+    const metaParts = gig.date ? [formatCardDate(gig.date)] : [];
+    const timeStr = formatTime(gig.doors_time);
+    if (timeStr) metaParts.push(timeStr);
+    metaStr = metaParts.join(' · ');
+  }
 
   // Venue + area
   const areaName = gig.venue?.location ? (AREA_LABELS[gig.venue.location] || gig.venue.location) : null;
@@ -956,18 +962,21 @@ function updateHeader() {
    there are no active featured slots. Fire-and-forget from init().
    ============================================================ */
 function renderFeaturedCard(gig) {
-  const tier = gigTier(gig);
+  // A featured whole run has no single date and no production-level tier
+  // (curation is per-night), so it shows a date-range pill and no ring.
+  const isRun = gig._isFeaturedRun;
+  const tier = isRun ? 0 : gigTier(gig);
   const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
   const img = posterSrc
     ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
     : `<div class="featured-card__img featured-card__img--placeholder">${esc((gig.title || '?').charAt(0).toUpperCase())}</div>`;
 
-  // Meta as pills: date · time.
+  // Meta as pills: a run shows its date range; a single event shows date · time.
   const pill = txt => txt ? `<span class="featured-pill">${esc(txt)}</span>` : '';
-  const pills = [
-    pill(gig.date ? formatCardDate(gig.date) : ''),
-    pill(formatTime(gig.doors_time)),
-  ].filter(Boolean).join('');
+  const pills = (isRun
+    ? [pill(gig.dateRange)]
+    : [pill(gig.date ? formatCardDate(gig.date) : ''), pill(formatTime(gig.doors_time))]
+  ).filter(Boolean).join('');
 
   return `
     <button class="featured-card featured-card--t${tier}" type="button" data-event-id="${esc(String(gig.id))}">
@@ -993,11 +1002,11 @@ async function renderFeatured() {
   track.innerHTML = events.map(renderFeaturedCard).join('');
   section.hidden = false;
 
-  // Tap a featured card → open the full event modal.
+  // Tap a featured card → open the full modal (events and whole runs alike).
+  // Match by string id so a run's "run:<n>" id resolves too.
   track.querySelectorAll('.featured-card[data-event-id]').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
-      const id  = parseInt(cardEl.dataset.eventId, 10);
-      const gig = events.find(e => e.id === id);
+      const gig = events.find(e => String(e.id) === cardEl.dataset.eventId);
       if (gig) openCardModal(gig, cardEl);
     });
   });

@@ -1182,18 +1182,21 @@ function updateRefraction() { /* replaced by scheduleRefractUpdate */ }
    Fire-and-forget from init().
    ============================================================ */
 function renderFeaturedCard(gig) {
-  const tier = curatorTier(gig);
+  // A featured whole run has no single date and no production-level tier
+  // (curation is per-night), so it shows a date-range pill and no ring.
+  const isRun = gig._isFeaturedRun;
+  const tier = isRun ? 0 : curatorTier(gig);
   const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
   const img = posterSrc
     ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
     : `<div class="featured-card__img featured-card__img--placeholder">${esc((gig.title || '?').charAt(0).toUpperCase())}</div>`;
 
-  // Meta as pills: date · time.
+  // Meta as pills: a run shows its date range; a single event shows date · time.
   const pill = txt => txt ? `<span class="featured-pill">${esc(txt)}</span>` : '';
-  const pills = [
-    pill(gig.date ? formatCardDate(gig.date) : ''),
-    pill(formatTime(gig.doors_time)),
-  ].filter(Boolean).join('');
+  const pills = (isRun
+    ? [pill(gig.dateRange)]
+    : [pill(gig.date ? formatCardDate(gig.date) : ''), pill(formatTime(gig.doors_time))]
+  ).filter(Boolean).join('');
 
   return `
     <button class="featured-card featured-card--t${tier}" type="button" data-event-id="${esc(String(gig.id))}">
@@ -1223,11 +1226,12 @@ async function renderFeatured() {
   track.innerHTML = events.map(renderFeaturedCard).join('');
   section.hidden = false;
 
-  // Tap → open the ticket link in a new tab (no detail modal on the gig guide yet).
+  // Tap → open the ticket link in a new tab (no detail modal on the gig guide
+  // yet — same for events and whole runs). Match by string id so a run's
+  // "run:<n>" id resolves too.
   track.querySelectorAll('.featured-card[data-event-id]').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
-      const id  = parseInt(cardEl.dataset.eventId, 10);
-      const gig = events.find(e => e.id === id);
+      const gig = events.find(e => String(e.id) === cardEl.dataset.eventId);
       if (gig?.ticket_url) window.open(gig.ticket_url, '_blank', 'noopener');
     });
   });
