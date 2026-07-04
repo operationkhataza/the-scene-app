@@ -230,6 +230,7 @@
               <input type="file" id="poster-input" accept="image/*" hidden>
             </div>
             <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
+            <div class="form-error" id="poster-error" style="margin-top:8px;">Please add an event poster.</div>
           </div>
         </div>
 
@@ -521,7 +522,7 @@
       if (!res.ok) throw new Error(`API ${res.status}`);
       return res.json();
     }
-    async function uploadFile(file) {
+    async function uploadFile(file, signal = null) {
       // Poster now uploads through the submit-gate endpoint (base64 in JSON), not
       // straight to Directus /files. Server re-checks type/size and stores it.
       const data = await fileToBase64(file);
@@ -534,7 +535,7 @@
         filename: file.name || 'upload.jpg',
         title,
         data,
-      });
+      }, false, signal);
       return d.data.id;
     }
 
@@ -595,18 +596,44 @@
       return ensureWristband();
     }
 
-    /* gatedPost — POST JSON to a submit-gate route with the wristband attached.
-       Retries once if the wristband has expired (403). Returns parsed JSON. */
-    async function gatedPost(path, body, isRetry = false) {
-      const wb = await ensureWristband();
-      const res = await fetch(`${SUBMIT_URL}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...body, wristband: wb }),
+    const GATE_TIMEOUT_MS = 60000;
+
+    /* Wraps fetch with a 60s timeout (aborts if the request stalls) and bridges
+       an optional external signal (e.g. a user-clicked cancel) into the same abort. */
+    function fetchWithGateTimeout(url, options, externalSignal) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), GATE_TIMEOUT_MS);
+      const onExternalAbort = () => controller.abort();
+      if (externalSignal) {
+        if (externalSignal.aborted) controller.abort();
+        else externalSignal.addEventListener('abort', onExternalAbort);
+      }
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+        clearTimeout(timer);
+        if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
       });
+    }
+
+    /* gatedPost — POST JSON to a submit-gate route with the wristband attached.
+       Retries once if the wristband has expired (403). Returns parsed JSON.
+       Optional signal lets a caller (e.g. a poster-upload cancel button) abort
+       early; either way the request auto-aborts after 60s if it stalls. */
+    async function gatedPost(path, body, isRetry = false, signal = null) {
+      const wb = await ensureWristband();
+      let res;
+      try {
+        res = await fetchWithGateTimeout(`${SUBMIT_URL}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...body, wristband: wb }),
+        }, signal);
+      } catch (err) {
+        if (err.name === 'AbortError') throw new Error('Request timed out — check your connection and try again.');
+        throw err;
+      }
       if (res.status === 403 && !isRetry) {
         await refreshWristband();
-        return gatedPost(path, body, true);
+        return gatedPost(path, body, true, signal);
       }
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -1016,6 +1043,49 @@
     let cropper        = null;
     let pendingObjectURL = null;
 
+    // Tracks the one in-flight poster upload (if any) so the remove button can
+    // actually abort it while uploading, rather than just hiding a request that
+    // could still resolve later and silently resurrect a "removed" image.
+    let activePosterUpload = null;
+    function cancelActivePosterUpload() {
+      if (!activePosterUpload) return;
+      activePosterUpload.cancelled = true;
+      activePosterUpload.controller.abort();
+      activePosterUpload = null;
+    }
+
+    // Shared by the crop-confirm handler and the upload-error retry button —
+    // both build the same slugified filename, call uploadFile, and drive the
+    // same state transitions; this was previously two copies of the same logic.
+    async function attemptPosterUpload() {
+      const uploadToken = { cancelled: false, controller: new AbortController() };
+      activePosterUpload = uploadToken;
+
+      posterWrap.dataset.state = 'uploading';
+      try {
+        const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
+        const slugTitle = rawTitle
+          ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : 'poster';
+        const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
+
+        const fileId = await uploadFile(namedFile, uploadToken.controller.signal);
+        if (uploadToken.cancelled) return; // remove button already reset the UI
+
+        state.posterFileId = fileId;
+        state.pendingFile   = null;   // bytes are in Directus now — no need to hold in memory
+        posterWrap.dataset.state = 'uploaded';
+      } catch (err) {
+        if (uploadToken.cancelled) return; // cancel click already reset the UI, no error toast
+        // Do NOT clear pendingCropData here — the crop is still valid and needed for retry
+        posterWrap.dataset.state = 'upload-error';
+        document.getElementById('poster-error-msg').textContent = `Upload failed: ${err.message}`;
+      } finally {
+        if (activePosterUpload === uploadToken) activePosterUpload = null;
+      }
+    }
+
     posterDrop.addEventListener('click', () => posterInput.click());
     posterDrop.addEventListener('dragover', e => { e.preventDefault(); posterWrap.classList.add('is-dragover'); });
     posterDrop.addEventListener('dragleave', () => posterWrap.classList.remove('is-dragover'));
@@ -1027,8 +1097,14 @@
       if (posterInput.files[0]) openCropper(posterInput.files[0]);
     });
     posterRemove.addEventListener('click', () => {
-      // If a file was already uploaded to Directus, delete it so it doesn't orphan
-      if (state.posterFileId) { deleteFile(state.posterFileId); }
+      if (posterWrap.dataset.state === 'uploading') {
+        // Abort the in-flight upload; attemptPosterUpload's cancelled check
+        // suppresses the error state when the aborted fetch rejects.
+        cancelActivePosterUpload();
+      } else if (state.posterFileId) {
+        // Upload already finished — delete the orphaned file so it doesn't orphan
+        deleteFile(state.posterFileId);
+      }
       posterWrap.dataset.state = 'empty';
       previewDiv.style.aspectRatio = '';
       previewDiv.style.width       = '';
@@ -1047,21 +1123,7 @@
         posterInput.value = '';
         return;
       }
-      posterWrap.dataset.state = 'uploading';
-      try {
-        const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
-        const slugTitle = rawTitle
-          ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-          : 'poster';
-        const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
-        const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
-        state.posterFileId = await uploadFile(namedFile);
-        state.pendingFile  = null;
-        posterWrap.dataset.state = 'uploaded';
-      } catch (err) {
-        posterWrap.dataset.state = 'upload-error';
-        document.getElementById('poster-error-msg').textContent = `Upload failed: ${err.message}`;
-      }
+      await attemptPosterUpload();
     });
     document.getElementById('poster-error-change').addEventListener('click', () => {
       // Discard current file and crop, start fresh
@@ -1212,23 +1274,7 @@
 
       // Upload the file immediately so the File object doesn't survive in memory
       // across tab switches (where mobile OS can GC it under memory pressure).
-      posterWrap.dataset.state = 'uploading';
-      try {
-        const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
-        const slugTitle = rawTitle
-          ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-          : 'poster';
-        const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
-        const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
-        state.posterFileId = await uploadFile(namedFile);
-        state.pendingFile  = null;   // bytes are in Directus now — no need to hold in memory
-        posterWrap.dataset.state = 'uploaded';
-      } catch (err) {
-        // Do NOT clear pendingCropData here — the crop is still valid and needed for retry
-        posterWrap.dataset.state = 'upload-error';
-        document.getElementById('poster-error-msg').textContent =
-          `Upload failed: ${err.message}`;
-      }
+      await attemptPosterUpload();
     });
 
     function closeCropModal() {
@@ -1288,6 +1334,24 @@
         else fgV.classList.remove('has-error');
       }
       if (page === 3) {
+        // Poster — REQUIRED. Must be fully uploaded (posterFileId set) before leaving
+        // this page. Gating on the *completed* upload also means no poster upload can
+        // still be in flight when the user reaches submit — which closes the orphaned-
+        // upload race where an abandoned upload resolves late and lands on the wrong
+        // gig (see attemptPosterUpload / resetForm).
+        const posterErr = document.getElementById('poster-error');
+        if (state.posterFileId) {
+          if (posterErr) posterErr.style.display = 'none';
+        } else {
+          ok = false;
+          if (posterErr) {
+            posterErr.textContent =
+              posterWrap.dataset.state === 'uploading'    ? 'Please wait for the poster to finish uploading.' :
+              posterWrap.dataset.state === 'upload-error' ? 'Poster upload failed — please retry or choose another image.' :
+                                                            'Please add an event poster.';
+            posterErr.style.display = 'block';
+          }
+        }
         // Artist validation — only when card is visible
         const artistCard = document.getElementById('card-artists');
         if (artistCard.style.display !== 'none') {
@@ -1359,24 +1423,10 @@
       const btn = document.getElementById('btn-next');
       btn.disabled = true; btn.textContent = 'Submitting…';
 
-      // Poster is uploaded eagerly at crop confirm — state.posterFileId is already set.
-      // Safety net: if somehow pendingFile survived (e.g. upload was never triggered), upload now.
-      if (state.pendingFile && state.pendingCropData && !state.posterFileId) {
-        try {
-          const rawTitle  = document.getElementById('inp-title')?.value?.trim() || '';
-          const slugTitle = rawTitle
-            ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-            : 'poster';
-          const ext       = (state.pendingFile.name.split('.').pop() || 'jpg').toLowerCase();
-          const namedFile = new File([state.pendingFile], `${slugTitle}.${ext}`, { type: state.pendingFile.type });
-          state.posterFileId = await uploadFile(namedFile);
-          state.pendingFile  = null;
-        } catch (err) {
-          toast(`Poster upload failed — ${err.message}. Please try again.`, 'err');
-          btn.disabled = false; btn.textContent = 'Submit gig →';
-          return;
-        }
-      }
+      // Poster is uploaded eagerly at crop-confirm, and the page-3 gate blocks reaching
+      // this point until state.posterFileId is set — so it's guaranteed present here.
+      // (No submit-time re-upload fallback: the old one required !posterFileId, which the
+      // gate makes impossible.)
 
       const title  = document.getElementById('inp-title').value.trim();
       const isFree = document.getElementById('chk-free').checked;
@@ -1433,6 +1483,12 @@
 
     /* RESET */
     function resetForm() {
+      // Abort any still-in-flight poster upload before clearing state. The page-3
+      // gate normally means none is live by the time we get here, but this is the
+      // direct guard against an abandoned upload resolving into the next gig's state.
+      cancelActivePosterUpload();
+      const posterErr = document.getElementById('poster-error');
+      if (posterErr) posterErr.style.display = 'none';
       const btnNext = document.getElementById('btn-next');
       btnNext.disabled = false;
       btnNext.textContent = 'Next →';
