@@ -1643,14 +1643,14 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   display: grid;
   grid-template-columns: 120px 1fr;
   gap: 0.85rem;
-  align-items: center;
+  align-items: stretch;   /* mirror .cal-day-card so the loading state matches */
   padding: 0.65rem;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--border);
   margin-bottom: 0.7rem;
 }
-.sk-day-card__poster { width: 120px; aspect-ratio: 16 / 9; border-radius: 4px; }
+.sk-day-card__poster { width: 120px; height: 100%; aspect-ratio: 16 / 9; border-radius: 4px; }
 .sk-day-card__lines { display: flex; flex-direction: column; gap: 0.5rem; }
 
 /* ── Footer contact line — small, muted, bottom of gig guide + calendar ── */
@@ -2309,7 +2309,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   grid-template-columns: repeat(7, 1fr);
   /* Row count is set dynamically by JS via --cal-rows; default 6 in
      case the var isn't set (e.g. during the loading state). */
-  grid-auto-rows: minmax(52px, 1fr);
+  grid-auto-rows: minmax(52px, auto);
   gap: 4px;
   padding: 0 1.25rem;
   /* When the loading state is showing, the grid collapses to one
@@ -2554,7 +2554,10 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   display: grid;
   grid-template-columns: 120px 1fr;
   gap: 0.85rem;
-  align-items: center;
+  /* stretch (not center): the poster stub fills the card's full height so a
+     taller text side (long title / OS-enlarged text) keeps the flyer's top
+     edge aligned with the title instead of sliding it to the vertical middle. */
+  align-items: stretch;
   padding: 0.65rem;
   border-radius: var(--radius-sm);
   background: var(--glass-bg-strong);
@@ -2606,20 +2609,32 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
 /* 16:9 poster thumbnail */
 .cal-day-card__poster {
+  /* Fills the stub's full height (card is align-items: stretch) with a 16:9
+     minimum floor: short cards stay ~68px, and the stub only grows to match a
+     taller text side. See .cal-day-card__img (object-fit: contain). */
+  position: relative;
   width: 100%;
+  height: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 6px;
   overflow: hidden;
   background: var(--scene-blue-wash);
-  flex-shrink: 0;
 }
 .cal-day-card__img {
+  /* Absolutely filled so the poster's height is driven purely by the card
+     stretch + the 16:9 floor (avoids aspect-ratio/height circularity).
+     contain keeps the whole flyer visible and centred; the poster's wash
+     background shows as a thin band top/bottom when the stub grows past 16:9. */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: fill;   /* file is already the cropped 16:9 — fill maps it 1:1 */
+  object-fit: contain;
   display: block;
 }
 .cal-day-card__img--placeholder {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: flex;
