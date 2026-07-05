@@ -2737,10 +2737,26 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
    parent card (all of which flatten preserve-3d in Chrome/WebKit).
 
    Timing contract:
-     Flipping TO back  → front leaves immediately (ease-in, 0 delay)
-                         back arrives after front gone (ease-out, 0.2s delay)
-     Flipping TO front → back leaves immediately (ease-in, 0 delay)
-                         front arrives after back gone (ease-out, 0.2s delay)
+     Flipping TO back  → front leaves immediately (easeInCubic, 0 delay)
+                         back arrives after front gone (easeOutCubic, 0.26s delay)
+     Flipping TO front → back leaves immediately (easeInCubic, 0 delay)
+                         front arrives after back gone (easeOutCubic, 0.26s delay)
+
+   Curve choice: bare `ease-in`/`ease-out` keywords are too mild to read
+   as "accelerating" at this duration — the eye can't perceive the curve
+   shape in the time available. easeInCubic (0.55, 0.055, 0.675, 0.19)
+   and its mirror easeOutCubic (0.215, 0.61, 0.355, 1) hold back much
+   longer before releasing, producing a clear "whoosh" that combines with
+   the natural |cos θ| foreshortening of a Y-axis rotation (which already
+   peaks in apparent speed at the 90°-edge-on midpoint) to sell the
+   "speeding up" sensation.
+
+   Duration is 0.28s per half (up from 0.22s) — long enough for a cubic
+   curve's shape to actually register; a curve this pronounced looks like
+   a linear snap below ~250ms regardless of its math.
+
+   Handoff delay (0.26s) is pinned just under the exit duration (0.28s),
+   preserving the same ~0.02s margin the previous 0.2s/0.22s pairing used.
 
    CSS transitions always use the *destination* state's transition
    property, so we encode each direction's timing in the state it
@@ -2749,28 +2765,29 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 
 /* Front face — default (showing): rotateY(0deg) facing user.
    This transition fires when IS-FLIPPED is REMOVED (flip back):
-   front arrives with ease-out after a 0.2s delay. */
+   front arrives with easeOutCubic after a 0.26s delay. */
 .gig-card__front {
   flex: 1;
   display: flex;
   flex-direction: column;
   transform: perspective(900px) rotateY(0deg);
-  transition: transform 0.22s ease-out 0.2s;
+  transition: transform 0.28s cubic-bezier(0.215, 0.61, 0.355, 1) 0.26s;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  will-change: transform;
 }
 /* Front face — flipped: rotates out to -90deg (disappears to left edge).
    This transition fires when IS-FLIPPED is ADDED (flip to back):
-   front leaves immediately with ease-in, no delay. */
+   front leaves immediately with easeInCubic, no delay. */
 .gig-card__inner.is-flipped .gig-card__front {
   transform: perspective(900px) rotateY(-90deg);
-  transition: transform 0.22s ease-in;
+  transition: transform 0.28s cubic-bezier(0.55, 0.055, 0.675, 0.19);
   pointer-events: none;
 }
 
 /* Back face — default (hidden): rotateY(90deg) edge-on/invisible.
    This transition fires when IS-FLIPPED is REMOVED (flip back):
-   back leaves immediately with ease-in, no delay.
+   back leaves immediately with easeInCubic, no delay.
    Visibility hides it fully and collapses after the transition. */
 .gig-card__back {
   position: absolute;
@@ -2786,19 +2803,20 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   -webkit-backface-visibility: hidden;
   transform: perspective(900px) rotateY(90deg);
   visibility: hidden;
-  /* ease-in departure + visibility collapses after 0.22s */
-  transition: transform 0.22s ease-in, visibility 0s linear 0.22s;
+  will-change: transform;
+  /* easeInCubic departure + visibility collapses after 0.28s */
+  transition: transform 0.28s cubic-bezier(0.55, 0.055, 0.675, 0.19), visibility 0s linear 0.28s;
 }
 /* Back face — flipped (visible): rotates in to 0deg facing user.
    This transition fires when IS-FLIPPED is ADDED (flip to back):
-   back arrives with ease-out after a 0.2s delay (front is gone by then).
+   back arrives with easeOutCubic after a 0.26s delay (front is gone by then).
    Visibility becomes visible immediately (0s delay). */
 .gig-card__inner.is-flipped .gig-card__back {
   transform: perspective(900px) rotateY(0deg);
   visibility: visible;
   pointer-events: auto;
-  /* ease-out arrival after delay + visibility shows immediately */
-  transition: transform 0.22s ease-out 0.2s, visibility 0s linear 0s;
+  /* easeOutCubic arrival after delay + visibility shows immediately */
+  transition: transform 0.28s cubic-bezier(0.215, 0.61, 0.355, 1) 0.26s, visibility 0s linear 0s;
 }
 
 /* ── Reduced motion: instant swap, no rotation ── */
