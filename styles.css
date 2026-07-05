@@ -1653,6 +1653,23 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .sk-day-card__poster { width: 120px; aspect-ratio: 16 / 9; border-radius: 4px; }
 .sk-day-card__lines { display: flex; flex-direction: column; gap: 0.5rem; }
 
+/* ── Footer contact line — small, muted, bottom of gig guide + calendar ── */
+.app-footer-contact {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+.app-footer-contact a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.85;
+}
+.app-footer-contact a:active { opacity: 0.6; }
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */
