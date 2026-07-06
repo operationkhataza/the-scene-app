@@ -149,7 +149,7 @@ button { font-family: inherit; cursor: pointer; }
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: calc(var(--safe-top) + 14px) 20px 14px;
+  padding: 14px 20px 14px;
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
           backdrop-filter: var(--glass-blur);

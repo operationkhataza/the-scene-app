@@ -562,7 +562,16 @@
        carrying that wristband in its body. On a 403 (expired) we re-challenge + retry. */
     let wristband = null;
     let wristbandResolve;
-    let wristbandReady = new Promise(r => { wristbandResolve = r; });
+    let wristbandReady = newWristbandReady();
+    function newWristbandReady() { return new Promise(r => { wristbandResolve = r; }); }
+
+    /* Re-challenge Turnstile: reset() discards the current token and asks for a fresh
+       one, which fires onTurnstile again. Used when a token expires/times out while the
+       form sits idle, and when a /session exchange fails — so the page recovers instead
+       of being stuck with no wristband until a manual reload. */
+    function rechallengeTurnstile() {
+      try { if (window.turnstile) window.turnstile.reset(); } catch (e) {}
+    }
 
     async function onTurnstile(token) {
       try {
@@ -573,8 +582,8 @@
         });
         const d = await res.json().catch(() => ({}));
         if (res.ok && d.wristband) { wristband = d.wristband; wristbandResolve(wristband); }
-        else console.error('[submit-gate] session exchange failed', d);
-      } catch (e) { console.error('[submit-gate] session exchange error', e); }
+        else { console.error('[submit-gate] session exchange failed', d); rechallengeTurnstile(); }
+      } catch (e) { console.error('[submit-gate] session exchange error', e); rechallengeTurnstile(); }
     }
 
     function renderTurnstile() {
@@ -583,6 +592,11 @@
         window.turnstile.render(el, {
           sitekey: TURNSTILE_SITE_KEY,
           callback: onTurnstile,
+          // A token left unused while the form is filled will expire/time out; re-mint
+          // the wristband proactively so it is always fresh by submit time (was the
+          // "captcha failed after ~30s idle, but fine when submitted immediately" bug).
+          'expired-callback': () => { console.warn('[submit-gate] turnstile token expired'); refreshWristband().catch(() => {}); },
+          'timeout-callback': () => { console.warn('[submit-gate] turnstile timeout'); refreshWristband().catch(() => {}); },
           'error-callback': () => console.warn('[submit-gate] turnstile error'),
         });
       } else {
@@ -590,16 +604,25 @@
       }
     }
 
+    /* How long a submit waits for a wristband before failing loudly. Without this a
+       stuck/never-resolving exchange would hang the submit indefinitely instead of
+       surfacing an error the user can act on. */
+    const WRISTBAND_WAIT_MS = 20000;
+
     async function ensureWristband() {
       if (wristband) return wristband;
-      await wristbandReady;
-      return wristband;
+      let timer;
+      const timeout = new Promise((_, rej) => {
+        timer = setTimeout(() => rej(new Error('Verification timed out — please reload and try again.')), WRISTBAND_WAIT_MS);
+      });
+      try { return await Promise.race([wristbandReady, timeout]); }
+      finally { clearTimeout(timer); }
     }
 
     async function refreshWristband() {
       wristband = null;
-      wristbandReady = new Promise(r => { wristbandResolve = r; });
-      try { if (window.turnstile) window.turnstile.reset(); } catch (e) {}
+      wristbandReady = newWristbandReady();
+      rechallengeTurnstile();
       return ensureWristband();
     }
 
