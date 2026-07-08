@@ -118,24 +118,30 @@
           <div class="card-body">
             <div class="fg" id="fg-date">
               <label>Event date <span class="req">*</span></label>
-              <input type="date" id="inp-date">
+              <button type="button" class="field-trigger" id="inp-date-btn">
+                <span class="field-trigger-text is-placeholder" id="inp-date-display">Select a date</span>
+                <span class="field-trigger-icon">📅</span>
+              </button>
+              <input type="hidden" id="inp-date">
               <div class="form-error">Please pick a date.</div>
             </div>
             <div class="fg-row">
               <div class="fg" id="fg-doors">
                 <label>Doors / Start <span class="req">*</span></label>
-                <div class="time-field">
-                  <input type="time" id="inp-doors" class="is-empty">
-                  <span class="time-placeholder" aria-hidden="true">--:--</span>
-                </div>
+                <button type="button" class="field-trigger" id="inp-doors-btn">
+                  <span class="field-trigger-text is-placeholder" id="inp-doors-display">--:--</span>
+                  <span class="field-trigger-icon">🕒</span>
+                </button>
+                <input type="hidden" id="inp-doors">
                 <div class="form-error">Required.</div>
               </div>
               <div class="fg">
                 <label>End time <span class="opt">(optional)</span></label>
-                <div class="time-field">
-                  <input type="time" id="inp-end" class="is-empty">
-                  <span class="time-placeholder" aria-hidden="true">--:--</span>
-                </div>
+                <button type="button" class="field-trigger" id="inp-end-btn">
+                  <span class="field-trigger-text is-placeholder" id="inp-end-display">--:--</span>
+                  <span class="field-trigger-icon">🕒</span>
+                </button>
+                <input type="hidden" id="inp-end">
               </div>
             </div>
           </div>
@@ -209,6 +215,7 @@
                 <div class="img-upload-icon">🖼</div>
                 <div class="img-upload-primary">Tap to upload an image</div>
                 <div class="img-upload-hint">JPEG, PNG or WebP, max 8MB — you'll crop after selecting</div>
+                <input type="file" id="poster-input" accept="image/*" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;">
               </label>
               <div class="img-upload-preview" id="poster-preview">
                 <div class="poster-confirmed" id="poster-confirmed">
@@ -230,7 +237,6 @@
                   <button type="button" class="poster-error-change" id="poster-error-change">Choose different image</button>
                 </div>
               </div>
-              <input type="file" id="poster-input" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0); pointer-events:none;">
             </div>
             <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
             <div class="form-error" id="poster-error" style="margin-top:8px;">Please add an event poster.</div>
@@ -401,6 +407,45 @@
   <!-- PORTAL DROPDOWNS — rendered at body level to escape card stacking contexts -->
   <div id="venue-dropdown" style="display:none; position:fixed; z-index:9999; background:rgba(255,255,255,0.98); border:1px solid rgba(255,255,255,0.82); border-radius:18px; box-shadow:0 12px 40px rgba(51,128,193,0.15),inset 0 1px 0 rgba(255,255,255,0.85); overflow:hidden; overflow-y:auto; max-height:240px;"></div>
   <div id="artist-dropdown" style="display:none; position:fixed; z-index:9999; background:rgba(255,255,255,0.98); border:1px solid rgba(255,255,255,0.82); border-radius:18px; box-shadow:0 12px 40px rgba(51,128,193,0.15),inset 0 1px 0 rgba(255,255,255,0.85); overflow:hidden; overflow-y:auto; max-height:220px;"></div>
+
+  <!-- DATE PICKER — fully custom, page-rendered (not the native OS calendar) so it
+       always matches the app's own light theme, on every device/webview. -->
+  <div id="date-picker-modal" class="picker-modal">
+    <div class="picker-sheet">
+      <div class="picker-cal-header">
+        <button type="button" class="picker-nav" id="cal-prev" aria-label="Previous month">‹</button>
+        <div class="picker-cal-title" id="cal-title">July 2026</div>
+        <button type="button" class="picker-nav" id="cal-next" aria-label="Next month">›</button>
+      </div>
+      <div class="picker-cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="picker-cal-grid" id="cal-grid"></div>
+      <div class="picker-actions">
+        <button type="button" class="picker-btn picker-btn-cancel" id="cal-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIME PICKER — fully custom, page-rendered (not the native OS clock dial); shared
+       by both the doors/start and end time fields, tracked via pickerState.activeInputId. -->
+  <div id="time-picker-modal" class="picker-modal">
+    <div class="picker-sheet">
+      <div class="picker-time-title" id="time-picker-title">Select a time</div>
+      <div class="picker-time-list" id="time-list"></div>
+      <div class="picker-time-custom">
+        <span class="picker-time-custom-label">Custom</span>
+        <input type="number" id="time-custom-h" class="picker-time-custom-input" min="0" max="23" placeholder="HH" inputmode="numeric">
+        <span class="picker-time-custom-sep">:</span>
+        <input type="number" id="time-custom-m" class="picker-time-custom-input" min="0" max="59" placeholder="MM" inputmode="numeric">
+        <button type="button" class="picker-btn picker-btn-set" id="time-custom-set">Set</button>
+      </div>
+      <div class="picker-actions">
+        <button type="button" class="picker-btn picker-btn-clear" id="time-clear">Clear</button>
+        <button type="button" class="picker-btn picker-btn-cancel" id="time-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- CROP MODAL -->
   <div id="crop-modal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(10,15,30,0.92); flex-direction:column;">
@@ -1564,8 +1609,10 @@
       const btnNext = document.getElementById('btn-next');
       btnNext.disabled = false;
       btnNext.textContent = 'Next →';
-      document.querySelectorAll('input[type="text"], input[type="url"], input[type="date"], input[type="time"], textarea').forEach(el => el.value = '');
-      document.querySelectorAll('input[type="time"]').forEach(syncTimePlaceholder);
+      document.querySelectorAll('input[type="text"], input[type="url"], textarea').forEach(el => el.value = '');
+      resetDateTimeField('inp-date', 'inp-date-display', 'Select a date');
+      resetDateTimeField('inp-doors', 'inp-doors-display', '--:--');
+      resetDateTimeField('inp-end', 'inp-end-display', '--:--');
       document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
       document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
       state.selectedVenueId = null; state.selectedVenueName = null;
@@ -1600,20 +1647,141 @@
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    /* Native <input type="time"> paints its own empty-state text, and that
-       differs by browser (Windows Chrome/Edge show "--:--"; Safari paints a
-       greyed sample time that reads as an already-filled value) — see the
-       .time-field / .is-empty CSS in event-submission-stylesheet.css. This
-       keeps that toggle in sync with the field's actual value; user typing
-       is covered by the delegated listener below. */
-    function syncTimePlaceholder(el) {
-      if (el) el.classList.toggle('is-empty', el.value === '');
+    /* CUSTOM DATE / TIME PICKERS — native <input type="date"/"time"> hand their popup
+       UI to the OS; that popup's colours live outside page CSS, so on some devices/
+       webviews the selected/current value renders illegibly and no stylesheet change
+       can reach it. inp-date/inp-doors/inp-end are now type="hidden" value-holders;
+       these two modals are fully page-rendered pickers (own markup, own CSS) that
+       write into them, so appearance is always this stylesheet's to control. */
+    const pickerState = { activeInputId: null, activeDisplayId: null, activeFgId: null, activePlaceholder: '', calYear: 0, calMonth: 0 };
+    const dateModal  = document.getElementById('date-picker-modal');
+    const timeModal  = document.getElementById('time-picker-modal');
+    const calTitle   = document.getElementById('cal-title');
+    const calGrid    = document.getElementById('cal-grid');
+    const timeList   = document.getElementById('time-list');
+    const timeTitle  = document.getElementById('time-picker-title');
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function formatDateDisplay(iso) {
+      return new Date(iso + 'T12:00:00').toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
     }
-    ['input', 'change'].forEach(evt => {
-      document.addEventListener(evt, e => {
-        if (e.target.matches?.('input[type="time"]')) syncTimePlaceholder(e.target);
-      });
+    function setFieldValue(inputId, displayId, value, displayText) {
+      document.getElementById(inputId).value = value;
+      const displayEl = document.getElementById(displayId);
+      displayEl.textContent = displayText;
+      displayEl.classList.toggle('is-placeholder', !value);
+    }
+    function resetDateTimeField(inputId, displayId, placeholderText) {
+      setFieldValue(inputId, displayId, '', placeholderText);
+    }
+
+    /* DATE PICKER */
+    function renderCalendar() {
+      const y = pickerState.calYear, m = pickerState.calMonth;
+      calTitle.textContent = new Date(y, m, 1).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+      const selectedISO = document.getElementById('inp-date').value;
+      const today = new Date();
+      const todayISO = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+      const firstDow = new Date(y, m, 1).getDay();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const daysInPrevMonth = new Date(y, m, 0).getDate();
+      calGrid.innerHTML = '';
+      for (let i = 0; i < 42; i++) { // fixed 6-week grid so height doesn't jump month to month
+        const dayNum = i - firstDow + 1;
+        let cellY = y, cellM = m, cellD = dayNum, outside = false;
+        if (dayNum < 1)                { cellM = m - 1; cellD = daysInPrevMonth + dayNum; outside = true; }
+        else if (dayNum > daysInMonth) { cellM = m + 1; cellD = dayNum - daysInMonth;      outside = true; }
+        const cellDate = new Date(cellY, cellM, cellD);
+        const iso = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth() + 1)}-${pad2(cellDate.getDate())}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'picker-cal-day' + (outside ? ' is-outside' : '') + (iso === todayISO ? ' is-today' : '') + (iso === selectedISO ? ' is-selected' : '');
+        btn.textContent = cellD;
+        btn.addEventListener('click', () => {
+          setFieldValue('inp-date', 'inp-date-display', iso, formatDateDisplay(iso));
+          document.getElementById('fg-date').classList.remove('has-error');
+          closeDatePicker();
+        });
+        calGrid.appendChild(btn);
+      }
+    }
+    function openDatePicker() {
+      const currentISO = document.getElementById('inp-date').value;
+      const base = currentISO ? new Date(currentISO + 'T12:00:00') : new Date();
+      pickerState.calYear = base.getFullYear();
+      pickerState.calMonth = base.getMonth();
+      renderCalendar();
+      dateModal.classList.add('is-open');
+    }
+    function closeDatePicker() { dateModal.classList.remove('is-open'); }
+
+    document.getElementById('inp-date-btn').addEventListener('click', openDatePicker);
+    document.getElementById('cal-prev').addEventListener('click', () => {
+      pickerState.calMonth--;
+      if (pickerState.calMonth < 0) { pickerState.calMonth = 11; pickerState.calYear--; }
+      renderCalendar();
     });
+    document.getElementById('cal-next').addEventListener('click', () => {
+      pickerState.calMonth++;
+      if (pickerState.calMonth > 11) { pickerState.calMonth = 0; pickerState.calYear++; }
+      renderCalendar();
+    });
+    document.getElementById('cal-cancel').addEventListener('click', closeDatePicker);
+    dateModal.addEventListener('click', e => { if (e.target === dateModal) closeDatePicker(); });
+
+    /* TIME PICKER — shared by doors/start + end time; 15-min increments plus a
+       custom H/M entry for times that fall between them. */
+    function openTimePicker(inputId, displayId, fgId, title, placeholderText) {
+      pickerState.activeInputId = inputId;
+      pickerState.activeDisplayId = displayId;
+      pickerState.activeFgId = fgId;
+      pickerState.activePlaceholder = placeholderText;
+      timeTitle.textContent = title;
+      const current = document.getElementById(inputId).value;
+      timeList.innerHTML = '';
+      let selectedRow = null;
+      for (let h = 0; h < 24; h++) {
+        for (let min = 0; min < 60; min += 15) {
+          const hm = `${pad2(h)}:${pad2(min)}`;
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'picker-time-row' + (hm === current ? ' is-selected' : '');
+          row.textContent = hm;
+          row.addEventListener('click', () => applyTime(hm));
+          timeList.appendChild(row);
+          if (hm === current) selectedRow = row;
+        }
+      }
+      document.getElementById('time-custom-h').value = '';
+      document.getElementById('time-custom-m').value = '';
+      timeModal.classList.add('is-open');
+      // Default scroll anchor: the selected time if set, else 18:00 (typical doors time)
+      (selectedRow || timeList.children[72]).scrollIntoView({ block: 'center' });
+    }
+    function applyTime(hm) {
+      setFieldValue(pickerState.activeInputId, pickerState.activeDisplayId, hm, hm);
+      if (pickerState.activeFgId) document.getElementById(pickerState.activeFgId)?.classList.remove('has-error');
+      closeTimePicker();
+    }
+    function closeTimePicker() { timeModal.classList.remove('is-open'); }
+
+    document.getElementById('inp-doors-btn').addEventListener('click', () => openTimePicker('inp-doors', 'inp-doors-display', 'fg-doors', 'Doors / Start time', '--:--'));
+    document.getElementById('inp-end-btn').addEventListener('click', () => openTimePicker('inp-end', 'inp-end-display', null, 'End time', '--:--'));
+    document.getElementById('time-cancel').addEventListener('click', closeTimePicker);
+    document.getElementById('time-clear').addEventListener('click', () => {
+      setFieldValue(pickerState.activeInputId, pickerState.activeDisplayId, '', pickerState.activePlaceholder);
+      closeTimePicker();
+    });
+    document.getElementById('time-custom-set').addEventListener('click', () => {
+      const h = parseInt(document.getElementById('time-custom-h').value, 10);
+      const m = parseInt(document.getElementById('time-custom-m').value, 10);
+      if (Number.isNaN(h) || h < 0 || h > 23 || Number.isNaN(m) || m < 0 || m > 59) {
+        toast('Enter a valid time (00:00–23:59).', 'err');
+        return;
+      }
+      applyTime(`${pad2(h)}:${pad2(m)}`);
+    });
+    timeModal.addEventListener('click', e => { if (e.target === timeModal) closeTimePicker(); });
 
     /* INIT */
     initFormType();

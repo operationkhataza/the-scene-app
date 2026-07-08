@@ -419,33 +419,182 @@ input::placeholder, textarea::placeholder {
   font-weight: 500;
 }
 
-/* Time-input empty state, normalised across browsers — see the
-   syncTimePlaceholder helper in the page script. The wrapper positions our
-   own "--:--" behind the native control's text, which is hidden (not the
-   control itself) while empty and unfocused, so the native picker/typing
-   UX is untouched. Native <input type="time"> paints its own empty-state
-   text, and that differs by browser (Windows Chrome/Edge show "--:--";
-   Safari paints a greyed sample time that reads as an already-filled
-   value) — this makes every browser show the same thing at rest. */
-.time-field { position: relative; }
-
-.time-field input[type="time"].is-empty:not(:focus) { color: transparent; }
-
-.time-placeholder {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
+/* ============================================================
+   CUSTOM DATE / TIME FIELD TRIGGER
+   Native <input type="date"/"time"> hand off their popup UI to the OS —
+   its colours are outside page CSS, so on some devices/webviews the
+   popup's own theming makes selected/current values illegible. These
+   fields are now `type="hidden"` value-holders; this button is the only
+   visible/tappable control, opening the fully custom pickers below (own
+   markup, own CSS, always matches the app's light design system).
+   ============================================================ */
+.field-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 15px;
+  border: 1.5px solid rgba(51, 128, 193, 0.18);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
   font-size: 0.94rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.85);
   font-weight: 500;
-  color: var(--text-subtle);
-  pointer-events: none;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+.field-trigger:hover { border-color: rgba(51, 128, 193, 0.35); background: white; }
+.field-trigger-text.is-placeholder { color: var(--text-subtle); }
+.field-trigger-icon { font-size: 1rem; flex-shrink: 0; opacity: 0.7; }
+
+/* ============================================================
+   CUSTOM DATE / TIME PICKERS (fully page-rendered — see field-trigger note)
+   ============================================================ */
+.picker-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(10, 15, 30, 0.55);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.picker-modal.is-open { display: flex; }
+
+.picker-sheet {
+  width: 100%;
+  max-width: 340px;
+  background: var(--scene-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
 }
 
-.time-field input[type="time"]:not(.is-empty) ~ .time-placeholder,
-.time-field input[type="time"]:focus ~ .time-placeholder {
-  display: none;
+.picker-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
+.picker-cal-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.picker-nav {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid rgba(51, 128, 193, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text);
+  font-size: 1.1rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.picker-nav:hover { background: var(--scene-cyan-wash); border-color: var(--scene-cyan); }
+
+.picker-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.picker-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.picker-cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.picker-cal-day:hover { background: var(--scene-cyan-wash); }
+.picker-cal-day.is-outside { color: var(--text-subtle); opacity: 0.5; }
+.picker-cal-day.is-today { box-shadow: inset 0 0 0 1.5px var(--scene-cyan-deep); }
+.picker-cal-day.is-selected {
+  background: var(--selected-bg);
+  color: white;
+  box-shadow: var(--selected-shadow);
+}
+
+.picker-actions { display: flex; gap: 10px; margin-top: 14px; }
+.picker-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border: 1.5px solid rgba(51, 128, 193, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text);
+  cursor: pointer;
+  min-height: 44px;
+}
+.picker-btn-set { background: var(--selected-bg); color: white; border: none; box-shadow: var(--selected-shadow); }
+
+.picker-time-title { font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+.picker-time-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1.5px solid rgba(51, 128, 193, 0.14);
+  border-radius: var(--radius-sm);
+}
+.picker-time-row {
+  display: block;
+  width: 100%;
+  padding: 11px 15px;
+  border: none;
+  border-bottom: 1px solid rgba(51, 128, 193, 0.08);
+  background: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-time-row:last-child { border-bottom: none; }
+.picker-time-row:hover { background: var(--scene-cyan-wash); }
+.picker-time-row.is-selected { background: var(--selected-bg); color: white; }
+
+.picker-time-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.picker-time-custom-label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+.picker-time-custom-input {
+  width: 48px;
+  padding: 9px 6px;
+  border: 1.5px solid rgba(51, 128, 193, 0.18);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.picker-time-custom-sep { font-weight: 700; color: var(--text-muted); }
+.picker-btn-set#time-custom-set { flex: 0 0 auto; padding: 9px 16px; min-height: 0; }
 
 input:hover, select:hover, textarea:hover {
   border-color: rgba(51, 128, 193, 0.35);
@@ -493,7 +642,8 @@ select {
 
 .fg.has-error input,
 .fg.has-error select,
-.fg.has-error textarea {
+.fg.has-error textarea,
+.fg.has-error .field-trigger {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(224, 75, 90, 0.12);
 }
@@ -875,6 +1025,7 @@ select {
 
 .img-upload-empty {
   display: none;            /* hidden by default — shown ONLY in the empty state (see below) */
+  position: relative;       /* positioning context for the overlaid <input type="file"> below */
   padding: 32px 20px;
   text-align: center;
   cursor: pointer;
