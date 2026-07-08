@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#15233D">
+  <!-- Pin native controls (date/time pickers) to light so the Android WebView's
+       force-dark can't re-theme them inconsistently with the all-light form. -->
+  <meta name="color-scheme" content="light">
   <title>Submit an Event — The Scene Cape Town</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -202,11 +205,11 @@
           </div>
           <div class="card-body">
             <div class="img-upload" id="poster-wrap" data-state="empty">
-              <div class="img-upload-empty" id="poster-drop">
+              <label class="img-upload-empty" id="poster-drop" for="poster-input">
                 <div class="img-upload-icon">🖼</div>
                 <div class="img-upload-primary">Tap to upload an image</div>
                 <div class="img-upload-hint">JPEG, PNG or WebP, max 8MB — you'll crop after selecting</div>
-              </div>
+              </label>
               <div class="img-upload-preview" id="poster-preview">
                 <div class="poster-confirmed" id="poster-confirmed">
                   <div class="poster-confirmed-icon">✓</div>
@@ -227,7 +230,7 @@
                   <button type="button" class="poster-error-change" id="poster-error-change">Choose different image</button>
                 </div>
               </div>
-              <input type="file" id="poster-input" accept="image/*" hidden>
+              <input type="file" id="poster-input" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0); pointer-events:none;">
             </div>
             <div class="form-hint" style="margin-top:8px;">We'll compress and optimise it automatically.</div>
             <div class="form-error" id="poster-error" style="margin-top:8px;">Please add an event poster.</div>
@@ -401,7 +404,7 @@
 
   <!-- CROP MODAL -->
   <div id="crop-modal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(10,15,30,0.92); flex-direction:column;">
-    <div style="flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; padding:12px 12px 0; touch-action:none;">
+    <div style="flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; padding:0; touch-action:none;">
       <img id="crop-img" style="max-width:100%; max-height:100%; display:block;">
     </div>
     <div style="padding:14px 16px calc(14px + var(--safe-bot)); background:rgba(255,255,255,0.06); border-top:1px solid rgba(255,255,255,0.12); display:flex; flex-direction:column; gap:12px; flex-shrink:0;">
@@ -1152,7 +1155,9 @@
       }
     }
 
-    posterDrop.addEventListener('click', () => posterInput.click());
+    // #poster-drop is a <label for="poster-input">, so a tap opens the native file
+    // picker via the browser's own label activation — no JS .click() (which Android
+    // WebViews block on a hidden input). Drag-and-drop (desktop) is still wired below.
     posterDrop.addEventListener('dragover', e => { e.preventDefault(); posterWrap.classList.add('is-dragover'); });
     posterDrop.addEventListener('dragleave', () => posterWrap.classList.remove('is-dragover'));
     posterDrop.addEventListener('drop', e => {

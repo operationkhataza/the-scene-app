@@ -8,6 +8,8 @@
    DESIGN TOKENS
    ============================================================ */
 :root {
+  color-scheme: light;
+
   --scene-cyan:        #4BB9D0;
   --scene-cyan-soft:   #9FDCE7;
   --scene-cyan-wash:   #E4F5FA;
