@@ -44,7 +44,6 @@ const TEST_HOLO = new URLSearchParams(window.location.search).get('holo') === 't
 
 const LIST_EL      = document.getElementById('gig-list');
 const TOOLBAR_EL   = document.getElementById('toolbar');
-const COUNT_EL     = document.getElementById('toolbar-count');
 const CLEAR_EL     = document.getElementById('toolbar-clear');
 const BTN_TYPE     = document.getElementById('btn-type');
 const BTN_AREA     = document.getElementById('btn-area');
@@ -997,10 +996,6 @@ function renderFlatList(gigs) {
 function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
   const anyFilters = state.selectedTypes.size + state.selectedAreas.size + (state.selectedPriceMax !== null ? 1 : 0) > 0;
   const anySearch = !!state.searchQuery;
-
-  COUNT_EL.textContent = gigs.length === 0
-    ? ''
-    : `${gigs.length} ${gigs.length === 1 ? 'event' : 'events'}`;
 
   if (!gigs.length) {
     const dateHeader = singleDay
