@@ -404,10 +404,13 @@
     <div style="flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; padding:12px 12px 0; touch-action:none;">
       <img id="crop-img" style="max-width:100%; max-height:100%; display:block;">
     </div>
-    <div style="padding:14px 16px calc(14px + var(--safe-bot)); background:rgba(255,255,255,0.06); border-top:1px solid rgba(255,255,255,0.12); display:flex; gap:10px; align-items:center; flex-shrink:0;">
-      <div style="flex:1; font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.55); line-height:1.4;">Drag to reposition · Pinch or scroll to zoom</div>
-      <button id="crop-cancel" type="button" style="padding:13px 18px; border-radius:var(--radius-sm); background:rgba(255,255,255,0.12); color:white; font-weight:700; font-size:0.88rem; border:1px solid rgba(255,255,255,0.18); font-family:inherit; cursor:pointer; min-height:48px;">Cancel</button>
-      <button id="crop-confirm" type="button" style="padding:13px 22px; border-radius:var(--radius-sm); background:var(--selected-bg); color:white; font-weight:700; font-size:0.88rem; border:none; font-family:inherit; cursor:pointer; box-shadow:var(--selected-shadow); min-height:48px;">Use this crop</button>
+    <div style="padding:14px 16px calc(14px + var(--safe-bot)); background:rgba(255,255,255,0.06); border-top:1px solid rgba(255,255,255,0.12); display:flex; flex-direction:column; gap:12px; flex-shrink:0;">
+      <label style="display:flex; align-items:center; gap:12px; font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.55);">Zoom<input id="crop-zoom" type="range" style="flex:1; accent-color:var(--selected-bg); height:4px; cursor:pointer;"></label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div style="flex:1; font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.55); line-height:1.4;">Drag to reposition · 16:9</div>
+        <button id="crop-cancel" type="button" style="padding:13px 18px; border-radius:var(--radius-sm); background:rgba(255,255,255,0.12); color:white; font-weight:700; font-size:0.88rem; border:1px solid rgba(255,255,255,0.18); font-family:inherit; cursor:pointer; min-height:48px;">Cancel</button>
+        <button id="crop-confirm" type="button" style="padding:13px 22px; border-radius:var(--radius-sm); background:var(--selected-bg); color:white; font-weight:700; font-size:0.88rem; border:none; font-family:inherit; cursor:pointer; box-shadow:var(--selected-shadow); min-height:48px;">Use this crop</button>
+      </div>
     </div>
   </div>
 
@@ -1070,6 +1073,39 @@
     const cropImg      = document.getElementById('crop-img');
     const cropConfirm  = document.getElementById('crop-confirm');
     const cropCancel   = document.getElementById('crop-cancel');
+    const cropZoom     = document.getElementById('crop-zoom');
+
+    /* Binds the Cropper to the zoom slider so the user gets fine, continuous
+       zoom that works on touch too (pinch granularity can't be tuned; a slider
+       can). Two-way: slider drives zoomTo(); wheel/pinch write back via 'zoom'.
+       Called once per open; re-initialises the slider so no stale position carries
+       over between opens. Mirrors wireCropZoom in Scene Studio's core.js. */
+    function wireCropZoom(cropperInstance, slider) {
+      if (!cropperInstance || !slider) return;
+      const el = cropperInstance.element;
+      const ratioNow = () => {
+        const d = cropperInstance.getImageData();
+        return d && d.naturalWidth ? d.width / d.naturalWidth : 0;
+      };
+      const init = () => {
+        const base = ratioNow();
+        if (!base) return;
+        const max = base * 4;
+        slider.min = String(base);
+        slider.max = String(max);
+        slider.step = String((max - base) / 500);
+        slider.value = String(base);
+      };
+      if (ratioNow() > 0) init();
+      else el.addEventListener('ready', init, { once: true });
+      slider.oninput = () => cropperInstance.zoomTo(parseFloat(slider.value));
+      el.addEventListener('zoom', (e) => {
+        const r = e.detail.ratio;
+        if (r >= parseFloat(slider.min) && r <= parseFloat(slider.max)) {
+          slider.value = String(r);
+        }
+      });
+    }
     let cropper        = null;
     let pendingObjectURL = null;
 
@@ -1285,6 +1321,7 @@
             }
           },
         });
+        wireCropZoom(cropper, cropZoom);
       };
 
       cropImg.src = cropperSrc;
