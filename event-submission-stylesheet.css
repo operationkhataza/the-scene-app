@@ -449,6 +449,7 @@ input::placeholder, textarea::placeholder {
 .field-trigger:hover { border-color: rgba(51, 128, 193, 0.35); background: white; }
 .field-trigger-text.is-placeholder { color: var(--text-subtle); }
 .field-trigger-icon { font-size: 1rem; flex-shrink: 0; opacity: 0.7; }
+.field-trigger-icon svg { width: 16px; height: 16px; display: block; }
 
 /* ============================================================
    CUSTOM DATE / TIME PICKERS (fully page-rendered — see field-trigger note)
@@ -883,8 +884,11 @@ select {
   cursor: pointer;
   line-height: 1;
   transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
 }
 .artist-pill-remove:hover { color: var(--danger); }
+.artist-pill-remove svg { width: 12px; height: 12px; }
 
 /* ============================================================
    TAGS INPUT
@@ -927,8 +931,11 @@ select {
   opacity: 0.55;
   font-size: 0.78rem;
   transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
 }
 .tag-remove:hover { opacity: 1; color: var(--danger); }
+.tag-remove svg { width: 12px; height: 12px; }
 
 .tags-bare-input {
   border: none !important;
@@ -991,6 +998,7 @@ select {
   transition: background 0.15s, color 0.15s;
 }
 .tier-remove:hover { background: rgba(224, 75, 90, 0.1); color: var(--danger); }
+.tier-remove svg { width: 14px; height: 14px; }
 
 .add-tier-btn {
   display: flex;
@@ -1031,6 +1039,7 @@ select {
   cursor: pointer;
 }
 .img-upload-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.img-upload-icon svg { width: 2.2rem; height: 2.2rem; }
 .img-upload-primary {
   font-size: 0.9rem;
   font-weight: 700;
@@ -1051,6 +1060,7 @@ select {
   padding: 32px 20px;
   text-align: center;
 }
+.poster-confirmed-icon svg { width: 22px; height: 22px; }
 .poster-confirmed-icon {
   width: 48px; height: 48px;
   border-radius: 50%;
@@ -1107,6 +1117,7 @@ select {
   transition: background 0.15s;
 }
 .img-upload-remove:hover { background: rgba(224, 75, 90, 0.85); }
+.img-upload-remove svg { width: 14px; height: 14px; }
 
 /* The empty drop zone shows ONLY in the empty state. Every other element
    (preview, error) is hidden by default and shown for its own state, so no two
@@ -1129,6 +1140,7 @@ select {
   font-size: 1.8rem;
   color: var(--danger);
 }
+.poster-error-icon svg { width: 28px; height: 28px; }
 .poster-error-msg {
   font-size: 0.85rem;
   color: var(--danger);
@@ -1216,18 +1228,17 @@ select {
   color: var(--text-muted);
   line-height: 1.6;
 }
-.summary-poster-ok {
+.summary-poster-ok, .summary-poster-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--success);
   margin-top: 6px;
 }
-.summary-poster-missing {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--danger);
-  margin-top: 6px;
-}
+.summary-poster-ok svg, .summary-poster-missing svg { width: 14px; height: 14px; flex-shrink: 0; }
+.summary-poster-ok { color: var(--success); }
+.summary-poster-missing { color: var(--danger); }
 
 /* ============================================================
    DISCLAIMER
@@ -1346,6 +1357,7 @@ select {
     inset 0 1px 0 rgba(255,255,255,0.6);
   animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+.success-glow svg { width: 36px; height: 36px; }
 @keyframes popIn {
   from { transform: scale(0.4); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }

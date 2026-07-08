@@ -34,6 +34,7 @@ import {
   esc, isoDate, formatCardDate, formatLongDate,
   formatTime, getParam, imgUrl
 } from './utils.js';
+import { ICONS } from './icons.js';
 
 /* DOM */
 const GRID_EL     = document.getElementById('cal-grid');
@@ -642,7 +643,7 @@ function renderModalCard(gig) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">✕</button>
+          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
@@ -757,7 +758,7 @@ MODAL_CARD.addEventListener('click', e => {
   if (!inner) return;
 
   if (closeBtn) {
-    // ✕ on the back face: flip back to front (don't close modal)
+    // close (X) on the back face: flip back to front (don't close modal)
     e.stopPropagation();
     inner.classList.remove('is-flipped');
     return;

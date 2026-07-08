@@ -120,7 +120,7 @@
               <label>Event date <span class="req">*</span></label>
               <button type="button" class="field-trigger" id="inp-date-btn">
                 <span class="field-trigger-text is-placeholder" id="inp-date-display">Select a date</span>
-                <span class="field-trigger-icon">📅</span>
+                <span class="field-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
               </button>
               <input type="hidden" id="inp-date">
               <div class="form-error">Please pick a date.</div>
@@ -130,7 +130,7 @@
                 <label>Doors / Start <span class="req">*</span></label>
                 <button type="button" class="field-trigger" id="inp-doors-btn">
                   <span class="field-trigger-text is-placeholder" id="inp-doors-display">--:--</span>
-                  <span class="field-trigger-icon">🕒</span>
+                  <span class="field-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
                 </button>
                 <input type="hidden" id="inp-doors">
                 <div class="form-error">Required.</div>
@@ -139,7 +139,7 @@
                 <label>End time <span class="opt">(optional)</span></label>
                 <button type="button" class="field-trigger" id="inp-end-btn">
                   <span class="field-trigger-text is-placeholder" id="inp-end-display">--:--</span>
-                  <span class="field-trigger-icon">🕒</span>
+                  <span class="field-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
                 </button>
                 <input type="hidden" id="inp-end">
               </div>
@@ -161,7 +161,7 @@
               </div>
               <div class="form-error">Please select or suggest a venue.</div>
             </div>
-            <button class="suggest-trigger-btn" id="suggest-venue-btn" type="button">＋ Suggest a new venue</button>
+            <button class="suggest-trigger-btn" id="suggest-venue-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Suggest a new venue</button>
 
             <div class="suggest-panel" id="suggest-venue-panel">
               <div class="suggest-panel-title">Suggest a new venue</div>
@@ -212,14 +212,14 @@
           <div class="card-body">
             <div class="img-upload" id="poster-wrap" data-state="empty">
               <label class="img-upload-empty" id="poster-drop" for="poster-input">
-                <div class="img-upload-icon">🖼</div>
+                <div class="img-upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
                 <div class="img-upload-primary">Tap to upload an image</div>
                 <div class="img-upload-hint">JPEG, PNG or WebP, max 8MB — you'll crop after selecting</div>
                 <input type="file" id="poster-input" accept="image/*" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;">
               </label>
               <div class="img-upload-preview" id="poster-preview">
                 <div class="poster-confirmed" id="poster-confirmed">
-                  <div class="poster-confirmed-icon">✓</div>
+                  <div class="poster-confirmed-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
                   <div class="poster-confirmed-text">Poster ready</div>
                   <div class="poster-confirmed-hint">Crop saved — we'll apply it automatically</div>
                 </div>
@@ -227,10 +227,10 @@
                   <div class="spinner"></div>
                   <span>Uploading…</span>
                 </div>
-                <button class="img-upload-remove" id="poster-remove" type="button">✕</button>
+                <button class="img-upload-remove" id="poster-remove" type="button" aria-label="Remove image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
               </div>
               <div class="poster-upload-error" id="poster-error-wrap">
-                <div class="poster-error-icon">⚠</div>
+                <div class="poster-error-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
                 <div class="poster-error-msg" id="poster-error-msg">Upload failed — please try again.</div>
                 <div class="poster-error-actions">
                   <button type="button" class="poster-error-retry" id="poster-error-retry">Try again</button>
@@ -261,7 +261,7 @@
               <div class="artists-selected" id="artists-selected"></div>
               <div class="form-error" id="artists-error">Please add at least one artist.</div>
             </div>
-            <button class="suggest-trigger-btn" id="suggest-artist-btn-trigger" type="button">＋ Suggest a new artist</button>
+            <button class="suggest-trigger-btn" id="suggest-artist-btn-trigger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Suggest a new artist</button>
             <div class="suggest-panel" id="suggest-artist-panel">
               <div class="suggest-panel-title">Add a new artist</div>
               <div class="fg">
@@ -334,7 +334,7 @@
               <div class="section-divider">Ticket tiers</div>
               <div id="tiers-list"></div>
               <div class="form-hint" style="margin-bottom:10px;">Enter price as a number only — no currency symbol (e.g. 150, not R150)</div>
-              <button class="add-tier-btn" id="add-tier-btn" type="button"><span>＋</span> Add ticket tier</button>
+              <button class="add-tier-btn" id="add-tier-btn" type="button"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add ticket tier</button>
             </div>
             <div class="fg" style="margin-top:14px;">
               <label>Ticketing link <span class="opt">(optional)</span></label>
@@ -392,7 +392,7 @@
 
   <!-- SUCCESS -->
   <div id="success-screen">
-    <div class="success-glow">✓</div>
+    <div class="success-glow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
     <h2 class="success-title">Gig submitted!</h2>
     <p class="success-body">Thanks — our editorial team will review your submission and get it on the gig guide within 48 hours.</p>
     <button class="success-another" id="submit-another-btn">Submit another gig</button>
@@ -463,6 +463,8 @@
   </div>
 
   <script type="module">
+    import { ICONS } from './icons.js';
+
     const API_URL = 'https://api.thescenecapetown.co.za';
     const SUBMIT_URL = `${API_URL}/submit-gate`;
     const TURNSTILE_SITE_KEY = '0x4AAAAAADjhF56NyKfNadij';
@@ -870,7 +872,7 @@
     function showVenueDropdown(q) {
       const filtered = state.venues.filter(v => v.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
       let html = filtered.map(v => `<div class="venue-option" data-id="${esc(v.id)}" data-name="${esc(v.name)}">${esc(v.name)}</div>`).join('');
-      html += `<div class="venue-option is-add" id="venue-add-opt">＋ Suggest "${esc(q)}" as a new venue</div>`;
+      html += `<div class="venue-option is-add" id="venue-add-opt">${ICONS.plus} Suggest "${esc(q)}" as a new venue</div>`;
       venueDropdown.innerHTML = html;
       positionDropdown(venueDropdown, venueSearch);
       venueDropdown.style.display = 'block';
@@ -962,7 +964,7 @@
           const types = Array.isArray(a.artist_type) ? a.artist_type.join(', ') : (a.artist_type || '');
           return `<div class="artist-option" data-id="${esc(a.id)}" data-name="${esc(a.name)}">${esc(a.name)}${types ? `<div class="artist-option-sub">${esc(types)}</div>` : ''}</div>`;
         }).join('');
-        html += `<div class="artist-option is-new" data-new="${esc(q)}">＋ Add "${esc(q)}" as a new artist</div>`;
+        html += `<div class="artist-option is-new" data-new="${esc(q)}">${ICONS.plus} Add "${esc(q)}" as a new artist</div>`;
         artistDropdown.innerHTML = html;
         positionDropdown(artistDropdown, artistSearch);
         artistDropdown.style.display = 'block';
@@ -1034,7 +1036,7 @@
     });
     function renderArtistPills() {
       artistsSelected.innerHTML = state.selectedArtists.map(a =>
-        `<div class="artist-pill">${esc(a.name)}<span class="artist-pill-remove" data-rid="${a.id}">✕</span></div>`
+        `<div class="artist-pill">${esc(a.name)}<span class="artist-pill-remove" data-rid="${a.id}" aria-label="Remove artist">${ICONS.x}</span></div>`
       ).join('');
       artistsSelected.querySelectorAll('.artist-pill-remove').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1075,7 +1077,7 @@
     }
     function renderTags() {
       const pills = state.tags.map(t =>
-        `<div class="tag-pill">${esc(t)}<span class="tag-remove" data-t="${esc(t)}">✕</span></div>`
+        `<div class="tag-pill">${esc(t)}<span class="tag-remove" data-t="${esc(t)}" aria-label="Remove tag">${ICONS.x}</span></div>`
       ).join('');
       tagsWrap.innerHTML = pills;
       tagsWrap.appendChild(tagsInput);
@@ -1096,7 +1098,7 @@
       const row = document.createElement('div'); row.className = 'tier-row';
       row.innerHTML = `<input type="text" class="tier-name" placeholder="Tier (e.g. General)" value="${esc(name)}">
         <input type="text" class="tier-price" placeholder="Amount (numbers only, e.g. 150)" value="${esc(price)}">
-        <button class="tier-remove" type="button">✕</button>`;
+        <button class="tier-remove" type="button" aria-label="Remove tier">${ICONS.x}</button>`;
       row.querySelector('.tier-remove').addEventListener('click', () => row.remove());
       document.getElementById('tiers-list').appendChild(row);
     }
@@ -1505,7 +1507,7 @@
           ${esc(catLabel || config.badge)}${formatLabel ? ' · ' + esc(formatLabel) : ''} · ${isFree ? 'Free' : 'Ticketed'}
         </div>
         <div class="${(state.posterFileId || state.pendingFile) ? 'summary-poster-ok' : 'summary-poster-missing'}">
-          ${(state.posterFileId || state.pendingFile) ? '✓ Poster ready' : '✗ No poster — consider going back to add one'}
+          ${(state.posterFileId || state.pendingFile) ? `${ICONS.check} Poster ready` : `${ICONS.triangleAlert} No poster — consider going back to add one`}
         </div>`;
     }
 

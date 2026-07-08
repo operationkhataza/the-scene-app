@@ -35,6 +35,7 @@ import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
   formatTime, dateForDayName, getParam, imgUrl
 } from './utils.js';
+import { ICONS } from './icons.js';
 
 // Dev preview: ?holo=test forces every event card into the holographic tier
 // so the WebGL shader is visible regardless of curator count in Directus.
@@ -914,7 +915,7 @@ function renderCard(gig, index) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">✕</button>
+          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
@@ -1428,7 +1429,7 @@ function renderModalCard(gig) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">✕</button>
+          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
@@ -1768,7 +1769,7 @@ function flipCard(inner, toBack) {
 
 // Flip delegation — entire front face is the click target.
 // Exemptions: ticket pill, back-face CTA, and promoter link all pass through.
-// Tapping the ✕ close button on the back face flips to front.
+// Tapping the close (X) button on the back face flips to front.
 // Any other tap while the back face is showing does nothing (lets content be readable).
 LIST_EL.addEventListener('click', e => {
   if (e.target.closest('.gig-card__ticket-pill'))   return;

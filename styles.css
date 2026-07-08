@@ -622,6 +622,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: var(--text);
 }
 .featured-carousel__star { color: var(--scene-blue); font-size: 0.82em; }
+.featured-carousel__star svg { width: 0.85em; height: 0.85em; display: block; }
+
+/* Lucide icons (icons.js) replacing emoji/symbol glyphs throughout the app. Any icon
+   without a more specific sizing rule above falls back to 1em, inheriting whatever
+   font-size its container already used for the glyph it replaces (e.g. .suggest-trigger-btn,
+   .add-tier-btn, .venue-option.is-add, .artist-option.is-new are already font-size-driven
+   flex containers, so this alone is enough — no bespoke rule needed per class). Scoped to
+   [aria-hidden="true"] so it can't touch the pre-existing hand-rolled chevron/search/close
+   icons, which are sized explicitly above and don't carry that attribute. */
+svg[aria-hidden="true"] { width: 1em; height: 1em; flex-shrink: 0; }
 .featured-carousel__track {
   display: flex;
   gap: 0.85rem;
@@ -2947,6 +2957,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   z-index: 1;
   -webkit-tap-highlight-color: transparent;
 }
+.gig-card__close svg { width: 16px; height: 16px; }
 .gig-card__close:hover { background: rgba(0,0,0,0.15); color: var(--text); }
 
 /* Back title */
