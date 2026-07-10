@@ -1481,6 +1481,77 @@ select {
 }
 
 /* ============================================================
+   SUBMISSION GUIDELINES  (portable block)
+   Teaser callout + collapsible full guidelines. Native <details>,
+   no JS. Pairs with the .submission-guidelines block in the form
+   HTML. To reuse on another form, copy that HTML block + this rule
+   group together; both depend only on shared brand tokens.
+   ============================================================ */
+.submission-guidelines {
+  margin-bottom: 18px;
+}
+.sg-details {
+  background: rgba(51, 128, 193, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 0.85rem;
+}
+.sg-details > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--scene-blue);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+}
+.sg-details > summary::-webkit-details-marker { display: none; }
+.sg-details > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 6px solid var(--scene-blue);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+.sg-details[open] > summary::before { transform: rotate(90deg); }
+.sg-content {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+.sg-content > p { margin: 0 0 0.7rem; }
+.sg-content > p:last-child { margin-bottom: 0; }
+.sg-content .sg-question {
+  font-weight: 700;
+  font-style: italic;
+  color: var(--scene-blue-deep);
+  margin: 0.2rem 0 0.7rem;
+}
+.sg-content h4 {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--scene-blue-deep);
+}
+.sg-content h4:first-child { margin-top: 0; }
+.sg-content ul {
+  margin: 0.4rem 0 0.7rem;
+  padding-left: 1.1rem;
+}
+.sg-content li {
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
    SUGGEST TRIGGER BUTTON
    ============================================================ */
 .suggest-trigger-btn {
