@@ -1731,7 +1731,7 @@
     document.getElementById('cal-cancel').addEventListener('click', closeDatePicker);
     dateModal.addEventListener('click', e => { if (e.target === dateModal) closeDatePicker(); });
 
-    /* TIME PICKER — shared by doors/start + end time; 15-min increments plus a
+    /* TIME PICKER — shared by doors/start + end time; 30-min increments plus a
        custom H/M entry for times that fall between them. */
     function openTimePicker(inputId, displayId, fgId, title, placeholderText) {
       pickerState.activeInputId = inputId;
@@ -1743,7 +1743,7 @@
       timeList.innerHTML = '';
       let selectedRow = null;
       for (let h = 0; h < 24; h++) {
-        for (let min = 0; min < 60; min += 15) {
+        for (let min = 0; min < 60; min += 30) {
           const hm = `${pad2(h)}:${pad2(min)}`;
           const row = document.createElement('button');
           row.type = 'button';
@@ -1758,7 +1758,7 @@
       document.getElementById('time-custom-m').value = '';
       timeModal.classList.add('is-open');
       // Default scroll anchor: the selected time if set, else 18:00 (typical doors time)
-      (selectedRow || timeList.children[72]).scrollIntoView({ block: 'center' });
+      (selectedRow || timeList.children[36]).scrollIntoView({ block: 'center' });
     }
     function applyTime(hm) {
       setFieldValue(pickerState.activeInputId, pickerState.activeDisplayId, hm, hm);

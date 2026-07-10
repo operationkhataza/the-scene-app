@@ -105,6 +105,12 @@
       <button class="search-bar__clear" id="search-clear" type="button" hidden aria-label="Clear search">×</button>
     </div>
 
+    <!-- Clear-all filters — deliberately NOT inside .toolbar: that container is
+         position:sticky, and this button should stay in normal document flow
+         (scroll away with the page) instead of sticking with the Type/Area/Price
+         pills. See styles.css .toolbar__clear for the self-right-aligning rule. -->
+    <button class="toolbar__clear" id="toolbar-clear" type="button" hidden aria-label="Clear all filters">Clear all</button>
+
     <!-- Sticky filter toolbar -->
     <div class="toolbar" id="toolbar" role="toolbar" aria-label="Filter gigs">
       <button class="filter-btn" id="btn-type" type="button" aria-haspopup="dialog">
@@ -128,7 +134,6 @@
           <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button class="toolbar__clear" id="toolbar-clear" type="button" hidden aria-label="Clear all filters">Clear all</button>
     </div>
 
     <!-- Loading state: app.js fills this with a skeleton (renderSkeleton) on

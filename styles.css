@@ -400,7 +400,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .toolbar__clear {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
+  margin: 1rem 0.6rem 0 auto;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.75rem;
@@ -1694,6 +1696,9 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
     margin-right: -1.5rem;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
+  }
+  .toolbar__clear {
+    margin-right: 1.5rem;
   }
   .tier { margin-left: -1.5rem; margin-right: -1.5rem; }
   .tier__header { padding-left: 1.5rem; padding-right: 1.5rem; }
