@@ -1488,7 +1488,7 @@ select {
    group together; both depend only on shared brand tokens.
    ============================================================ */
 .submission-guidelines {
-  margin-bottom: 18px;
+  margin: 0 20px 18px;
 }
 .sg-details {
   background: rgba(51, 128, 193, 0.05);
@@ -1612,6 +1612,7 @@ select {
   }
   .sub-hero { padding: 36px 24px 28px; }
   .stepper  { padding: 0 24px 24px; }
+  .submission-guidelines { margin: 0 24px 18px; }
   .form-page { padding: 0 24px 12px; }
   .bottom-nav { justify-content: center; }
   .bottom-nav .btn-p { max-width: 280px; }
