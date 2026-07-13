@@ -71,6 +71,15 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Lucide icons (icons.js) are authored with no width/height and are sized via CSS. This page
+   loads only this stylesheet, NOT styles.css, so it needs its own copy of the global fallback
+   that styles.css provides for the gig guide / calendar. Placed here (before the per-class
+   `.class svg` rules below) so those explicit rules win on equal specificity and keep their
+   sizes, while any icon whose class has no bespoke rule falls back to 1em instead of rendering
+   at the SVG's unconstrained intrinsic size. Scoped to [aria-hidden="true"] so it can't touch
+   the hand-rolled chevron/search icons. */
+svg[aria-hidden="true"] { width: 1em; height: 1em; flex-shrink: 0; }
+
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -796,6 +805,9 @@ select {
 .venue-option:last-child { border-bottom: none; }
 .venue-option:hover { background: rgba(75, 185, 208, 0.08); }
 .venue-option.is-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--scene-blue);
   font-weight: 700;
 }
@@ -857,7 +869,7 @@ select {
   color: var(--text-muted);
   margin-top: 1px;
 }
-.artist-option.is-new { color: var(--scene-blue); font-weight: 700; }
+.artist-option.is-new { display: flex; align-items: center; gap: 6px; color: var(--scene-blue); font-weight: 700; }
 
 .artists-selected {
   display: flex;
