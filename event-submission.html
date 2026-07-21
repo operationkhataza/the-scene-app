@@ -21,7 +21,6 @@
   <!-- HEADER -->
   <header class="sub-header">
     <div class="sub-header-brand">The Scene</div>
-    <div class="sub-header-badge" id="header-badge">Submit an Event</div>
   </header>
 
   <!-- MAIN CONTENT -->
@@ -812,7 +811,6 @@
 
     /* FORM TYPE INIT — apply config to DOM before user sees anything */
     function initFormType() {
-      document.getElementById('header-badge').textContent  = config.badge;
       document.getElementById('hero-title').innerHTML      = config.heroTitle;
       document.getElementById('hero-sub').textContent      = config.heroSub;
       document.title = `${config.badge} — The Scene Cape Town`;

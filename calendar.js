@@ -550,7 +550,7 @@ function renderModalCard(gig) {
                      : 0;
   const curatorHtml = curators.length > 0
     ? `<div class="curators">
-        <span class="curators__label">Curated by</span>
+        <span class="curators__label">Selected by</span>
         ${curators.map(c => {
           const logo = imgUrl(c.logo, { width: '60', height: '60', fit: 'cover' });
           const logoEl = logo

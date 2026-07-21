@@ -183,18 +183,6 @@ button { font-family: inherit; cursor: pointer; }
   color: transparent;
 }
 
-.sub-header-badge {
-  font-size: 0.67rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--scene-blue);
-  background: rgba(51, 128, 193, 0.08);
-  border: 1.5px solid rgba(51, 128, 193, 0.20);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-}
-
 /* ============================================================
    HERO BLOCK
    ============================================================ */
