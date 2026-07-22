@@ -1100,7 +1100,7 @@ function startFeaturedAutoscroll(track) {
    just stays generic while the event filter still applies. */
 async function loadPromoter(slug) {
   try {
-    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio&limit=1`);
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio,cover_image&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Calendar] Could not load promoter:', err);
@@ -1129,6 +1129,21 @@ function renderPromoterHeader(promoter) {
   if (bioEl && promoter?.bio) {
     bioEl.textContent = promoter.bio;
     bioEl.hidden = false;
+  }
+  // Cover image → header background (festival mode). When the promoter has
+  // a cover_image, the identity-card header swaps its navy gradient for the
+  // cover, with a static frosted-glass pane on top (blur + ink tint — see
+  // the "--cover" rules in styles.css) so the white title/bio stay legible.
+  // Null cover → class never added, the plain navy identity card stays.
+  if (promoter?.cover_image) {
+    const headerEl = document.querySelector('.calendar-header');
+    if (headerEl) {
+      headerEl.style.setProperty(
+        '--promoter-cover',
+        `url("${imgUrl(promoter.cover_image, { width: '1280', fit: 'cover' })}")`
+      );
+      headerEl.classList.add('gigs-header--cover');
+    }
   }
 }
 

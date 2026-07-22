@@ -2206,6 +2206,60 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   margin-top: -3.5rem;
 }
 
+/* ── Promoter cover header (.gigs-header--cover) ─────────────
+   Added by calendar.js in ?promoter= mode when the promoter has a
+   cover_image (also sets --promoter-cover, a url(...)). The identity
+   card's navy gradient is replaced by the cover image, and the sheen
+   ::before — display:none'd by the identity rules above — is re-enabled
+   as a full-bleed static frosted-glass pane (ink tint + backdrop blur)
+   between the image and the text, so the white title/bio stay legible.
+   Selectors are (0,3,x) like the :has() identity rules above; being
+   later in the file they win the ties. No cover image → class absent,
+   plain navy identity card as before. */
+.gigs-page .gigs-header.gigs-header--cover {
+  /* Navy gradient shows while the cover loads; the blurred image on
+     ::before then paints over it. */
+  background: linear-gradient(155deg, var(--id-ink) 0%, var(--id-ink-deep) 100%);
+  /* The identity card's heavy navy drop shadow (35% ink, designed to
+     ground a solid dark panel) reads as a thick dark rim under a bright
+     cover image — the "too heavy" bottom edge. Much lighter float here. */
+  box-shadow:
+    0 10px 24px rgba(15, 26, 46, 0.08),
+    0 1px 4px rgba(15, 26, 46, 0.05);
+}
+/* The cover image, PRE-blurred via filter (not a backdrop-filter pane —
+   that sampled past its own bottom edge and smeared a visible band).
+   Oversized by the negative inset so the blur's soft transparent fringe
+   falls outside the header's overflow clip: edge-to-edge frost, no band. */
+.gigs-page .gigs-header.gigs-header--cover::before {
+  display: block;
+  inset: -28px;
+  width: auto;
+  height: auto;
+  background: var(--promoter-cover) center / cover no-repeat;
+  filter: blur(12px) saturate(1.15);
+}
+/* Frost tint between the blurred image and the text (::after paints
+   above ::before at the same z-index). Replaces the green accent
+   radials — the cover carries the colour now. (Avatar ring + subtitle
+   stay green.) */
+.gigs-page .gigs-header.gigs-header--cover::after {
+  background: rgba(15, 26, 46, 0.35);
+}
+/* Cover mode always means dark-on-image, even for a promoter with a
+   cover but no profile_image (avatar hidden → the :has() identity rules
+   never fire, which would leave gradient-clip title text on the frost). */
+.gigs-page .gigs-header.gigs-header--cover .gigs-header__title {
+  background: none;
+  -webkit-background-clip: border-box;
+          background-clip: border-box;
+  -webkit-text-fill-color: #fff;
+  color: #fff;
+}
+.gigs-page .gigs-header.gigs-header--cover .gigs-header__promoter-bio {
+  color: var(--id-on-dark-mut);
+}
+
 /* ============================================================
    CALENDAR VIEW
    ────────────────────────────────────────────────────────────
