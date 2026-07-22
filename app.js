@@ -1143,6 +1143,18 @@ window.clearAllFilters = clearAllFilters; // for inline onclick
    walks that small set inside requestAnimationFrame — O(visible)
    per frame, not O(total-cards), so cost stays flat as the feed
    grows. ============================================================ */
+/* STATIC_REFRACT — companion to HOLO_STATIC in holo-shader.js.
+   When true, the scroll-driven --refract updates below are disabled for
+   ALL curated tiers: no cards are observed, --refract is never written,
+   and every sheen/foil rests at the styles.css default var(--refract, 0.5)
+   (silver/gold specular mid-card, holo ::before foil at translateY(0)).
+   Introduced 22 Jul 2026 with HOLO_STATIC: the per-scroll-frame
+   getBoundingClientRect walk + style writes here were a jank source on
+   mobile (Pixel 8 Pro), and the scroll-tied sheen/foil motion was judged
+   superfluous. TO REVERT the original scroll-tied prismatic motion:
+   set this false (and HOLO_STATIC = false in holo-shader.js). */
+const STATIC_REFRACT = true;
+
 const visibleHoloCards = new Set();
 let refractRaf = 0;
 
@@ -1178,8 +1190,12 @@ function refreshRefractionRefs() {
   // HoloShader.refresh() registers only the data-curated="3" subset.
   visibleHoloCards.clear();
   holoObserver.disconnect();
-  const cards = document.querySelectorAll('.gig-card[data-curated]');
-  cards.forEach(c => holoObserver.observe(c));
+  // With STATIC_REFRACT, no cards are observed: --refract is never set, so
+  // every tier rests at the styles.css var(--refract, 0.5) default.
+  if (!STATIC_REFRACT) {
+    const cards = document.querySelectorAll('.gig-card[data-curated]');
+    cards.forEach(c => holoObserver.observe(c));
+  }
   if (window.HoloShader) window.HoloShader.refresh();
 
 
@@ -1804,9 +1820,9 @@ LIST_EL.addEventListener('click', e => {
 
 window.addEventListener('scroll', () => {
   TOOLBAR_EL.classList.toggle('is-scrolled', window.scrollY > 12);
-  scheduleRefractUpdate();
+  if (!STATIC_REFRACT) scheduleRefractUpdate();
 }, { passive: true });
-window.addEventListener('resize', scheduleRefractUpdate, { passive: true });
+if (!STATIC_REFRACT) window.addEventListener('resize', scheduleRefractUpdate, { passive: true });
 
 // Initialise the WebGL holographic shader before kicking off the data fetch.
 // Returns false if WebGL is unavailable; refreshRefractionRefs() will then
