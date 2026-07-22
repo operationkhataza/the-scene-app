@@ -742,7 +742,7 @@ async function loadCurator(slug) {
    ============================================================ */
 async function loadPromoter(slug) {
   try {
-    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load promoter:', err);
@@ -1679,12 +1679,19 @@ async function init() {
       const titleEl    = document.getElementById('gigs-header-title');
       const subtitleEl = document.getElementById('gigs-header-subtitle');
       const avatarEl   = document.getElementById('gigs-header-promoter-avatar');
+      const bioEl      = document.getElementById('gigs-header-promoter-bio');
       if (titleEl)    titleEl.textContent    = promoter?.name || 'Promoter Events';
       if (subtitleEl) subtitleEl.textContent = 'Events';
       if (avatarEl && promoter?.profile_image) {
         avatarEl.src    = imgUrl(promoter.profile_image, { width: '128', height: '128', fit: 'cover' });
         avatarEl.alt    = promoter.name ? `${promoter.name} logo` : '';
         avatarEl.hidden = false;
+      }
+      // Bio under the title block (200-char field). textContent — no HTML
+      // injection. Same class + rules as the calendar's promoter header.
+      if (bioEl && promoter?.bio) {
+        bioEl.textContent = promoter.bio;
+        bioEl.hidden = false;
       }
     }
 

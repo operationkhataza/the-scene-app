@@ -1100,7 +1100,7 @@ function startFeaturedAutoscroll(track) {
    just stays generic while the event filter still applies. */
 async function loadPromoter(slug) {
   try {
-    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Calendar] Could not load promoter:', err);
@@ -1116,11 +1116,19 @@ async function loadPromoter(slug) {
 function renderPromoterHeader(promoter) {
   const titleEl  = document.getElementById('calendar-eyebrow');
   const avatarEl = document.getElementById('cal-header-avatar');
+  const bioEl    = document.getElementById('cal-header-bio');
   if (titleEl) titleEl.textContent = promoter?.name || 'Promoter Events';
   if (avatarEl && promoter?.profile_image) {
     avatarEl.src    = imgUrl(promoter.profile_image, { width: '128', height: '128', fit: 'cover' });
     avatarEl.alt    = promoter.name ? `${promoter.name} logo` : '';
     avatarEl.hidden = false;
+  }
+  // Bio under the title (200-char field). textContent — no HTML injection.
+  // Its own class, NOT .gigs-header__curator-byline: unhiding the byline would
+  // trip the curator-mode :has() CSS (cyan identity card) on this header.
+  if (bioEl && promoter?.bio) {
+    bioEl.textContent = promoter.bio;
+    bioEl.hidden = false;
   }
 }
 
