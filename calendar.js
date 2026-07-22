@@ -110,9 +110,26 @@ function gigTier(gig) {
    DO request `parent_run.description` so a theatre night arrives with
    its blurb already coalesced (hydrateDescriptions then skips it).
    ============================================================ */
+/* A pending (unapproved) venue must not have its name shown publicly: the
+   event still lists, but its venue reads blank until an editor flips the venue
+   to `published`. The public Directus read policy deliberately RETURNS pending
+   venues (the submit form's venue-suggestion flow needs to read the new row's
+   id back — see docs/directus.md), so the leak can't be closed at the policy
+   layer without breaking suggestions; we blank it here at ingestion instead.
+   Whole-object blank (not just the name) so a pending venue's area vanishes too.
+   A venue with no `status` in the payload is left untouched (safe fallback). */
+function publicVenue(venue) {
+  return (venue && typeof venue === 'object' && venue.status && venue.status !== 'published')
+    ? null
+    : venue;
+}
+
 function resolveGig(event) {
   const run = event && event.parent_run;
-  if (!run || typeof run !== 'object') return event;   // ordinary gig
+  if (!run || typeof run !== 'object') {               // ordinary gig
+    if (event) event.venue = publicVenue(event.venue);
+    return event;
+  }
   return {
     ...event,
     title:             run.title             ?? event.title,
@@ -125,7 +142,7 @@ function resolveGig(event) {
     ticket_tiers:      run.ticket_tiers      ?? event.ticket_tiers,
     age_restriction:   run.age_restriction   ?? event.age_restriction,
     tags:              run.tags              ?? event.tags,
-    venue:             run.venue             ?? event.venue,
+    venue:             publicVenue(run.venue ?? event.venue),
     _isRun: true,
   };
 }
@@ -151,6 +168,7 @@ async function fetchMonth(d) {
     'is_free', 'ticket_tiers', 'age_restriction', 'tags',
     'venue.name',
     'venue.location',
+    'venue.status',
     'event_category.id',
     'event_category.name',
     'event_category.slug',
@@ -177,6 +195,7 @@ async function fetchMonth(d) {
     'parent_run.tags',
     'parent_run.venue.name',
     'parent_run.venue.location',
+    'parent_run.venue.status',
   ].join(',');
 
   // Generous base limit as a sanity bound. We intentionally avoid limit=-1:
@@ -1178,12 +1197,13 @@ async function fetchPromoterEvents(promoterId) {
     'filter[promoters][promoters_id][_eq]': promoterId,
     'filter[status][_eq]':                 'published',
     'filter[date][_gte]':                  today,
-    'fields':                              'id,title,date,doors_time,poster,venue.name,ticket_url',
+    'fields':                              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
     'sort':                                'date,doors_time',
     'limit':                               '20'
   });
   const json = await apiGet('/items/events', params);
-  return json.data || [];
+  // This sheet bypasses resolveGig, so blank pending venues here too.
+  return (json.data || []).map(ev => { ev.venue = publicVenue(ev.venue); return ev; });
 }
 
 function renderPromoterProfile(promoter, events) {

@@ -53,7 +53,7 @@ const FEATURED_EVENT_SUBFIELDS = [
   'id', 'title', 'slug', 'date', 'doors_time',
   'short_description', 'description', 'ticket_url', 'poster',
   'is_free', 'ticket_tiers', 'age_restriction', 'tags',
-  'venue.name', 'venue.location',
+  'venue.name', 'venue.location', 'venue.status',
   'event_category.id', 'event_category.name', 'event_category.slug',
   'artists.artists_id.name',
   'curators.curators_id.name', 'curators.curators_id.logo',
@@ -63,7 +63,7 @@ const FEATURED_EVENT_SUBFIELDS = [
   'parent_run.short_description', 'parent_run.description', 'parent_run.ticket_url',
   'parent_run.poster', 'parent_run.is_free', 'parent_run.ticket_tiers',
   'parent_run.age_restriction', 'parent_run.tags',
-  'parent_run.venue.name', 'parent_run.venue.location',
+  'parent_run.venue.name', 'parent_run.venue.location', 'parent_run.venue.status',
 ];
 
 /* Production-wide fields for a featured theatre RUN (the parent). A run-only
@@ -72,7 +72,7 @@ const FEATURED_EVENT_SUBFIELDS = [
 const FEATURED_RUN_SUBFIELDS = [
   'id', 'status', 'title', 'slug', 'short_description', 'description',
   'ticket_url', 'poster', 'is_free', 'ticket_tiers', 'age_restriction', 'tags',
-  'venue.name', 'venue.location',
+  'venue.name', 'venue.location', 'venue.status',
 ];
 
 /* A featured theatre run reshaped to look like a resolved gig, so both

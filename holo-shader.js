@@ -24,6 +24,20 @@
   const ACTIVE_CLASS  = 'holo-shader-active';
   const CANVAS_CLASS  = 'holo-shader-card-canvas';
 
+  /* ── Static vs. animated ──────────────────────────────────
+     HOLO_STATIC renders each card ONCE with a fixed shine frame and
+     skips the scroll listener, so there are no per-scroll WebGL redraws.
+     This was introduced to fix choppy vertical scrolling on mobile
+     (Pixel 8 Pro): the effect never self-animated (u_time is unused) —
+     it only shifted because u_scroll was recomputed from the card's
+     viewport position on every scroll frame, redrawing every visible
+     canvas. TO REVERT to the original scroll-reactive v7 animation:
+     set HOLO_STATIC = false. STATIC_SCROLL is the frozen u_scroll value
+     (0..1) that picks which frame of the old animation the static card
+     shows — tune it for shine placement. */
+  const HOLO_STATIC   = true;
+  const STATIC_SCROLL = 0.35;
+
   /* ── Shader sources ───────────────────────────────────── */
 
   const VERTEX_SHADER = `
@@ -187,7 +201,7 @@ void main() {
         antialias: false,
         alpha: false,
         premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
+        preserveDrawingBuffer: HOLO_STATIC,
       }) || canvas.getContext('experimental-webgl');
     } catch (_e) {
       gl = null;
@@ -242,8 +256,13 @@ void main() {
   function renderOne(card, time, vh) {
     ensureSize(card);
     const r = card.el.getBoundingClientRect();
-    const progress = 1 - (r.top + r.height * 0.5) / vh;
-    const scroll = progress < 0 ? 0 : progress > 1 ? 1 : progress;
+    let scroll;
+    if (HOLO_STATIC) {
+      scroll = STATIC_SCROLL;
+    } else {
+      const progress = 1 - (r.top + r.height * 0.5) / vh;
+      scroll = progress < 0 ? 0 : progress > 1 ? 1 : progress;
+    }
     card.gl.uniform1f(card.scrollLoc, scroll);
     card.gl.uniform1f(card.timeLoc, time);
     card.gl.drawArrays(card.gl.TRIANGLES, 0, 6);
@@ -285,7 +304,7 @@ void main() {
     initStartTime = performance.now();
     setupObserver();
     refresh();
-    window.addEventListener('scroll', scheduleRender, { passive: true });
+    if (!HOLO_STATIC) window.addEventListener('scroll', scheduleRender, { passive: true });
     window.addEventListener('resize', scheduleRender, { passive: true });
     initialised = true;
     console.log('[HoloShader v7] initialised — glossy silver + full-spectrum shines');

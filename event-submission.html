@@ -991,8 +991,14 @@
       const btn = document.getElementById('submit-venue-btn');
       btn.disabled = true; btn.textContent = 'Submitting…';
       try {
+        // status/slug sent explicitly to match the Studio form (submit.js). The gate
+        // forces status server-side and ignores the client value, so this is for
+        // consistency across the two forms, not a behaviour change on this path.
         const res = await gatedPost('/venue', {
-          name, address,
+          name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          status: 'pending',
+          address,
           location: document.getElementById('new-venue-location').value || null,
           submitted_by_name: document.getElementById('new-venue-submitted-by')?.value?.trim() || document.getElementById('inp-submitter-name')?.value?.trim() || null,
         });
