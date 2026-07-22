@@ -2224,6 +2224,13 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   padding-top: 1.5rem;
   padding-bottom: 1.1rem;
 }
+/* Promoter mode (?promoter=slug on calendar.html): the shared identity-card
+   rules above set padding-bottom: 4.5rem to pull the gig guide's toolbar up
+   into the header — and at (0,3,0) they beat the snug rule above. The
+   calendar has no toolbar, so re-tighten at higher specificity. */
+.gigs-page > .calendar-header:has(.gigs-header__promoter-avatar:not([hidden])) {
+  padding-bottom: 1.1rem;
+}
 /* Featured carousel lives INSIDE the header glass panel on BOTH surfaces (so the
    frosted background wraps it). Drop the edge-bleed margins (the header already
    has side padding) and sit it snug under the title. */

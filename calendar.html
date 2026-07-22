@@ -26,8 +26,13 @@
   <main class="gigs-page calendar-page">
 
     <!-- Page header — same glass treatment as the gig guide so the two
-         surfaces read as one app. Title shows the current month. -->
+         surfaces read as one app. Title shows the current month.
+         Promoter mode (?promoter=slug): calendar.js unhides the avatar and
+         swaps the title to the promoter's name; the shared :has() rules in
+         styles.css then flip the header into the dark identity card, exactly
+         like the gig guide's promoter feed. -->
     <header class="gigs-header calendar-header">
+      <img class="gigs-header__promoter-avatar" id="cal-header-avatar" hidden alt="">
       <h1 class="gigs-header__title" id="calendar-eyebrow">Cape Town Cultural Calendar</h1>
 
       <!-- Featured events carousel — sits INSIDE the header panel, filling the

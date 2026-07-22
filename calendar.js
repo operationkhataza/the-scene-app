@@ -13,9 +13,15 @@
      • Prev / Next / Today month navigation
      • URL routing: ?day=YYYY-MM-DD pre-selects a day
                     ?month=YYYY-MM jumps to a month
+                    ?promoter=slug scopes the whole calendar to one
+                      promoter (festival mode): identity header, month
+                      fetch filtered, featured carousel suppressed, and
+                      the view auto-jumps to the first upcoming event's
+                      month/day (explicit ?day / ?month win over the jump)
 
    What's NOT here:
      • Filters — calendar's job is overview, not filtering
+       (the ?promoter URL mode above is a scoped VIEW, not a filter UI)
      • Search — same reason
    ============================================================ */
 
@@ -60,6 +66,7 @@ const state = {
   selectedDay: null,     // selected day as ISO string YYYY-MM-DD
   eventsByDate: new Map(), // ISO date -> array of events
   monthsLoaded: new Set(), // YYYY-MM keys we've already fetched
+  promoterSlug: null,      // ?promoter=slug — scopes every month fetch (festival mode)
 };
 
 /* In-flight guard for month navigation — blocks overlapping swipes/taps
@@ -218,6 +225,14 @@ async function fetchMonth(d) {
   // draft/pending parent never leaks as a blank pip/card.
   params.set('filter[_or][0][parent_run][_null]', 'true');
   params.set('filter[_or][1][parent_run][status][_eq]', 'published');
+
+  // Promoter mode (?promoter=slug): scope the month to that promoter's events.
+  // Same deep M2M-junction filter as app.js's promoter feed. Fixed for the
+  // lifetime of the page load, so the month caches above stay valid — and the
+  // pagination clone below copies params wholesale, so it inherits the filter.
+  if (state.promoterSlug) {
+    params.set('filter[promoters][promoters_id][slug][_eq]', state.promoterSlug);
+  }
 
   try {
     // apiGet throws on a bad response; the catch below logs it and marks the
@@ -1014,6 +1029,11 @@ async function renderFeatured() {
   const track   = document.getElementById('featured-carousel-track');
   if (!section || !track) return;
 
+  // Promoter mode: no spotlight — a promoter/festival calendar must not
+  // advertise unrelated events. Mirrors app.js, which suppresses the
+  // carousel whenever a URL mode (?day/?curator/?promoter) is active.
+  if (state.promoterSlug) { section.hidden = true; return; }
+
   let events = [];
   try { events = (await fetchFeatured()).map(resolveGig); } catch (_) { /* helper already logs */ }
 
@@ -1070,6 +1090,65 @@ function startFeaturedAutoscroll(track) {
 }
 
 /* ============================================================
+   PROMOTER MODE (?promoter=slug) — festival/promoter-scoped calendar.
+   Mirrors the gig guide's promoter feed: the same slug drives both
+   surfaces, so a festival gets a feed URL and a calendar URL.
+   ============================================================ */
+
+/* Fetch the promoter's identity for the header. Mirrors app.js
+   loadPromoter — warn-and-null on error/not-found; the header then
+   just stays generic while the event filter still applies. */
+async function loadPromoter(slug) {
+  try {
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image&limit=1`);
+    return json.data?.[0] || null;
+  } catch (err) {
+    console.warn('[Calendar] Could not load promoter:', err);
+    return null;
+  }
+}
+
+/* Swap the header into the promoter's identity card. Setting the title
+   text and unhiding the avatar is the whole mode switch — the dark
+   identity styling is pure CSS (:has() on the visible avatar), shared
+   with the gig guide. Avatar only unhides when there's an image, same
+   as app.js (no image → light header with just the name swapped). */
+function renderPromoterHeader(promoter) {
+  const titleEl  = document.getElementById('calendar-eyebrow');
+  const avatarEl = document.getElementById('cal-header-avatar');
+  if (titleEl) titleEl.textContent = promoter?.name || 'Promoter Events';
+  if (avatarEl && promoter?.profile_image) {
+    avatarEl.src    = imgUrl(promoter.profile_image, { width: '128', height: '128', fit: 'cover' });
+    avatarEl.alt    = promoter.name ? `${promoter.name} logo` : '';
+    avatarEl.hidden = false;
+  }
+}
+
+/* Auto-jump lookahead: the promoter's first upcoming event date, so the
+   calendar can land on a month that actually has content (a festival may
+   sit wholly in next month). One tiny query — date only, limit 1, same
+   guards as fetchMonth. Null on none/error → caller stays on today. */
+async function fetchFirstPromoterEventDate() {
+  const params = new URLSearchParams({
+    'filter[status][_eq]': 'published',
+    'filter[date][_gte]':  isoDate(new Date()),
+    'filter[promoters][promoters_id][slug][_eq]': state.promoterSlug,
+    'sort':   'date',
+    'fields': 'date',
+    'limit':  '1',
+  });
+  params.set('filter[_or][0][parent_run][_null]', 'true');
+  params.set('filter[_or][1][parent_run][status][_eq]', 'published');
+  try {
+    const json = await apiGet('/items/events', params);
+    return json.data?.[0]?.date || null;
+  } catch (err) {
+    console.warn('[Calendar] first-event lookahead failed', err);
+    return null;
+  }
+}
+
+/* ============================================================
    BOOT
    ============================================================ */
 /* ============================================================
@@ -1098,10 +1177,22 @@ async function init() {
   const today = new Date();
 
   // ?day=YYYY-MM-DD pre-selects a day. ?month=YYYY-MM jumps a month
-  // without selecting any day. Defaults: focused month = today's month,
-  // selected day = today.
+  // without selecting any day. ?promoter=slug scopes the calendar to one
+  // promoter (see PROMOTER MODE above). Defaults: focused month = today's
+  // month, selected day = today.
   const dayParam   = getParam('day');
   const monthParam = getParam('month');
+  state.promoterSlug = getParam('promoter') || null;
+
+  // Paint the loading skeleton immediately — before ANY awaits (in promoter
+  // mode the auto-jump lookahead below runs before the month fetch).
+  renderGridSkeleton();
+
+  // Promoter identity header — independent of the month data, so it loads in
+  // parallel and lands whenever it lands (null → header just stays generic).
+  if (state.promoterSlug) {
+    loadPromoter(state.promoterSlug).then(renderPromoterHeader);
+  }
 
   let focused = today;
   let selected = isoDate(today);
@@ -1112,15 +1203,23 @@ async function init() {
   } else if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
     focused  = new Date(monthParam + '-01T00:00:00');
     selected = isoDate(focused); // select the 1st of that month
+  } else if (state.promoterSlug) {
+    // Auto-jump: land on the promoter's first upcoming event (month AND day),
+    // so a festival that sits wholly in next month opens with content instead
+    // of an empty grid. Explicit ?day / ?month above win over the jump — deep
+    // links stay deterministic. No upcoming events → stay on today (the empty
+    // grid is the honest state).
+    const firstDate = await fetchFirstPromoterEventDate();
+    if (firstDate && /^\d{4}-\d{2}-\d{2}$/.test(firstDate)) {
+      selected = firstDate;
+      focused  = new Date(firstDate + 'T00:00:00');
+    }
   }
 
   state.viewMonth   = startOfMonth(focused);
   state.selectedDay = selected;
 
   updateHeader();
-
-  // Paint the loading skeleton before awaiting the month fetch.
-  renderGridSkeleton();
 
   await fetchMonth(state.viewMonth);
 
