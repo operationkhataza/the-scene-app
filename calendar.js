@@ -355,8 +355,27 @@ function renderGrid() {
     else break;
   }
 
+  // Promoter mode: render only the weeks that hold this promoter's events —
+  // a festival sitting in the first two weeks shouldn't drag two dead weeks
+  // below it. Adjacent-month filler days don't count toward keeping a week
+  // (their pips are suppressed anyway). If NO week has events, keep the full
+  // grid: an empty month reads more honestly than a vanished one.
+  let cellIdxs = [...Array(visibleCells).keys()];
+  if (state.promoterSlug) {
+    const keptWeeks = [];
+    for (let w = 0; w < visibleCells; w += 7) {
+      const hasEvents = cells.slice(w, w + 7).some(d =>
+        d.getMonth() === month.getMonth() &&
+        (state.eventsByDate.get(isoDate(d)) || []).length > 0);
+      if (hasEvents) keptWeeks.push(w);
+    }
+    if (keptWeeks.length) {
+      cellIdxs = keptWeeks.flatMap(w => [...Array(7).keys()].map(k => w + k));
+    }
+  }
+
   let html = '';
-  for (let i = 0; i < visibleCells; i++) {
+  for (const i of cellIdxs) {
     const d = cells[i];
     const iso = isoDate(d);
     const inMonth   = d.getMonth() === month.getMonth();
@@ -402,7 +421,7 @@ function renderGrid() {
   }
 
   GRID_EL.innerHTML = html;
-  GRID_EL.style.setProperty('--cal-rows', String(visibleCells / 7));
+  GRID_EL.style.setProperty('--cal-rows', String(cellIdxs.length / 7));
 
   // Wire up tap-to-select on every cell
   GRID_EL.querySelectorAll('.cal-cell').forEach(btn => {
@@ -1130,20 +1149,36 @@ function renderPromoterHeader(promoter) {
     bioEl.textContent = promoter.bio;
     bioEl.hidden = false;
   }
-  // Cover image → header background (festival mode). When the promoter has
-  // a cover_image, the identity-card header swaps its navy gradient for the
-  // cover, with a static frosted-glass pane on top (blur + ink tint — see
-  // the "--cover" rules in styles.css) so the white title/bio stay legible.
-  // Null cover → class never added, the plain navy identity card stays.
+  // Cover image → whole-page background (festival mode, v2 experiment).
+  // When the promoter has a cover_image, the art becomes the fixed
+  // background of the ENTIRE calendar page (body.has-cover-bg repurposes
+  // the bloom layer, body::before) and the header ribbon becomes a heavy
+  // frosted-glass pane over it — no navy, no image inside the ribbon.
+  // See the "--cover" rules in styles.css. The custom property lives on
+  // <body> so it inherits everywhere (incl. the header, if ever needed).
+  // Null cover → classes never added, the plain navy identity card stays.
   if (promoter?.cover_image) {
+    // Request the cover at the device's real pixel size (screen × DPR,
+    // capped at 3x). A fixed width-1280 request gets upscaled to fill a
+    // full-viewport cover on a high-DPR phone (height is the binding
+    // dimension there) and reads blurry. fit=cover with both dims makes
+    // Directus serve the same centre crop CSS shows, at native sharpness;
+    // it never upscales past the source file. screen.* is orientation-
+    // normalised via the window aspect (iOS reports portrait-fixed,
+    // Android swaps — this handles both).
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const sw = window.screen.width  || 390;
+    const sh = window.screen.height || 844;
+    const landscape = window.innerWidth > window.innerHeight;
+    const coverW = Math.round((landscape ? Math.max(sw, sh) : Math.min(sw, sh)) * dpr);
+    const coverH = Math.round((landscape ? Math.min(sw, sh) : Math.max(sw, sh)) * dpr);
+    document.body.style.setProperty(
+      '--promoter-cover',
+      `url("${imgUrl(promoter.cover_image, { width: String(coverW), height: String(coverH), fit: 'cover' })}")`
+    );
+    document.body.classList.add('has-cover-bg');
     const headerEl = document.querySelector('.calendar-header');
-    if (headerEl) {
-      headerEl.style.setProperty(
-        '--promoter-cover',
-        `url("${imgUrl(promoter.cover_image, { width: '1280', fit: 'cover' })}")`
-      );
-      headerEl.classList.add('gigs-header--cover');
-    }
+    if (headerEl) headerEl.classList.add('gigs-header--cover');
   }
 }
 
@@ -1206,6 +1241,12 @@ async function init() {
   const dayParam   = getParam('day');
   const monthParam = getParam('month');
   state.promoterSlug = getParam('promoter') || null;
+
+  // Page-level promoter-mode hook for CSS (black calendar chrome — see the
+  // .cal-promoter rules in styles.css). The header's :has(avatar) switch
+  // can't serve this: it only fires once the avatar loads, and the grid
+  // lives outside the header anyway.
+  if (state.promoterSlug) document.body.classList.add('cal-promoter');
 
   // Paint the loading skeleton immediately — before ANY awaits (in promoter
   // mode the auto-jump lookahead below runs before the month fetch).
