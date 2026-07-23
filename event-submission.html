@@ -535,6 +535,30 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       ANDROID UPLOAD NOTICE (temporary)
+       The Fabrik app's Android webview has a broken image upload
+       (immedia bug, unfixed as of 23 Jul 2026), which blocks the
+       required poster step and therefore the whole submission.
+       Shown on load to any Android user; pairs with the
+       .android-notice rule group in event-submission-stylesheet.css
+       and the init block at the bottom of the script. Remove all
+       three together once immedia ships the fix.
+       ============================================================ -->
+  <div id="android-notice" role="alertdialog" aria-modal="true" aria-labelledby="android-notice-title" style="display:none;">
+    <div class="android-notice-card">
+      <div class="android-notice-title" id="android-notice-title">Heads up, Android users</div>
+      <p>A known bug in the app on Android is blocking image uploads, so event submissions can't be completed here for now. The app developers are on it.</p>
+      <p>In the meantime, open your phone's browser and head to</p>
+      <div class="android-notice-url">studio.thescenecapetown.co.za</div>
+      <p>to upload your events as usual.</p>
+      <div class="android-notice-actions">
+        <button type="button" id="android-notice-copy" class="an-btn an-btn-primary">Copy link</button>
+        <button type="button" id="android-notice-dismiss" class="an-btn an-btn-secondary">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { ICONS } from './icons.js';
 
@@ -1862,6 +1886,37 @@
       applyTime(`${pad2(h)}:${pad2(m)}`);
     });
     timeModal.addEventListener('click', e => { if (e.target === timeModal) closeTimePicker(); });
+
+    /* ANDROID UPLOAD NOTICE (temporary — see the markup comment above the
+       #android-notice block). Plain Android UA check: inside the Fabrik
+       webview the UA always carries the Android token, and this form has no
+       normal-browser audience, so no wv-token narrowing is needed. */
+    (() => {
+      if (!/Android/i.test(navigator.userAgent)) return;
+      const notice  = document.getElementById('android-notice');
+      const copyBtn = document.getElementById('android-notice-copy');
+      const STUDIO_URL = 'https://studio.thescenecapetown.co.za';
+      notice.style.display = 'flex';
+      copyBtn.addEventListener('click', async () => {
+        let ok = false;
+        try { await navigator.clipboard.writeText(STUDIO_URL); ok = true; } catch {}
+        if (!ok) {
+          /* execCommand fallback — clipboard API can reject in Android webviews */
+          const ta = document.createElement('textarea');
+          ta.value = STUDIO_URL;
+          ta.style.cssText = 'position:fixed; opacity:0;';
+          document.body.appendChild(ta);
+          ta.select();
+          try { ok = document.execCommand('copy'); } catch {}
+          ta.remove();
+        }
+        copyBtn.textContent = ok ? 'Copied!' : 'Copy failed';
+        setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2200);
+      });
+      document.getElementById('android-notice-dismiss').addEventListener('click', () => {
+        notice.style.display = 'none';
+      });
+    })();
 
     /* INIT */
     initFormType();

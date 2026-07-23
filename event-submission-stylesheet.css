@@ -1604,6 +1604,92 @@ select {
 }
 
 /* ============================================================
+   ANDROID UPLOAD NOTICE (temporary)
+   Pairs with the #android-notice block in event-submission.html.
+   Self-contained rule group keyed only to brand tokens; delete
+   the whole group when the immedia Android webview upload bug is
+   fixed and the markup + init JS are removed.
+   ============================================================ */
+#android-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 600; /* above the crop modal (500) */
+  background: rgba(10, 15, 30, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.android-notice-card {
+  background: var(--scene-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 22px calc(22px + var(--safe-bot) / 2);
+  max-width: 380px;
+  width: 100%;
+}
+
+.android-notice-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--charcoal);
+  margin-bottom: 12px;
+}
+
+.android-notice-card p {
+  font-size: 0.9rem;
+  color: var(--text-soft);
+  margin-bottom: 10px;
+}
+
+.android-notice-url {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--scene-blue-deep);
+  background: var(--scene-blue-wash);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 2px 0 12px;
+  text-align: center;
+  word-break: break-all;
+  /* body sets user-select:none — make the URL long-pressable anyway */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.android-notice-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.an-btn {
+  flex: 1;
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.an-btn-primary {
+  background: var(--selected-bg);
+  color: var(--scene-white);
+  border: none;
+  box-shadow: var(--selected-shadow);
+}
+
+.an-btn-secondary {
+  background: var(--warm-grey);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+
+/* ============================================================
    RESPONSIVE — wider screens get a centred card look
    ============================================================ */
 @media (min-width: 600px) {

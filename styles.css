@@ -292,7 +292,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
    Deliberately its own class, not .gigs-header__curator-byline: unhiding
    the byline would trip the curator-mode :has() rules on the header. */
 .gigs-header__promoter-bio {
-  font-size: 0.88rem;
+  font-size: 0.94rem;
   line-height: 1.5;
   color: var(--text-muted);
   margin: 0.5rem auto 0;
@@ -2409,7 +2409,7 @@ body.has-cover-bg::before {
 }
 .cal-weekdays > span {
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: 0.61rem;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2582,7 +2582,10 @@ body.has-cover-bg::before {
    body.cal-promoter is set by calendar.js in ?promoter= mode. Team call
    (22 Jul 2026): promoter/festival calendar views run black text — the
    muted grays were hard to read, and cover images are curated light
-   going forward. Adjacent-month days keep a lighter step (they're
+   going forward. Briefly flipped to white (23 Jul 2026) on a Kamil
+   suggestion, then flipped back the same day — team preferred black,
+   keeping only the existing selected-day white flip (below) as the one
+   colour-change moment. Adjacent-month days keep a lighter step (they're
    filler, not info) and the today/selected signal colours re-assert
    below (these rules out-rank the base ones, so without the re-assert
    the blue/white signals would go black too). */
@@ -2595,6 +2598,20 @@ body.cal-promoter .cal-cell--out.cal-cell--selected .cal-cell__num {
 }
 body.cal-promoter .cal-cell--today .cal-cell__num    { color: var(--scene-blue-deep); }
 body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
+/* Day panel heading — "Selected day" eyebrow + date title — and the
+   event count join the rest of the black chrome. Ticket stub cards
+   (.cal-day-card) are untouched. */
+body.cal-promoter .cal-day__eyebrow,
+body.cal-promoter .cal-day__title,
+body.cal-promoter .cal-day__count {
+  color: #000;
+}
+/* Empty-day copy ("No events listed yet.") — same black, joins the rest
+   of the day panel above. */
+body.cal-promoter .cal-day__empty,
+body.cal-promoter .cal-day__empty-sub {
+  color: #000;
+}
 .cal-cell--selected .cal-pip--t0 { background: rgba(255, 255, 255, 0.85); }
 .cal-cell--selected .cal-pip--t1 { background: white; }
 .cal-cell--selected .cal-pip--t2 { background: #FFE0A1; }
@@ -2629,7 +2646,7 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
 }
 .cal-day__eyebrow {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -2646,7 +2663,7 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
 }
 .cal-day__count {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -3338,7 +3355,10 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
   height: 30px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  border: 2px solid rgba(255, 255, 255, 0.92);
+  /* Charcoal outline on EVERY tier (23 Jul 2026, follow-up to the
+     t0-only outline): one dark edge unifies the pin family and holds
+     up on the pale basemap regardless of fill. */
+  border: 2px solid var(--charcoal);
   box-shadow: 0 4px 10px rgba(21, 35, 61, 0.35);
   /* t0 — uncurated: frosted white, same read as an uncurated gig card.
      Keeps the tier ladder honest: white < silver < gold < holo (the old
@@ -3354,12 +3374,12 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
   height: 8px;
   margin: -4px 0 0 -4px;
   border-radius: 50%;
-  background: var(--scene-gradient);
+  /* Charcoal on EVERY tier (23 Jul 2026 user feedback): the old
+     white-on-silver dot had no contrast, and one dark dot across
+     the ladder reads as a single family of pins. */
+  background: var(--charcoal);
 }
-.map-pin--t1::after,
-.map-pin--t2::after,
-.map-pin--t3::after { background: rgba(255, 255, 255, 0.9); }
-.map-pin--t1 { background: linear-gradient(135deg, #A8A8B2, #E0E0E5); }  /* Silver */
+.map-pin--t1 { background: linear-gradient(135deg, #7E7E8A, #C4C4CE); }  /* Silver — darkened toward pewter so it can't blend into the pale basemap (23 Jul 2026 user feedback) */
 .map-pin--t2 { background: linear-gradient(135deg, #C9932A, #F5D14C); }  /* Gold   */
 .map-pin--t3 {                                                           /* Holo   */
   background: conic-gradient(from 180deg,
@@ -3418,11 +3438,11 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
   flex-shrink: 0;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  border: 1px solid rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--charcoal);               /* charcoal outline on every tier, same as the map pins */
   box-shadow: 0 1px 3px rgba(21, 35, 61, 0.30);
   background: rgba(255, 255, 255, 0.95);           /* t0 — listed */
 }
-.map-key__pin::after {                              /* t0 centre dot */
+.map-key__pin::after {                              /* centre dot — charcoal on every tier, mirroring .map-pin */
   content: '';
   position: absolute;
   left: 50%;
@@ -3431,12 +3451,9 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
   height: 4px;
   margin: -2px 0 0 -2px;
   border-radius: 50%;
-  background: var(--scene-gradient);
+  background: var(--charcoal);
 }
-.map-key__pin--t1::after,
-.map-key__pin--t2::after,
-.map-key__pin--t3::after { content: none; }
-.map-key__pin--t1 { background: linear-gradient(135deg, #A8A8B2, #E0E0E5); }
+.map-key__pin--t1 { background: linear-gradient(135deg, #7E7E8A, #C4C4CE); }
 .map-key__pin--t2 { background: linear-gradient(135deg, #C9932A, #F5D14C); }
 .map-key__pin--t3 {
   background: conic-gradient(from 180deg,
@@ -3580,8 +3597,19 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
   border-bottom-color: var(--border-sub);
 }
 
-/* Touch devices: pinch handles zoom — the +/- buttons are desktop
-   affordances and just clutter a phone screen. */
-@media (pointer: coarse) {
-  .leaflet-control-zoom { display: none; }
+/* Zoom +/- — visible on ALL devices. Pinch still zooms on touch, but
+   the buttons were hidden there and a user asked for them back
+   (23 Jul 2026): not everyone finds pinch, and one-handed use wants
+   buttons. Sized up to real tap targets — the #map-canvas id selector
+   outranks Leaflet's own .leaflet-touch sizing (30px) regardless of
+   stylesheet order. Bottom margin lifts the control clear of the
+   iPhone home-bar safe area; attribution keeps the bottom edge. */
+#map-canvas .leaflet-control-zoom {
+  margin: 0 0.8rem calc(env(safe-area-inset-bottom, 0px) + 0.8rem) 0;
+}
+#map-canvas .leaflet-bar a {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 1.2rem;
 }
