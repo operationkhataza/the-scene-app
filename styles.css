@@ -3260,3 +3260,328 @@ body.cal-promoter .cal-cell--selected .cal-cell__num { color: #fff; }
     transition: opacity 0.12s ease !important;
   }
 }
+
+/* ================================================================
+   MAP VIEW  (map.html / map.js)
+   Full-viewport Leaflet map with floating glass chrome. z-index
+   contract: map canvas 1 (own stacking context, so Leaflet's
+   internal 100-1000 pane/control z-indexes stay caged inside it)
+   < floating chrome 800 < event modal 900 < sheets 940/950.
+   The event modal + promoter sheet reuse the calendar's classes
+   wholesale — nothing map-specific needed there.
+   ================================================================ */
+
+#map-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #E8F2FB;   /* ice tint while tiles load */
+}
+.leaflet-container { font-family: var(--font); }
+
+/* ── Floating day bar: prev · label · next ─────────────────── */
+.map-bar {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 0.8rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.28rem;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+.map-bar__chev {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--scene-blue-deep);
+  cursor: pointer;
+}
+.map-bar__chev svg { width: 14px; height: 14px; }
+.map-bar__chev:active { background: rgba(51, 128, 193, 0.10); }
+.map-bar__label {
+  min-width: 7.25rem;
+  padding: 0 0.4rem;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+
+/* ── Teardrop pin — rotated-square technique. The wrapper class
+   neutralises Leaflet's default divIcon chrome; the tip of the
+   drop lands on the icon anchor (17, 43). Tier fills mirror the
+   card/pip signal palette: scene blue (uncurated), silver, gold,
+   holo conic. ────────────────────────────────────────────────── */
+.map-pin-wrap { background: none; border: none; }
+.map-pin {
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 10px rgba(21, 35, 61, 0.35);
+  /* t0 — uncurated: frosted white, same read as an uncurated gig card.
+     Keeps the tier ladder honest: white < silver < gold < holo (the old
+     scene-blue fill outshouted silver). Scene-blue centre dot for brand. */
+  background: rgba(255, 255, 255, 0.92);
+}
+.map-pin::after {                                  /* inner dot */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--scene-gradient);
+}
+.map-pin--t1::after,
+.map-pin--t2::after,
+.map-pin--t3::after { background: rgba(255, 255, 255, 0.9); }
+.map-pin--t1 { background: linear-gradient(135deg, #A8A8B2, #E0E0E5); }  /* Silver */
+.map-pin--t2 { background: linear-gradient(135deg, #C9932A, #F5D14C); }  /* Gold   */
+.map-pin--t3 {                                                           /* Holo   */
+  background: conic-gradient(from 180deg,
+    #C9A2E0, #F4C9D6, #B7E5DC, #F0D9A4, #C9A2E0);
+}
+.map-pin__count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  transform: rotate(45deg);                        /* counter-rotate upright */
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--charcoal);
+  border: 1.5px solid rgba(255, 255, 255, 0.92);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Pin key — compact tier ladder, top right. Offset below the
+   day bar's band so the two never overlap on narrow screens. ─── */
+.map-key {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 4.6rem);
+  right: 0.8rem;
+  z-index: 800;
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.map-key__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  line-height: 1;
+}
+.map-key__pin {
+  position: relative;
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 3px rgba(21, 35, 61, 0.30);
+  background: rgba(255, 255, 255, 0.95);           /* t0 — listed */
+}
+.map-key__pin::after {                              /* t0 centre dot */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--scene-gradient);
+}
+.map-key__pin--t1::after,
+.map-key__pin--t2::after,
+.map-key__pin--t3::after { content: none; }
+.map-key__pin--t1 { background: linear-gradient(135deg, #A8A8B2, #E0E0E5); }
+.map-key__pin--t2 { background: linear-gradient(135deg, #C9932A, #F5D14C); }
+.map-key__pin--t3 {
+  background: conic-gradient(from 180deg,
+    #C9A2E0, #F4C9D6, #B7E5DC, #F0D9A4, #C9A2E0);
+}
+
+/* ── Bottom-centre status pills (loading / not-on-map-yet) ─── */
+.map-pills {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;                            /* children re-enable */
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+}
+.map-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.95rem;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+.map-loading__spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  margin: 0;
+}
+.map-missing-pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.map-missing-pill__label {
+  padding: 0.55rem 0.3rem 0.55rem 0.95rem;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.map-missing-pill__dismiss {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.map-missing-pill__dismiss svg { width: 13px; height: 13px; }
+
+/* ── Empty state — centred glass panel over the live map ───── */
+.map-empty {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 800;
+  width: calc(100% - 4rem);
+  max-width: 320px;
+  padding: 1.4rem 1.6rem;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+          backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  pointer-events: none;
+}
+.map-empty__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+.map-empty__sub {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* ── Venue chooser sheet — same stacking as the promoter sheet:
+   above the event modal (900), same tier as its sibling sheets. ── */
+#venue-backdrop { z-index: 940; }
+#venue-sheet    { z-index: 950; }
+
+/* ── Venue chooser sheet body — the calendar's mini day-cards
+   stacked inside the shared .sheet component. ────────────────── */
+.map-venue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.25rem 0 1rem;
+}
+
+/* ── Leaflet control restyles — soften toward the glass system.
+   Attribution stays visible and tappable (licence condition);
+   just smaller and translucent. ─────────────────────────────── */
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.68) !important;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  padding: 2px 6px;
+}
+.leaflet-control-attribution a { color: var(--scene-blue); }
+.leaflet-bar {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-radius: var(--radius-sm) !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background: var(--glass-bg-strong);
+  color: var(--scene-blue-deep);
+  border-bottom-color: var(--border-sub);
+}
+
+/* Touch devices: pinch handles zoom — the +/- buttons are desktop
+   affordances and just clutter a phone screen. */
+@media (pointer: coarse) {
+  .leaflet-control-zoom { display: none; }
+}

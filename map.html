@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
+       Same viewport contract as event-guide.html / calendar.html — the MAP
+       itself still pinch-zooms (Leaflet touch handling), only page zoom is
+       locked. See the scoped touchend guard in map.js. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F4F7FB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Tonight's gigs across Cape Town on a map — every venue with a live event, curated by The Scene.">
+  <title>Map — The Scene Cape Town</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <main class="map-page">
+
+    <!-- The Leaflet container — fills the viewport; everything else floats
+         above it. z-index contract: map 1 < chrome 800 < modal 900 < sheets
+         940/950 (see the MAP VIEW section of styles.css). -->
+    <div id="map-canvas" aria-label="Map of events in Cape Town"></div>
+
+    <!-- Floating day bar: prev chevron · day label · next chevron.
+         Tapping the central label returns to today. Same chevron SVGs as
+         the calendar's month nav. -->
+    <header class="map-bar" id="map-bar" role="navigation" aria-label="Day navigation">
+      <button class="map-bar__chev" id="map-prev" type="button" aria-label="Previous day">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="map-bar__label" id="map-day-label" type="button" aria-live="polite" title="Back to today">Tonight</button>
+      <button class="map-bar__chev" id="map-next" type="button" aria-label="Next day">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M5 2L10 7L5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Pin key — the tier ladder at a glance. Sits top-right BELOW the
+         day bar's height so the two never collide on narrow screens. -->
+    <aside class="map-key" aria-label="Pin colour key">
+      <div class="map-key__row"><span class="map-key__pin"></span>Listed</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t1"></span>1 curator</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t2"></span>2 curators</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t3"></span>3+ curators</div>
+    </aside>
+
+    <!-- Bottom-centre status pills. Loading shows while a day fetches;
+         the "missing" pill appears when some of the day's events have no
+         venue coordinates yet — tapping it lists them (chooser sheet),
+         the × dismisses it for the session. -->
+    <div class="map-pills">
+      <div class="map-loading" id="map-loading" hidden>
+        <div class="spinner map-loading__spinner"></div>
+        <span>Loading&hellip;</span>
+      </div>
+      <div class="map-missing-pill" id="map-missing-pill" hidden>
+        <button class="map-missing-pill__label" id="map-missing-label" type="button"></button>
+        <button class="map-missing-pill__dismiss" id="map-missing-dismiss" type="button" aria-label="Dismiss">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state — the day has no events at all. The map stays live
+         underneath; the day bar still navigates. -->
+    <div class="map-empty" id="map-empty" hidden>
+      <p class="map-empty__title">Nothing on this night</p>
+      <p class="map-empty__sub">Try another day — the chevrons up top step through the week.</p>
+    </div>
+
+  </main>
+
+  <!-- Event detail modal — same shell + ids as calendar.html so every
+       .cal-modal rule in styles.css applies untouched. map.js fills
+       #cal-modal-card with the full gig-card (front + flippable back). -->
+  <div class="cal-modal" id="cal-modal" role="dialog" aria-modal="true" aria-label="Event details">
+    <div class="cal-modal__backdrop"></div>
+    <div class="cal-modal__card" id="cal-modal-card"></div>
+  </div>
+
+  <!-- Promoter profile sheet — slides up over the event modal when a
+       promoter pill is tapped. Same markup as calendar.html. -->
+  <div class="sheet-backdrop" id="promoter-backdrop" aria-hidden="true"></div>
+  <aside class="sheet" id="promoter-sheet" data-mode="promoter"
+         role="dialog" aria-modal="true" aria-labelledby="promoter-sheet-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <header class="sheet__header">
+      <h2 class="sheet__title" id="promoter-sheet-title">Promoter</h2>
+      <button class="sheet__close" id="promoter-sheet-close" type="button" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </header>
+    <div class="sheet__body" id="promoter-sheet-body"></div>
+  </aside>
+
+  <!-- Venue chooser sheet — opens when a marker holds 2+ events that night
+       (or from the "not on the map yet" pill). Lists the events as the
+       calendar's mini day-cards; tapping one opens the event modal. -->
+  <div class="sheet-backdrop" id="venue-backdrop" aria-hidden="true"></div>
+  <aside class="sheet" id="venue-sheet"
+         role="dialog" aria-modal="true" aria-labelledby="venue-sheet-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <header class="sheet__header">
+      <h2 class="sheet__title" id="venue-sheet-title">Venue</h2>
+      <button class="sheet__close" id="venue-sheet-close" type="button" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </header>
+    <div class="sheet__body" id="venue-sheet-body"></div>
+  </aside>
+
+  <script type="module" src="holo-shader.js"></script>
+  <script type="module" src="map.js"></script>
+</body>
+</html>

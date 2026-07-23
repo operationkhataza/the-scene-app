@@ -8,6 +8,7 @@ export default defineConfig({
         eventGuide: 'event-guide.html',
         calendar: 'calendar.html',
         submission: 'event-submission.html',
+        map: 'map.html',
       },
     },
   },
