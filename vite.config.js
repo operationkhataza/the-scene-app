@@ -9,6 +9,7 @@ export default defineConfig({
         calendar: 'calendar.html',
         submission: 'event-submission.html',
         map: 'map.html',
+        exhibitions: 'exhibitions.html',
       },
     },
   },

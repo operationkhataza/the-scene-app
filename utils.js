@@ -59,6 +59,48 @@ export function imgUrl(fileId, opts = {}) {
   return `${API}/assets/${fileId}?${params.toString()}`;
 }
 
+/* ============================================================
+   CURATION TIER — single source of truth for the whole app.
+   ────────────────────────────────────────────────────────────
+   Visual ladder (raised 29 Jul 2026; was 3+/2/1):
+     4+ curators → tier 3 (rainbow holographic, WebGL HoloShader)
+     3 curators  → tier 2 (gold sheen)
+     2 curators  → tier 1 (silver sheen)
+     0-1 curator → tier 0 (plain card)
+
+   TIER vs RANK are deliberately different and must stay that way.
+   A single-curator event renders plain (no sheen) but still sorts
+   above a wholly uncurated one, so `curatorRank` counts raw curators
+   while `gigTier` applies the thresholds. Don't collapse them.
+
+   The `.map(...).filter(Boolean)` form below is required — a
+   `.filter(c => c.curators_id)` shape has bitten us before by leaving
+   junction rows in place of curator records.
+
+   This lives here because the ladder was previously copy-pasted into
+   eight places across app.js / calendar.js / map.js and drifted.
+   ============================================================ */
+function curatorList(gig) {
+  return (gig.curators || []).map(c => c.curators_id).filter(Boolean);
+}
+
+/* Visual tier 0-3 — drives data-curated, cal-pip--t*, map-pin--t*,
+   featured-card--t* and the holo shader selector. */
+export function gigTier(gig) {
+  const n = curatorList(gig).length;
+  if (n >= 4) return 3;
+  if (n === 3) return 2;
+  if (n === 2) return 1;
+  return 0;
+}
+
+/* Sort priority only — higher appears first. Raw curator count capped
+   at 4 so every extra curator still lifts an event, including the
+   first one that earns no visual treatment. */
+export function curatorRank(gig) {
+  return Math.min(curatorList(gig).length, 4);
+}
+
 /* ---- HTML escaping ---- */
 export function esc(str) {
   if (str == null) return '';

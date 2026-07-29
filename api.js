@@ -197,3 +197,46 @@ export async function fetchFeatured() {
     return [];
   }
 }
+
+/* ============================================================
+   EXHIBITIONS — art + museum shows currently on
+   ────────────────────────────────────────────────────────────
+   Shared by the exhibitions feed (exhibitions.html) and the map's
+   blue exhibition pins. Returns published exhibitions whose run
+   spans a given day: start_date <= day <= end_date. Same "now falls
+   inside a window" idiom as fetchFeatured, so no expiry cron is
+   needed — a show whose end_date has passed simply stops matching.
+   `onDate` (YYYY-MM-DD) defaults to today; the map passes the focused
+   day so pins are date-scoped. Sorted closing-soonest-first (end_date
+   asc) for the feed's "catch it before it closes" ordering; the map
+   ignores order. venue.location_point + venue.website are read here
+   (both are now on the Public venues field allow-list) so the same
+   payload drives the feed card link and the map pin. Kept DOM/state-free.
+   ============================================================ */
+export async function fetchExhibitions({ onDate } = {}) {
+  const iso = onDate || new Date().toISOString().slice(0, 10);
+  const fields = [
+    'id', 'title', 'slug', 'short_description', 'description',
+    'start_date', 'end_date', 'website', 'exhibition_type',
+    'is_free', 'entry_info', 'tags', 'poster',
+    'venue.id', 'venue.name', 'venue.location', 'venue.status',
+    'venue.website', 'venue.location_point',
+  ].join(',');
+
+  const params = new URLSearchParams({
+    'filter[status][_eq]':      'published',
+    'filter[start_date][_lte]': iso,
+    'filter[end_date][_gte]':   iso,
+    'sort':   'end_date',
+    'fields': fields,
+    'limit':  '200',
+  });
+
+  try {
+    const json = await apiGet('/items/exhibitions', params);
+    return json.data || [];
+  } catch (err) {
+    console.warn('[Scene] exhibitions fetch failed:', err);
+    return [];
+  }
+}

@@ -42,10 +42,10 @@ document.addEventListener('touchend', e => {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { apiGet } from './api.js';
+import { apiGet, fetchExhibitions } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
-  formatTime, getParam, imgUrl, dateForDayName
+  formatTime, getParam, imgUrl, dateForDayName, gigTier
 } from './utils.js';
 import { ICONS } from './icons.js';
 
@@ -73,6 +73,7 @@ const VENUE_SHEET  = document.getElementById('venue-sheet');
 const VENUE_TITLE  = document.getElementById('venue-sheet-title');
 const VENUE_BODY   = document.getElementById('venue-sheet-body');
 const VENUE_CLOSE  = document.getElementById('venue-sheet-close');
+const EXH_TOGGLE   = document.getElementById('map-exhibition-toggle');
 
 /* ============================================================
    STATE — the focused day, a per-day event cache, and the pill
@@ -82,21 +83,14 @@ const VENUE_CLOSE  = document.getElementById('venue-sheet-close');
 const state = {
   day:        null,        // focused day as ISO string YYYY-MM-DD
   gigsByDay:  new Map(),   // ISO date -> array of resolved gigs
+  exhibitionsByDay: new Map(), // ISO date -> array of exhibitions active that day
+  showExhibitions:  true,  // Exhibitions layer toggle (session state)
   unmapped:   [],          // current day's gigs with no usable coordinates
   pillDismissed: false,    // "not on the map yet" pill, per session
 };
 let fetchToken = 0;
 
-/* ============================================================
-   TIER + THEATRE COALESCING — same contracts as app.js/calendar.js.
-   ============================================================ */
-function gigTier(gig) {
-  const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  if (curators.length >= 3) return 3;
-  if (curators.length === 2) return 2;
-  if (curators.length === 1) return 1;
-  return 0;
-}
+// TIER + THEATRE COALESCING — gigTier is single-sourced in utils.js.
 
 /* A pending (unapproved) venue must not have its name — or its pin —
    shown publicly. Whole-object blank, same as app.js/calendar.js, so a
@@ -259,6 +253,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 map.setView(CITY_CENTRE, 12);
 
 const markerLayer = L.layerGroup().addTo(map);
+// Exhibitions ride their own layer so the toggle can show/hide them without
+// touching the gig markers, and so their blue family reads as distinct.
+const exhibitionLayer = L.layerGroup().addTo(map);
 
 /* Teardrop divIcon. Pin tier = the HIGHEST tier among the venue's
    events that night (brightest signal wins — same rule as the
@@ -308,19 +305,37 @@ function renderMarkers(iso) {
     marker.addTo(markerLayer);
   }
 
-  if (pins.length > 0) {
-    map.fitBounds(L.latLngBounds(pins.map(p => p.latlng)), {
-      padding: [48, 48],
-      maxZoom: 15,
+  // Exhibitions — a separate blue-pin family, date-scoped to this day and
+  // gated by the layer toggle. groupByPin works on them unchanged (they carry
+  // venue.name + venue.location_point just like gigs). We keep the RAW list
+  // (pre-toggle) for the empty-state test so hiding the layer never fakes an
+  // empty night.
+  const rawExhibitions = state.exhibitionsByDay.get(iso) || [];
+  const exhibitions = state.showExhibitions ? rawExhibitions : [];
+  const { pins: exPins } = groupByPin(exhibitions);
+
+  exhibitionLayer.clearLayers();
+  for (const pin of exPins) {
+    const marker = L.marker(pin.latlng, {
+      icon: exhibitionPinIcon(pin),
+      keyboard: true,
+      alt: `${pin.venueName} — ${pin.gigs.length} exhibition${pin.gigs.length === 1 ? '' : 's'}`,
     });
+    marker.on('click', e => openExhibitionPin(pin, e.target.getElement()));
+    marker.addTo(exhibitionLayer);
+  }
+
+  const allLatLngs = [...pins.map(p => p.latlng), ...exPins.map(p => p.latlng)];
+  if (allLatLngs.length > 0) {
+    map.fitBounds(L.latLngBounds(allLatLngs), { padding: [48, 48], maxZoom: 15 });
   } else {
     map.setView(CITY_CENTRE, 12);
   }
 
-  // Empty state: only when the day has NO events at all. A day whose
-  // events are all unmapped shows the pill instead — the night exists,
-  // the map just can't place it yet.
-  if (gigs.length === 0) {
+  // Empty state: only when the day has NO gigs AND NO exhibitions at all. A day
+  // whose gigs are all unmapped shows the pill instead — the night exists, the
+  // map just can't place it yet.
+  if (gigs.length === 0 && rawExhibitions.length === 0) {
     showEmpty('Nothing on this night', 'Try another day — the chevrons up top step through the week.');
   } else {
     hideEmpty();
@@ -383,10 +398,12 @@ async function setDay(iso) {
   url.searchParams.set('day', iso);
   window.history.replaceState({}, '', url);
 
-  const cached = state.gigsByDay.has(iso);
+  const cached = state.gigsByDay.has(iso) && state.exhibitionsByDay.has(iso);
   if (!cached) LOADING_EL.hidden = false;
   try {
-    await fetchDay(iso);
+    // Exhibitions fetch never rejects (api.js swallows its errors → []), so a
+    // failed exhibitions read can't take the gig map down; only fetchDay throws.
+    await Promise.all([fetchDay(iso), fetchExhibitionsDay(iso)]);
   } catch (err) {
     console.error('[Map] fetch failed', err);
     if (token === fetchToken) {
@@ -503,10 +520,7 @@ function renderModalCard(gig) {
 
   // Curators
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  const curatedLevel = curators.length >= 3 ? 3
-                     : curators.length === 2 ? 2
-                     : curators.length === 1 ? 1
-                     : 0;
+  const curatedLevel = gigTier(gig);
   const curatorHtml = curators.length > 0
     ? `<div class="curators">
         <span class="curators__label">Selected by</span>
@@ -940,6 +954,234 @@ PROMO_BD.addEventListener('click', closePromoterSheet);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && PROMO_SHEET.classList.contains('is-open')) closePromoterSheet();
 });
+
+/* ============================================================
+   EXHIBITIONS ON THE MAP — blue-pin family, date-scoped
+   ────────────────────────────────────────────────────────────
+   Art + museum shows active on the focused day, as scene-blue teardrop
+   pins on their own layer (toggled by the Exhibitions switch). gigLatLng
+   + groupByPin already operate on any object carrying venue.location_point
+   + venue.name, so they're reused as-is. Tap → the shared #cal-modal
+   (single) or the venue sheet (2+). The card markup + small date/label
+   helpers are duplicated here per the codebase's per-entry-script
+   convention (same as the four gig-card modal copies).
+   ============================================================ */
+const EXH_TYPE_LABELS = {
+  'painting': 'Painting', 'sculpture': 'Sculpture', 'photography': 'Photography',
+  'mixed-media': 'Mixed Media', 'installation': 'Installation',
+  'group-show': 'Group Show', 'heritage': 'Heritage',
+};
+const EXH_AREAS = {
+  'cbd': 'CBD', 'southern-suburbs': 'Southern Suburbs', 'northern-suburbs': 'Northern Suburbs',
+  'atlantic-seaboard': 'Atlantic Seaboard', 'southern-peninsula': 'Southern Peninsula', 'cape-flats': 'Cape Flats',
+};
+function exhTypeLabel(slug) {
+  return EXH_TYPE_LABELS[slug] || String(slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function fmtExhRange(start, end) {
+  const opts = { day: 'numeric', month: 'short' };
+  const d0 = new Date(start + 'T00:00:00');
+  const d1 = new Date(end + 'T00:00:00');
+  if (start === end) return d0.toLocaleDateString('en-ZA', opts);
+  const sameMonth = d0.getMonth() === d1.getMonth() && d0.getFullYear() === d1.getFullYear();
+  return sameMonth
+    ? `${d0.getDate()} - ${d1.toLocaleDateString('en-ZA', opts)}`
+    : `${d0.toLocaleDateString('en-ZA', opts)} - ${d1.toLocaleDateString('en-ZA', opts)}`;
+}
+function fmtExhClosing(end) {
+  const d = new Date(end + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((d - today) / 86400000);
+  if (days <= 0)  return 'Last day';
+  if (days === 1) return 'Ends tomorrow';
+  if (days <= 7)  return `${days} days left`;
+  return 'On until ' + d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+}
+function exhClosingSoon(end) {
+  const d = new Date(end + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.round((d - today) / 86400000) <= 7;
+}
+function exhEntryMarkup(ex) {
+  if (ex.is_free)    return `<div class="price price--free"><span class="price__prefix">Entry</span><span class="price__value">Free</span></div>`;
+  if (ex.entry_info) return `<div class="price"><span class="price__prefix">Entry</span><span class="price__value">${esc(ex.entry_info)}</span></div>`;
+  return '';
+}
+
+/* Blue teardrop divIcon — same shape/anchor as the tier pins, scene-blue fill. */
+function exhibitionPinIcon(pin) {
+  const count = pin.gigs.length;
+  const badge = count > 1 ? `<span class="map-pin__count">${count}</span>` : '';
+  return L.divIcon({
+    className: 'map-pin-wrap',
+    html: `<div class="map-pin map-pin--exhibition">${badge}</div>`,
+    iconSize:   [34, 46],
+    iconAnchor: [17, 43],
+  });
+}
+
+function renderExhibitionModalCard(ex) {
+  const posterSrc = imgUrl(ex.poster, { width: '800', fit: 'contain' });
+  const poster = posterSrc
+    ? `<img class="gig-card__poster" src="${posterSrc}" alt="${esc(ex.title)} poster" loading="lazy">`
+    : `<div class="gig-card__poster-placeholder">The Scene</div>`;
+
+  const range   = fmtExhRange(ex.start_date, ex.end_date);
+  const closing = fmtExhClosing(ex.end_date);
+  const soon    = exhClosingSoon(ex.end_date);
+
+  const areaName = ex.venue?.location ? (EXH_AREAS[ex.venue.location] || ex.venue.location) : null;
+  const venueHtml = ex.venue?.name
+    ? `<p class="gig-card__venue"><span class="gig-card__venue-name">${esc(ex.venue.name)}</span>${areaName ? `<span class="gig-card__venue-area">${esc(areaName)}</span>` : ''}</p>`
+    : '';
+
+  const descHtml = ex.short_description ? `<p class="gig-card__desc">${esc(ex.short_description)}</p>` : '';
+
+  const typeName = ex.exhibition_type ? exhTypeLabel(ex.exhibition_type) : null;
+  const freeform = Array.isArray(ex.tags) ? ex.tags : [];
+  const tagsHtml = (typeName || freeform.length > 0)
+    ? `<div class="gig-card__tags">
+        ${typeName ? `<span class="tag">${esc(typeName)}</span>` : ''}
+        ${freeform.map(t => `<span class="tag tag--neutral">${esc(t)}</span>`).join('')}
+      </div>`
+    : '';
+
+  const visitUrl  = ex.website || ex.venue?.website || '';
+  const visitPill = visitUrl
+    ? `<a class="gig-card__ticket-pill" href="${esc(visitUrl)}" target="_blank" rel="noopener noreferrer">Visit ↗</a>`
+    : '';
+
+  const frontFooter = `
+    <div class="gig-card__footer">
+      <div class="gig-card__footer-row">
+        ${exhEntryMarkup(ex)}
+        ${visitPill}
+      </div>
+      ${ex.description ? `<button type="button" class="gig-card__read-more">Read more →</button>` : ''}
+    </div>`;
+
+  const backDesc = ex.description
+    ? `<div class="gig-card__back-desc">${esc(ex.description)}</div>`
+    : `<div class="gig-card__back-desc gig-card__back-desc--empty">No description added yet.</div>`;
+
+  const backMetaParts = [range];
+  if (ex.is_free) backMetaParts.push('Free entry');
+  else if (ex.entry_info) backMetaParts.push(ex.entry_info);
+
+  const backCta = visitUrl
+    ? `<a class="gig-card__back-cta" href="${esc(visitUrl)}" target="_blank" rel="noopener noreferrer">Visit website →</a>`
+    : '';
+
+  return `
+    <div class="exh-card gig-card">
+      <div class="gig-card__inner">
+        <div class="gig-card__front">
+          ${poster}
+          <div class="gig-card__body">
+            <div class="gig-card__meta">
+              <span>${esc(range)}</span>
+              <span class="exh-card__closing${soon ? ' exh-card__closing--soon' : ''}">${esc(closing)}</span>
+            </div>
+            <h2 class="gig-card__title">${esc(ex.title)}</h2>
+            ${venueHtml}
+            ${descHtml}
+            ${tagsHtml}
+            ${frontFooter}
+          </div>
+        </div>
+        <div class="gig-card__back">
+          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
+          <h3 class="gig-card__back-title">${esc(ex.title)}</h3>
+          <div class="gig-card__back-divider"></div>
+          ${backDesc}
+          <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
+          ${backCta}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* Open the exhibition in the shared #cal-modal, hero-expanding from the tapped
+   pin/card. Reuses the modal's existing outside-tap / Escape / flip handlers —
+   they key off .gig-card + MODAL_EL._activeGig.description, which this provides.
+   No holo shader mount: exhibitions carry no curator tier. */
+function openExhibitionModal(ex, originEl) {
+  if (originEl) {
+    const rect = originEl.getBoundingClientRect();
+    const ox = Math.round(((rect.left + rect.width  / 2) / window.innerWidth)  * 100);
+    const oy = Math.round(((rect.top  + rect.height / 2) / window.innerHeight) * 100);
+    MODAL_CARD.style.setProperty('--origin-x', `${ox}%`);
+    MODAL_CARD.style.setProperty('--origin-y', `${oy}%`);
+  } else {
+    MODAL_CARD.style.setProperty('--origin-x', '50%');
+    MODAL_CARD.style.setProperty('--origin-y', '50%');
+  }
+  MODAL_CARD.innerHTML = renderExhibitionModalCard(ex);
+  MODAL_EL.classList.remove('is-closing');
+  MODAL_EL.classList.add('is-open');
+  MODAL_EL._activeGig = ex;   // shared flip handler reads .description off this
+}
+
+/* Mini card for the chooser when a gallery shows 2+ exhibitions that day. */
+function renderExhibitionMini(ex) {
+  const posterSrc = imgUrl(ex.poster, { width: '320', height: '180', fit: 'contain' });
+  const imageHtml = posterSrc
+    ? `<img class="cal-day-card__img" src="${posterSrc}" alt="" loading="lazy">`
+    : `<div class="cal-day-card__img cal-day-card__img--placeholder">${esc((ex.title || '?').charAt(0).toUpperCase())}</div>`;
+  const venueName = ex.venue?.name ? esc(ex.venue.name) : '';
+  const meta = [fmtExhRange(ex.start_date, ex.end_date), ex.is_free ? 'Free' : (ex.entry_info || '')].filter(Boolean);
+  const metaHtml = meta.length
+    ? `<div class="cal-day-card__meta">${meta.map(m => `<span>${esc(m)}</span>`).join('<span class="cal-day-card__sep">·</span>')}</div>`
+    : '';
+  return `
+    <button class="cal-day-card" type="button" data-exh-id="${esc(String(ex.id))}">
+      <div class="cal-day-card__poster">${imageHtml}</div>
+      <div class="cal-day-card__body">
+        <div class="cal-day-card__title">${esc(ex.title)}</div>
+        ${venueName ? `<div class="cal-day-card__venue">${venueName}</div>` : ''}
+        ${metaHtml}
+      </div>
+    </button>`;
+}
+
+function openExhibitionVenueSheet(title, list) {
+  VENUE_TITLE.textContent = title;
+  VENUE_BODY.innerHTML = `<div class="map-venue-list">${list.map(renderExhibitionMini).join('')}</div>`;
+  VENUE_SHEET.classList.add('is-open');
+  VENUE_BD.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  VENUE_BODY.querySelectorAll('.cal-day-card[data-exh-id]').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const ex = list.find(e => String(e.id) === cardEl.dataset.exhId);
+      if (!ex) return;
+      openExhibitionModal(ex, cardEl);
+      closeVenueSheet();
+    });
+  });
+}
+
+function openExhibitionPin(pin, markerEl) {
+  if (pin.gigs.length === 1) openExhibitionModal(pin.gigs[0], markerEl);
+  else openExhibitionVenueSheet(pin.venueName || 'Gallery', pin.gigs);
+}
+
+async function fetchExhibitionsDay(iso) {
+  if (state.exhibitionsByDay.has(iso)) return state.exhibitionsByDay.get(iso);
+  const list = (await fetchExhibitions({ onDate: iso }))
+    .map(ex => { ex.venue = publicVenue(ex.venue); return ex; });
+  state.exhibitionsByDay.set(iso, list);
+  return list;
+}
+
+/* Exhibitions layer toggle — re-renders the current day's markers (no refetch). */
+if (EXH_TOGGLE) {
+  EXH_TOGGLE.addEventListener('click', () => {
+    state.showExhibitions = !state.showExhibitions;
+    EXH_TOGGLE.classList.toggle('is-active', state.showExhibitions);
+    EXH_TOGGLE.setAttribute('aria-pressed', String(state.showExhibitions));
+    if (state.day) renderMarkers(state.day);
+  });
+}
 
 /* ============================================================
    BOOT

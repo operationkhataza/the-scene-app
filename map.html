@@ -52,10 +52,17 @@
          day bar's height so the two never collide on narrow screens. -->
     <aside class="map-key" aria-label="Pin colour key">
       <div class="map-key__row"><span class="map-key__pin"></span>Listed</div>
-      <div class="map-key__row"><span class="map-key__pin map-key__pin--t1"></span>1 curator</div>
-      <div class="map-key__row"><span class="map-key__pin map-key__pin--t2"></span>2 curators</div>
-      <div class="map-key__row"><span class="map-key__pin map-key__pin--t3"></span>3+ curators</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t1"></span>2 curators</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t2"></span>3 curators</div>
+      <div class="map-key__row"><span class="map-key__pin map-key__pin--t3"></span>4+ curators</div>
+      <div class="map-key__row map-key__row--exhibition"><span class="map-key__pin map-key__pin--exhibition"></span>Exhibition</div>
     </aside>
+
+    <!-- Exhibitions layer toggle — blue pins are a separate family from the
+         tiered gig pins; this shows/hides them. Sits top-left, mirroring the key. -->
+    <button class="map-layer-toggle is-active" id="map-exhibition-toggle" type="button" aria-pressed="true" aria-label="Toggle exhibitions layer">
+      <span class="map-layer-toggle__dot" aria-hidden="true"></span>Exhibitions
+    </button>
 
     <!-- Bottom-centre status pills. Loading shows while a day fetches;
          the "missing" pill appears when some of the day's events have no

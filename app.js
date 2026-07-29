@@ -33,7 +33,7 @@ document.addEventListener('touchend', e => {
 import { API, apiGet, fetchFeatured } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
-  formatTime, dateForDayName, getParam, imgUrl
+  formatTime, dateForDayName, getParam, imgUrl, gigTier, curatorRank
 } from './utils.js';
 import { ICONS } from './icons.js';
 
@@ -836,13 +836,9 @@ function renderCard(gig, index) {
       </div>`
     : '';
 
-  // Curators — count determines card treatment (1=silver, 2=gold, 3+=holographic)
+  // Curators — count determines card treatment via gigTier (utils.js): 2=silver, 3=gold, 4+=holographic
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  const curatedLevel = TEST_HOLO ? 3
-                     : curators.length >= 3 ? 3
-                     : curators.length === 2 ? 2
-                     : curators.length === 1 ? 1
-                     : 0;
+  const curatedLevel = TEST_HOLO ? 3 : gigTier(gig);
   const curatorHtml = curators.length > 0
     ? `<div class="curators">
         <span class="curators__label">Selected by</span>
@@ -953,8 +949,9 @@ function renderCard(gig, index) {
                   rolling 7-day window). Empty days hidden.
    Single-day   → full-width vertical list of that day's gigs.
 
-   Curation level (1/2/3+) drives the holographic shader on each
-   card via data-curated — it does NOT affect card position.
+   Curation tier (see gigTier in utils.js) drives the holographic
+   shader on each card via data-curated — it does NOT affect card
+   position (that's curatorRank, also in utils.js).
    ============================================================ */
 
 /* Format a day strip header label.
@@ -970,20 +967,12 @@ function formatDayLabel(dateStr) {
   return `${dayName} · ${day} ${month}`;
 }
 
-/* Returns curation tier priority — higher = appears first.
-   3+ curators → 3 (rainbow holo), 2 → 2 (gold), 1 → 1 (silver), uncurated → 0
-   Matches exactly the curatedLevel logic in renderCard. */
-function curatorTier(gig) {
-  const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  const n = curators.length;
-  return n >= 3 ? 3 : n;
-}
-
-/* Sort by curation tier (highest first = rainbow first, then gold, then silver, then normal),
-   then chronologically by doors_time within each tier. */
+/* Sort by curator rank (highest first — see gigTier/curatorRank in utils.js;
+   a 1-curator event still outranks an uncurated one even though both render
+   plain), then chronologically by doors_time within each rank. */
 function sortByTime(gigs) {
   return [...gigs].sort((a, b) => {
-    const tierDiff = curatorTier(b) - curatorTier(a);
+    const tierDiff = curatorRank(b) - curatorRank(a);
     if (tierDiff !== 0) return tierDiff;
     const ta = a.doors_time || '';
     const tb = b.doors_time || '';
@@ -1218,7 +1207,7 @@ function renderFeaturedCard(gig) {
   // A featured whole run has no single date and no production-level tier
   // (curation is per-night), so it shows a date-range pill and no ring.
   const isRun = gig._isFeaturedRun;
-  const tier = isRun ? 0 : curatorTier(gig);
+  const tier = isRun ? 0 : gigTier(gig);
   const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
   const img = posterSrc
     ? `<img class="featured-card__img" src="${posterSrc}" alt="${esc(gig.title)} flyer" loading="lazy">`
@@ -1371,10 +1360,7 @@ function renderModalCard(gig) {
     : '';
 
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  const curatedLevel = curators.length >= 3 ? 3
-                     : curators.length === 2 ? 2
-                     : curators.length === 1 ? 1
-                     : 0;
+  const curatedLevel = TEST_HOLO ? 3 : gigTier(gig);
   const curatorHtml = curators.length > 0
     ? `<div class="curators">
         <span class="curators__label">Selected by</span>

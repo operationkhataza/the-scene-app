@@ -38,7 +38,7 @@ document.addEventListener('touchend', e => {
 import { API, apiGet, fetchFeatured } from './api.js';
 import {
   esc, isoDate, formatCardDate, formatLongDate,
-  formatTime, getParam, imgUrl
+  formatTime, getParam, imgUrl, gigTier
 } from './utils.js';
 import { ICONS } from './icons.js';
 
@@ -92,20 +92,7 @@ function formatMonth(d) {
   return d.toLocaleDateString('en-ZA', { month: 'long' });
 }
 
-/* ============================================================
-   TIER ASSIGNMENT — same rule as the gig guide:
-     3+ curators → Holographic (tier 3)
-     2 curators  → Gold        (tier 2)
-     1 curator   → Silver      (tier 1)
-     0 curators  → Uncurated   (tier 0)
-   ============================================================ */
-function gigTier(gig) {
-  const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  if (curators.length >= 3) return 3;
-  if (curators.length === 2) return 2;
-  if (curators.length === 1) return 1;
-  return 0;
-}
+// TIER ASSIGNMENT — gigTier is single-sourced in utils.js (2=silver, 3=gold, 4+=holo).
 
 /* ============================================================
    THEATRE PARENT-CHILD COALESCING — identical contract to app.js.
@@ -597,10 +584,7 @@ function renderModalCard(gig) {
 
   // Curators — exact match to app.js curatorHtml structure
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
-  const curatedLevel = curators.length >= 3 ? 3
-                     : curators.length === 2 ? 2
-                     : curators.length === 1 ? 1
-                     : 0;
+  const curatedLevel = gigTier(gig);
   const curatorHtml = curators.length > 0
     ? `<div class="curators">
         <span class="curators__label">Selected by</span>
