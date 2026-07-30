@@ -33,7 +33,12 @@ document.addEventListener('gesturechange', e => e.preventDefault(), { passive: f
 document.addEventListener('gestureend',    e => e.preventDefault(), { passive: false });
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => {
-  if (e.target.closest('#map-canvas')) return;   // let Leaflet handle map taps
+  // Leaflet owns map taps; buttons and links own their own clicks. Cancelling
+  // touchend on a control cancels the synthesised click with it, which is what
+  // made rapid day-chevron taps feel dead (every second tap inside 350ms was
+  // thrown away). Page zoom is already locked by the viewport meta and by
+  // html { touch-action: manipulation } — this guard is the third layer.
+  if (e.target.closest('#map-canvas, button, a, [role="button"], input, label')) return;
   const now = Date.now();
   if (now - lastTouchEnd < 350) e.preventDefault();
   lastTouchEnd = now;
@@ -63,11 +68,11 @@ const MISSING_LABEL   = document.getElementById('map-missing-label');
 const MISSING_DISMISS = document.getElementById('map-missing-dismiss');
 const MODAL_EL     = document.getElementById('cal-modal');
 const MODAL_CARD   = document.getElementById('cal-modal-card');
-const PROMO_BD     = document.getElementById('promoter-backdrop');
-const PROMO_SHEET  = document.getElementById('promoter-sheet');
-const PROMO_TITLE  = document.getElementById('promoter-sheet-title');
-const PROMO_BODY   = document.getElementById('promoter-sheet-body');
-const PROMO_CLOSE  = document.getElementById('promoter-sheet-close');
+const PROFILE_BD    = document.getElementById('profile-backdrop');
+const PROFILE_SHEET = document.getElementById('profile-sheet');
+const PROFILE_TITLE = document.getElementById('profile-sheet-title');
+const PROFILE_BODY  = document.getElementById('profile-sheet-body');
+const PROFILE_CLOSE = document.getElementById('profile-sheet-close');
 const VENUE_BD     = document.getElementById('venue-backdrop');
 const VENUE_SHEET  = document.getElementById('venue-sheet');
 const VENUE_TITLE  = document.getElementById('venue-sheet-title');
@@ -150,6 +155,7 @@ async function fetchDay(iso) {
     'event_category.name',
     'event_category.slug',
     'artists.artists_id.name',
+    'curators.curators_id.id',      // needed by the curator profile sheet
     'curators.curators_id.name',
     'curators.curators_id.logo',
     'promoters.promoters_id.id',
@@ -336,7 +342,16 @@ function renderMarkers(iso) {
   // whose gigs are all unmapped shows the pill instead — the night exists, the
   // map just can't place it yet.
   if (gigs.length === 0 && rawExhibitions.length === 0) {
-    showEmpty('Nothing on this night', 'Try another day — the chevrons up top step through the week.');
+    // Date-aware wording: "check back" reads as nonsense on a day that's
+    // already passed, so past and future/today get their own copy. ISO date
+    // strings compare lexically, so no extra parsing is needed here.
+    const past = iso < isoDate(new Date());
+    showEmpty(
+      past ? 'Nothing was listed' : 'Nothing listed yet',
+      past
+        ? 'No events made the map on this day.'
+        : 'No events on the map for this day. New listings land through the week.'
+    );
   } else {
     hideEmpty();
   }
@@ -399,7 +414,20 @@ async function setDay(iso) {
   window.history.replaceState({}, '', url);
 
   const cached = state.gigsByDay.has(iso) && state.exhibitionsByDay.has(iso);
-  if (!cached) LOADING_EL.hidden = false;
+  if (!cached) {
+    LOADING_EL.hidden = false;
+    // Clear the OUTGOING day's state the instant a real fetch starts, so a tap
+    // is visibly acknowledged straight away instead of leaving the previous
+    // day's pins/pill/empty-panel on screen for the whole await (that dead
+    // feeling is what drove rapid re-tapping in the first place). Skipped for
+    // a cached day, which resolves on a microtask with no paint in between —
+    // clearing there would just flash a blank map on fast repeat visits.
+    hideEmpty();
+    markerLayer.clearLayers();
+    exhibitionLayer.clearLayers();
+    state.unmapped = [];
+    MISSING_EL.hidden = true;
+  }
   try {
     // Exhibitions fetch never rejects (api.js swallows its errors → []), so a
     // failed exhibitions read can't take the gig map down; only fetchDay throws.
@@ -410,7 +438,9 @@ async function setDay(iso) {
       state.gigsByDay.delete(iso);   // allow a retry on the next visit
       LOADING_EL.hidden = true;
       markerLayer.clearLayers();
-      showEmpty('Couldn’t load events', 'Check your connection and step to another day to retry.');
+      state.unmapped = [];
+      MISSING_EL.hidden = true;
+      showEmpty('Couldn’t load events', 'Check your connection, then tap the date above to try again.');
     }
     return;
   }
@@ -529,7 +559,7 @@ function renderModalCard(gig) {
           const logoEl = logo
             ? `<img class="curator-badge__logo" src="${logo}" alt="">`
             : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<span class="curator-badge">${logoEl}${esc(c.name)}</span>`;
+          return `<button class="curator-badge" type="button" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</button>`;
         }).join('')}
       </div>`
     : '';
@@ -552,7 +582,7 @@ function renderModalCard(gig) {
           const logoEl = logoSrc
             ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
             : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<button class="gig-card__promoter-link" type="button" data-promoter-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
+          return `<button class="gig-card__promoter-link" type="button" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
         }).join('')
       }</p>`
     : '';
@@ -688,7 +718,7 @@ MODAL_CARD.addEventListener('click', e => {
 // Close on Escape — only if no sheet is stacked on top
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape'
-      && !PROMO_SHEET.classList.contains('is-open')
+      && !PROFILE_SHEET.classList.contains('is-open')
       && !VENUE_SHEET.classList.contains('is-open')) closeCardModal();
 });
 
@@ -697,7 +727,7 @@ MODAL_CARD.addEventListener('click', e => {
   if (!MODAL_EL.classList.contains('is-open')) return;
   if (e.target.closest('.gig-card__back-cta'))   return;
   if (e.target.closest('.gig-card__ticket-pill')) return;
-  if (e.target.closest('.gig-card__promoter-link')) return;
+  if (e.target.closest('[data-profile-kind]'))    return;  // promoter + curator pills
 
   const inner    = MODAL_CARD.querySelector('.gig-card__inner');
   const closeBtn = e.target.closest('.gig-card__close');
@@ -816,54 +846,98 @@ MISSING_DISMISS.addEventListener('click', () => {
 });
 
 /* ============================================================
-   PROMOTER PROFILE SHEET — mirrors calendar.js. Opens on top of
-   the event modal when a promoter pill is tapped.
+   PROFILE SHEET — mirrors calendar.js. Opens on top of the event
+   modal when a promoter or curator pill is tapped.
+
+   One sheet serves both types; everything that differs lives in
+   PROFILE_KINDS, and data-mode on the sheet picks the accent colour.
    ============================================================ */
-async function fetchPromoter(id) {
-  const json = await apiGet(
-    `/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
-  );
+
+// Directus curator_type values → the label shown above the name.
+// Promoters have no equivalent field, so their cards omit the line.
+const CURATOR_TYPE_LABELS = {
+  individual: 'Curator',    publication: 'Publication',
+  collective: 'Collective', other:       'Curator'
+};
+
+const PROFILE_KINDS = {
+  promoter: {
+    label:       'Promoter',
+    collection:  'promoters',
+    fields:      'id,name,bio,profile_image,website,social_links',
+    eventFilter: 'filter[promoters][promoters_id][_eq]',
+    avatar:      p => p.profile_image,
+    role:        () => null,
+    errorText:   "Couldn't load promoter details."
+  },
+  curator: {
+    label:       'Curator',
+    collection:  'curators',
+    fields:      'id,name,bio,profile_image,logo,website,social_links,curator_type',
+    eventFilter: 'filter[curators][curators_id][_eq]',
+    // logo is required on curators, profile_image optional — so fall back.
+    avatar:      c => c.profile_image || c.logo,
+    role:        c => CURATOR_TYPE_LABELS[c.curator_type] || null,
+    errorText:   "Couldn't load curator details."
+  }
+};
+
+async function fetchProfile(kind, id) {
+  const cfg  = PROFILE_KINDS[kind];
+  const json = await apiGet(`/items/${cfg.collection}/${id}?fields=${cfg.fields}`);
   return json.data;
 }
 
-async function fetchPromoterEvents(promoterId) {
+async function fetchProfileEvents(kind, id) {
+  const cfg   = PROFILE_KINDS[kind];
   const today = isoDate(new Date());
   const params = new URLSearchParams({
-    'filter[promoters][promoters_id][_eq]': promoterId,
-    'filter[status][_eq]':                 'published',
-    'filter[date][_gte]':                  today,
-    'fields':                              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
-    'sort':                                'date,doors_time',
-    'limit':                               '20'
+    [cfg.eventFilter]:     id,
+    'filter[status][_eq]': 'published',
+    'filter[date][_gte]':  today,
+    'fields':              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
+    'sort':                'date,doors_time',
+    'limit':               '20'
   });
   const json = await apiGet('/items/events', params);
   // This sheet bypasses resolveGig, so blank pending venues here too.
   return (json.data || []).map(ev => { ev.venue = publicVenue(ev.venue); return ev; });
 }
 
-function renderPromoterProfile(promoter, events) {
-  const avatarSrc  = promoter.profile_image
-    ? imgUrl(promoter.profile_image, { width: '120', height: '120', fit: 'cover' })
+function renderProfile(kind, entity, events) {
+  const cfg = PROFILE_KINDS[kind];
+
+  const avatarImg  = cfg.avatar(entity);
+  const avatarSrc  = avatarImg
+    ? imgUrl(avatarImg, { width: '120', height: '120', fit: 'cover' })
     : null;
   const avatarHtml = avatarSrc
-    ? `<img class="promoter-sheet__avatar" src="${avatarSrc}" alt="${esc(promoter.name)} logo">`
-    : `<div class="promoter-sheet__avatar promoter-sheet__avatar--placeholder">${esc(promoter.name.charAt(0).toUpperCase())}</div>`;
+    ? `<img class="profile-sheet__avatar" src="${avatarSrc}" alt="${esc(entity.name)} logo">`
+    : `<div class="profile-sheet__avatar profile-sheet__avatar--placeholder">${esc(entity.name.charAt(0).toUpperCase())}</div>`;
 
-  const bioHtml     = promoter.bio
-    ? `<p class="promoter-sheet__bio">${esc(promoter.bio)}</p>`
-    : '';
-  const websiteHtml = promoter.website
-    ? `<a class="promoter-sheet__website" href="${esc(promoter.website)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+  // Role marker — curator_type for curators, nothing for promoters
+  const roleLabel = cfg.role(entity);
+  const roleHtml  = roleLabel
+    ? `<p class="profile-sheet__role">${esc(roleLabel)}</p>`
     : '';
 
+  const bioHtml     = entity.bio
+    ? `<p class="profile-sheet__bio">${esc(entity.bio)}</p>`
+    : '';
+  const websiteHtml = entity.website
+    ? `<a class="profile-sheet__website" href="${esc(entity.website)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+    : '';
+
+  // social_links key casing differs by collection — promoters store
+  // Platforms/URL, curators store platform/url — so read both.
   const PLATFORM_LABELS = {
     instagram: 'Instagram', facebook: 'Facebook',
     x: 'X', youtube: 'YouTube', tiktok: 'TikTok',
     soundcloud: 'SoundCloud', spotify: 'Spotify', bandcamp: 'Bandcamp'
   };
-  const socials    = Array.isArray(promoter.social_links) ? promoter.social_links : [];
+  const socials    = Array.isArray(entity.social_links) ? entity.social_links : [];
   const socialHtml = socials.length > 0
-    ? `<div class="promoter-sheet__socials">
+    ? `<div class="profile-sheet__socials">
         ${socials.map(s => {
           const rawPlatform = s.Platforms || s.platform || '';
           const url         = s.URL       || s.url      || '';
@@ -871,41 +945,42 @@ function renderPromoterProfile(promoter, events) {
           const label = PLATFORM_LABELS[rawPlatform.toLowerCase()]
             || (rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1))
             || url;
-          return `<a class="promoter-sheet__social-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+          return `<a class="profile-sheet__social-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
         }).filter(Boolean).join('')}
       </div>`
     : '';
 
   const eventsHtml = events.length > 0
-    ? `<div class="promoter-sheet__events">
-        <p class="promoter-sheet__events-title">Upcoming Events</p>
-        <ul class="promoter-sheet__event-list">
+    ? `<div class="profile-sheet__events">
+        <p class="profile-sheet__events-title">Upcoming Events</p>
+        <ul class="profile-sheet__event-list">
           ${events.map(ev => {
             const timeStr   = formatTime(ev.doors_time);
             const meta      = [formatCardDate(ev.date), timeStr, ev.venue?.name].filter(Boolean).join(' · ');
             const thumbSrc  = ev.poster ? imgUrl(ev.poster, { width: '144', fit: 'contain' }) : null;
             const thumbHtml = thumbSrc
-              ? `<img class="promoter-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
-              : `<div class="promoter-sheet__event-thumb promoter-sheet__event-thumb--placeholder"></div>`;
+              ? `<img class="profile-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
+              : `<div class="profile-sheet__event-thumb profile-sheet__event-thumb--placeholder"></div>`;
             const textHtml  = `
-              <div class="promoter-sheet__event-text">
-                <div class="promoter-sheet__event-title">${esc(ev.title)}</div>
-                <div class="promoter-sheet__event-meta">${esc(meta)}</div>
+              <div class="profile-sheet__event-text">
+                <div class="profile-sheet__event-title">${esc(ev.title)}</div>
+                <div class="profile-sheet__event-meta">${esc(meta)}</div>
               </div>`;
             return ev.ticket_url
-              ? `<li class="promoter-sheet__event-item"><a href="${esc(ev.ticket_url)}" target="_blank" rel="noopener noreferrer" class="promoter-sheet__event-link">${thumbHtml}${textHtml}</a></li>`
-              : `<li class="promoter-sheet__event-item">${thumbHtml}${textHtml}</li>`;
+              ? `<li class="profile-sheet__event-item"><a href="${esc(ev.ticket_url)}" target="_blank" rel="noopener noreferrer" class="profile-sheet__event-link">${thumbHtml}${textHtml}</a></li>`
+              : `<li class="profile-sheet__event-item">${thumbHtml}${textHtml}</li>`;
           }).join('')}
         </ul>
       </div>`
-    : `<p class="promoter-sheet__no-events">No upcoming events scheduled.</p>`;
+    : `<p class="profile-sheet__no-events">No upcoming events scheduled.</p>`;
 
   return `
-    <div class="promoter-sheet">
-      <div class="promoter-sheet__header">
-        <div class="promoter-sheet__accent-bg"></div>
+    <div class="profile-sheet">
+      <div class="profile-sheet__header">
+        <div class="profile-sheet__accent-bg"></div>
         ${avatarHtml}
-        <h3 class="promoter-sheet__name">${esc(promoter.name)}</h3>
+        ${roleHtml}
+        <h3 class="profile-sheet__name">${esc(entity.name)}</h3>
         ${bioHtml}
         ${websiteHtml}
         ${socialHtml}
@@ -914,45 +989,50 @@ function renderPromoterProfile(promoter, events) {
     </div>`;
 }
 
-function openPromoterSheet(promoterId) {
-  PROMO_TITLE.textContent = 'Loading…';
-  PROMO_BODY.innerHTML    = `<div class="promoter-sheet__loading"><div class="spinner"></div></div>`;
-  PROMO_SHEET.classList.add('is-open');
-  PROMO_BD.classList.add('is-open');
+function openProfileSheet(kind, id) {
+  const cfg = PROFILE_KINDS[kind];
+  if (!cfg) return;
+
+  // data-mode drives the accent: green for promoter, cyan for curator.
+  PROFILE_SHEET.setAttribute('data-mode', kind);
+  PROFILE_TITLE.textContent = 'Loading…';
+  PROFILE_BODY.innerHTML    = `<div class="profile-sheet__loading"><div class="spinner"></div></div>`;
+  PROFILE_SHEET.classList.add('is-open');
+  PROFILE_BD.classList.add('is-open');
   document.body.style.overflow = 'hidden';
 
-  fetchPromoter(promoterId)
-    .then(async promoter => {
-      PROMO_TITLE.textContent = promoter.name;
+  fetchProfile(kind, id)
+    .then(async entity => {
+      PROFILE_TITLE.textContent = entity.name;
       let events = [];
-      try { events = await fetchPromoterEvents(promoterId); } catch (_) {}
-      PROMO_BODY.innerHTML = renderPromoterProfile(promoter, events);
+      try { events = await fetchProfileEvents(kind, id); } catch (_) {}
+      PROFILE_BODY.innerHTML = renderProfile(kind, entity, events);
     })
     .catch(err => {
-      console.error('[Scene] fetchPromoter failed:', err);
-      PROMO_BODY.innerHTML    = `<div class="state" style="padding:2rem 1rem;"><p class="state__text">Couldn't load promoter details.</p></div>`;
-      PROMO_TITLE.textContent = 'Promoter';
+      console.error(`[Scene] fetchProfile(${kind}) failed:`, err);
+      PROFILE_BODY.innerHTML    = `<div class="state" style="padding:2rem 1rem;"><p class="state__text">${cfg.errorText}</p></div>`;
+      PROFILE_TITLE.textContent = cfg.label;
     });
 }
 
-function closePromoterSheet() {
-  PROMO_SHEET.classList.remove('is-open');
-  PROMO_BD.classList.remove('is-open');
+function closeProfileSheet() {
+  PROFILE_SHEET.classList.remove('is-open');
+  PROFILE_BD.classList.remove('is-open');
   document.body.style.overflow = '';
 }
 
-// Tap a promoter pill inside the event modal card
+// Tap a promoter or curator pill inside the event modal card
 MODAL_CARD.addEventListener('click', e => {
-  const pill = e.target.closest('.gig-card__promoter-link[data-promoter-id]');
+  const pill = e.target.closest('[data-profile-kind][data-profile-id]');
   if (!pill) return;
   e.stopPropagation();
-  openPromoterSheet(Number(pill.dataset.promoterId));
+  openProfileSheet(pill.dataset.profileKind, Number(pill.dataset.profileId));
 });
 
-PROMO_CLOSE.addEventListener('click', closePromoterSheet);
-PROMO_BD.addEventListener('click', closePromoterSheet);
+PROFILE_CLOSE.addEventListener('click', closeProfileSheet);
+PROFILE_BD.addEventListener('click', closeProfileSheet);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && PROMO_SHEET.classList.contains('is-open')) closePromoterSheet();
+  if (e.key === 'Escape' && PROFILE_SHEET.classList.contains('is-open')) closeProfileSheet();
 });
 
 /* ============================================================

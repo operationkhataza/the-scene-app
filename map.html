@@ -98,15 +98,15 @@
     <div class="cal-modal__card" id="cal-modal-card"></div>
   </div>
 
-  <!-- Promoter profile sheet — slides up over the event modal when a
-       promoter pill is tapped. Same markup as calendar.html. -->
-  <div class="sheet-backdrop" id="promoter-backdrop" aria-hidden="true"></div>
-  <aside class="sheet" id="promoter-sheet" data-mode="promoter"
-         role="dialog" aria-modal="true" aria-labelledby="promoter-sheet-title">
+  <!-- Profile sheet — slides up over the event modal when a promoter or
+       curator pill is tapped. Same markup as calendar.html. -->
+  <div class="sheet-backdrop" id="profile-backdrop" aria-hidden="true"></div>
+  <aside class="sheet" id="profile-sheet"
+         role="dialog" aria-modal="true" aria-labelledby="profile-sheet-title">
     <div class="sheet__grip" aria-hidden="true"></div>
     <header class="sheet__header">
-      <h2 class="sheet__title" id="promoter-sheet-title">Promoter</h2>
-      <button class="sheet__close" id="promoter-sheet-close" type="button" aria-label="Close">
+      <h2 class="sheet__title" id="profile-sheet-title">Profile</h2>
+      <button class="sheet__close" id="profile-sheet-close" type="button" aria-label="Close">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
              fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -114,7 +114,7 @@
         </svg>
       </button>
     </header>
-    <div class="sheet__body" id="promoter-sheet-body"></div>
+    <div class="sheet__body" id="profile-sheet-body"></div>
   </aside>
 
   <!-- Venue chooser sheet — opens when a marker holds 2+ events that night

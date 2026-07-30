@@ -83,7 +83,7 @@ const state = {
   selectedPriceMax: null,  // null = no filter; number = show gigs priced ≤ this value
   searchQuery: '',         // name search string
   currentSheet: null,      // 'type' | 'area' | 'price' | null
-  activeSheetContent: null, // 'filter' | 'promoter' | null
+  activeSheetContent: null, // 'filter' | 'promoter' | 'curator' | null
   sheetDraft: new Set(),   // working copy while sheet open (type/area)
   sheetDraftPrice: null,   // working copy while price sheet open
 };
@@ -301,58 +301,102 @@ function closeSheet() {
 }
 
 /* ============================================================
-   PROMOTER SHEET — lazy-loaded profile bottom sheet
+   PROFILE SHEET — lazy-loaded promoter / curator bottom sheet
+
+   One sheet serves both entity types. Everything that differs between
+   them lives in PROFILE_KINDS below; the fetch/render/open functions
+   are entity-agnostic, so adding a third type means adding a config
+   entry plus a CSS accent-token pair, not another copy of this block.
    ============================================================ */
 
-async function fetchPromoter(id) {
-  const json = await apiGet(
-    `/items/promoters/${id}?fields=id,name,bio,profile_image,website,social_links`
-  );
+// Directus curator_type values → the label shown above the name.
+// Promoters have no equivalent field, so their cards omit the line.
+const CURATOR_TYPE_LABELS = {
+  individual: 'Curator',    publication: 'Publication',
+  collective: 'Collective', other:       'Curator'
+};
+
+const PROFILE_KINDS = {
+  promoter: {
+    label:       'Promoter',
+    collection:  'promoters',
+    fields:      'id,name,bio,profile_image,website,social_links',
+    eventFilter: 'filter[promoters][promoters_id][_eq]',
+    avatar:      p => p.profile_image,
+    role:        () => null,
+    errorText:   "Couldn't load promoter details."
+  },
+  curator: {
+    label:       'Curator',
+    collection:  'curators',
+    fields:      'id,name,bio,profile_image,logo,website,social_links,curator_type',
+    eventFilter: 'filter[curators][curators_id][_eq]',
+    // logo is required on curators, profile_image optional — so fall back.
+    avatar:      c => c.profile_image || c.logo,
+    role:        c => CURATOR_TYPE_LABELS[c.curator_type] || null,
+    errorText:   "Couldn't load curator details."
+  }
+};
+
+async function fetchProfile(kind, id) {
+  const cfg  = PROFILE_KINDS[kind];
+  const json = await apiGet(`/items/${cfg.collection}/${id}?fields=${cfg.fields}`);
   return json.data;
 }
 
-async function fetchPromoterEvents(promoterId) {
+async function fetchProfileEvents(kind, id) {
+  const cfg   = PROFILE_KINDS[kind];
   const today = isoDate(new Date());
   const params = new URLSearchParams({
-    'filter[promoters][promoters_id][_eq]': promoterId,
-    'filter[status][_eq]':                 'published',
-    'filter[date][_gte]':                  today,
-    'fields':                              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
-    'sort':                                'date,doors_time',
-    'limit':                               '20'
+    [cfg.eventFilter]:     id,
+    'filter[status][_eq]': 'published',
+    'filter[date][_gte]':  today,
+    'fields':              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
+    'sort':                'date,doors_time',
+    'limit':               '20'
   });
   const json = await apiGet('/items/events', params);
   // This sheet bypasses resolveGig, so blank pending venues here too.
   return (json.data || []).map(ev => { ev.venue = publicVenue(ev.venue); return ev; });
 }
 
-function renderPromoterProfile(promoter, events) {
+function renderProfile(kind, entity, events) {
+  const cfg = PROFILE_KINDS[kind];
+
   // Avatar — image or initial placeholder
-  const avatarSrc = promoter.profile_image
-    ? imgUrl(promoter.profile_image, { width: '120', height: '120', fit: 'cover' })
+  const avatarImg = cfg.avatar(entity);
+  const avatarSrc = avatarImg
+    ? imgUrl(avatarImg, { width: '120', height: '120', fit: 'cover' })
     : null;
   const avatarHtml = avatarSrc
-    ? `<img class="promoter-sheet__avatar" src="${avatarSrc}" alt="${esc(promoter.name)} logo">`
-    : `<div class="promoter-sheet__avatar promoter-sheet__avatar--placeholder">${esc(promoter.name.charAt(0).toUpperCase())}</div>`;
+    ? `<img class="profile-sheet__avatar" src="${avatarSrc}" alt="${esc(entity.name)} logo">`
+    : `<div class="profile-sheet__avatar profile-sheet__avatar--placeholder">${esc(entity.name.charAt(0).toUpperCase())}</div>`;
 
-  const bioHtml = promoter.bio
-    ? `<p class="promoter-sheet__bio">${esc(promoter.bio)}</p>`
+  // Role marker — curator_type for curators, nothing for promoters
+  const roleLabel = cfg.role(entity);
+  const roleHtml  = roleLabel
+    ? `<p class="profile-sheet__role">${esc(roleLabel)}</p>`
     : '';
 
-  const websiteHtml = promoter.website
-    ? `<a class="promoter-sheet__website" href="${esc(promoter.website)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+  const bioHtml = entity.bio
+    ? `<p class="profile-sheet__bio">${esc(entity.bio)}</p>`
     : '';
 
-  // social_links uses capitalised Directus field keys: Platforms + URL
+  const websiteHtml = entity.website
+    ? `<a class="profile-sheet__website" href="${esc(entity.website)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+    : '';
+
+  // social_links key casing differs by collection — promoters store
+  // Platforms/URL, curators store platform/url — so read both.
   // Map stored values back to display labels (stored as lowercase slugs)
   const PLATFORM_LABELS = {
     instagram: 'Instagram', facebook: 'Facebook',
     x: 'X', youtube: 'YouTube', tiktok: 'TikTok',
     soundcloud: 'SoundCloud', spotify: 'Spotify', bandcamp: 'Bandcamp'
   };
-  const socials = Array.isArray(promoter.social_links) ? promoter.social_links : [];
+  const socials = Array.isArray(entity.social_links) ? entity.social_links : [];
   const socialHtml = socials.length > 0
-    ? `<div class="promoter-sheet__socials">
+    ? `<div class="profile-sheet__socials">
         ${socials.map(s => {
           const rawPlatform = s.Platforms || s.platform || '';
           const url         = s.URL      || s.url      || '';
@@ -360,42 +404,43 @@ function renderPromoterProfile(promoter, events) {
           const label = PLATFORM_LABELS[rawPlatform.toLowerCase()]
             || (rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1))
             || url;
-          return `<a class="promoter-sheet__social-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+          return `<a class="profile-sheet__social-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
         }).filter(Boolean).join('')}
       </div>`
     : '';
 
   // Upcoming events list — each item is a thumbnail + text row
   const eventsHtml = events.length > 0
-    ? `<div class="promoter-sheet__events">
-        <p class="promoter-sheet__events-title">Upcoming Events</p>
-        <ul class="promoter-sheet__event-list">
+    ? `<div class="profile-sheet__events">
+        <p class="profile-sheet__events-title">Upcoming Events</p>
+        <ul class="profile-sheet__event-list">
           ${events.map(ev => {
             const timeStr  = formatTime(ev.doors_time);
             const meta     = [formatCardDate(ev.date), timeStr, ev.venue?.name].filter(Boolean).join(' · ');
             const thumbSrc = ev.poster ? imgUrl(ev.poster, { width: '144', fit: 'contain' }) : null;
             const thumbHtml = thumbSrc
-              ? `<img class="promoter-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
-              : `<div class="promoter-sheet__event-thumb promoter-sheet__event-thumb--placeholder"></div>`;
+              ? `<img class="profile-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
+              : `<div class="profile-sheet__event-thumb profile-sheet__event-thumb--placeholder"></div>`;
             const textHtml  = `
-              <div class="promoter-sheet__event-text">
-                <div class="promoter-sheet__event-title">${esc(ev.title)}</div>
-                <div class="promoter-sheet__event-meta">${esc(meta)}</div>
+              <div class="profile-sheet__event-text">
+                <div class="profile-sheet__event-title">${esc(ev.title)}</div>
+                <div class="profile-sheet__event-meta">${esc(meta)}</div>
               </div>`;
             return ev.ticket_url
-              ? `<li class="promoter-sheet__event-item"><a href="${esc(ev.ticket_url)}" target="_blank" rel="noopener noreferrer" class="promoter-sheet__event-link">${thumbHtml}${textHtml}</a></li>`
-              : `<li class="promoter-sheet__event-item">${thumbHtml}${textHtml}</li>`;
+              ? `<li class="profile-sheet__event-item"><a href="${esc(ev.ticket_url)}" target="_blank" rel="noopener noreferrer" class="profile-sheet__event-link">${thumbHtml}${textHtml}</a></li>`
+              : `<li class="profile-sheet__event-item">${thumbHtml}${textHtml}</li>`;
           }).join('')}
         </ul>
       </div>`
-    : `<p class="promoter-sheet__no-events">No upcoming events scheduled.</p>`;
+    : `<p class="profile-sheet__no-events">No upcoming events scheduled.</p>`;
 
   return `
-    <div class="promoter-sheet">
-      <div class="promoter-sheet__header">
-        <div class="promoter-sheet__accent-bg"></div>
+    <div class="profile-sheet">
+      <div class="profile-sheet__header">
+        <div class="profile-sheet__accent-bg"></div>
         ${avatarHtml}
-        <h3 class="promoter-sheet__name">${esc(promoter.name)}</h3>
+        ${roleHtml}
+        <h3 class="profile-sheet__name">${esc(entity.name)}</h3>
         ${bioHtml}
         ${websiteHtml}
         ${socialHtml}
@@ -404,39 +449,43 @@ function renderPromoterProfile(promoter, events) {
     </div>`;
 }
 
-async function openPromoterSheet(promoterId) {
-  state.activeSheetContent = 'promoter';
-  SHEET.setAttribute('data-mode', 'promoter');
+async function openProfileSheet(kind, id) {
+  const cfg = PROFILE_KINDS[kind];
+  if (!cfg) return;
+
+  state.activeSheetContent = kind;
+  // data-mode drives the accent: green for promoter, cyan for curator.
+  SHEET.setAttribute('data-mode', kind);
 
   // Open immediately with skeleton so the sheet feels instant
   SHEET_TITLE.textContent = 'Loading…';
-  SHEET_BODY.innerHTML    = `<div class="promoter-sheet__loading"><div class="spinner"></div></div>`;
+  SHEET_BODY.innerHTML    = `<div class="profile-sheet__loading"><div class="spinner"></div></div>`;
   SHEET.classList.add('is-open');
   SHEET_BD.classList.add('is-open');
   document.body.style.overflow = 'hidden';
 
-  // Tier 1 — promoter metadata (fatal: nothing to show without this)
-  let promoter;
+  // Tier 1 — entity metadata (fatal: nothing to show without this)
+  let entity;
   try {
-    promoter = await fetchPromoter(promoterId);
+    entity = await fetchProfile(kind, id);
   } catch (err) {
-    console.error('[Scene] fetchPromoter failed:', err);
-    SHEET_BODY.innerHTML    = `<div class="state" style="padding: 2rem 1rem;"><p class="state__text">Couldn't load promoter details.</p></div>`;
-    SHEET_TITLE.textContent = 'Promoter';
+    console.error(`[Scene] fetchProfile(${kind}) failed:`, err);
+    SHEET_BODY.innerHTML    = `<div class="state" style="padding: 2rem 1rem;"><p class="state__text">${cfg.errorText}</p></div>`;
+    SHEET_TITLE.textContent = cfg.label;
     return;
   }
 
-  SHEET_TITLE.textContent = promoter.name;
+  SHEET_TITLE.textContent = entity.name;
 
   // Tier 2 — upcoming events (non-fatal: sheet still renders without them)
   let events = [];
   try {
-    events = await fetchPromoterEvents(promoterId);
+    events = await fetchProfileEvents(kind, id);
   } catch (err) {
-    console.warn('[Scene] fetchPromoterEvents failed — rendering without events list:', err);
+    console.warn(`[Scene] fetchProfileEvents(${kind}) failed — rendering without events list:`, err);
   }
 
-  SHEET_BODY.innerHTML = renderPromoterProfile(promoter, events);
+  SHEET_BODY.innerHTML = renderProfile(kind, entity, events);
 }
 
 function renderSheetOptions() {
@@ -632,6 +681,7 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
     'venue.status',
     'event_category',       // works for M2O (scalar) or M2M (array); accessor handles both
     'artists.artists_id.name',
+    'curators.curators_id.id',      // needed by the curator profile sheet
     'curators.curators_id.name',
     'curators.curators_id.logo',
     'promoters.promoters_id.id',
@@ -836,7 +886,8 @@ function renderCard(gig, index) {
       </div>`
     : '';
 
-  // Curators — count determines card treatment via gigTier (utils.js): 2=silver, 3=gold, 4+=holographic
+  // Curators — count determines card treatment via gigTier (utils.js): 2=silver, 3=gold, 4+=holographic.
+  // Each badge carries data-profile-kind/id so it opens the curator profile sheet.
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
   const curatedLevel = TEST_HOLO ? 3 : gigTier(gig);
   const curatorHtml = curators.length > 0
@@ -847,7 +898,7 @@ function renderCard(gig, index) {
           const logoEl = logo
             ? `<img class="curator-badge__logo" src="${logo}" alt="">`
             : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<span class="curator-badge">${logoEl}${esc(c.name)}</span>`;
+          return `<span class="curator-badge" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</span>`;
         }).join('')}
       </div>`
     : '';
@@ -870,7 +921,7 @@ function renderCard(gig, index) {
           const logoEl = logoSrc
             ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
             : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<span class="gig-card__promoter-link" data-promoter-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
+          return `<span class="gig-card__promoter-link" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
         }).join(', ')
       }</p>`
     : '';
@@ -1369,7 +1420,7 @@ function renderModalCard(gig) {
           const logoEl = logo
             ? `<img class="curator-badge__logo" src="${logo}" alt="">`
             : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<span class="curator-badge">${logoEl}${esc(c.name)}</span>`;
+          return `<span class="curator-badge" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</span>`;
         }).join('')}
       </div>`
     : '';
@@ -1391,7 +1442,7 @@ function renderModalCard(gig) {
           const logoEl = logoSrc
             ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
             : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<span class="gig-card__promoter-link" data-promoter-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
+          return `<span class="gig-card__promoter-link" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
         }).join(', ')
       }</p>`
     : '';
@@ -1525,7 +1576,7 @@ MODAL_CARD.addEventListener('click', e => {
   if (!MODAL_EL.classList.contains('is-open')) return;
   if (e.target.closest('.gig-card__back-cta'))      return;
   if (e.target.closest('.gig-card__ticket-pill'))   return;
-  if (e.target.closest('.gig-card__promoter-link')) return;
+  if (e.target.closest('[data-profile-kind]'))      return;  // promoter + curator pills
 
   const inner    = MODAL_CARD.querySelector('.gig-card__inner');
   const closeBtn = e.target.closest('.gig-card__close');
@@ -1547,13 +1598,13 @@ MODAL_CARD.addEventListener('click', e => {
   }
 });
 
-// Promoter pill inside the modal card — reuses the existing sheet-based
-// promoter profile (openPromoterSheet), same as the main feed.
+// Promoter / curator pill inside the modal card — reuses the existing
+// sheet-based profile (openProfileSheet), same as the main feed.
 MODAL_CARD.addEventListener('click', e => {
-  const pill = e.target.closest('.gig-card__promoter-link[data-promoter-id]');
+  const pill = e.target.closest('[data-profile-kind][data-profile-id]');
   if (!pill) return;
   e.stopPropagation();
-  openPromoterSheet(Number(pill.dataset.promoterId));
+  openProfileSheet(pill.dataset.profileKind, Number(pill.dataset.profileId));
 });
 
 /* ============================================================
@@ -1769,13 +1820,13 @@ if (SEARCH_CLEAR) {
     renderFromState();
   });
 }
-// Promoter link — delegated to LIST_EL because cards are built via innerHTML.
+// Promoter / curator pill — delegated to LIST_EL because cards are built via innerHTML.
 LIST_EL.addEventListener('click', e => {
-  const link = e.target.closest('.gig-card__promoter-link');
+  const link = e.target.closest('[data-profile-kind][data-profile-id]');
   if (!link) return;
   e.stopPropagation();
   e.preventDefault();
-  openPromoterSheet(Number(link.dataset.promoterId));
+  openProfileSheet(link.dataset.profileKind, Number(link.dataset.profileId));
 });
 
 /* ============================================================
@@ -1798,7 +1849,7 @@ function flipCard(inner, toBack) {
 LIST_EL.addEventListener('click', e => {
   if (e.target.closest('.gig-card__ticket-pill'))   return;
   if (e.target.closest('.gig-card__back-cta'))      return;
-  if (e.target.closest('.gig-card__promoter-link')) return;
+  if (e.target.closest('[data-profile-kind]'))      return;  // promoter + curator pills
 
   const closeBtn = e.target.closest('.gig-card__close');
   if (closeBtn) {

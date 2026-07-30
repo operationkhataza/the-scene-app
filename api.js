@@ -56,7 +56,7 @@ const FEATURED_EVENT_SUBFIELDS = [
   'venue.name', 'venue.location', 'venue.status',
   'event_category.id', 'event_category.name', 'event_category.slug',
   'artists.artists_id.name',
-  'curators.curators_id.name', 'curators.curators_id.logo',
+  'curators.curators_id.id', 'curators.curators_id.name', 'curators.curators_id.logo',
   'promoters.promoters_id.id', 'promoters.promoters_id.name', 'promoters.promoters_id.profile_image',
   // Theatre parent run — production-wide fields a night inherits (resolveGig coalesces).
   'parent_run.id', 'parent_run.status', 'parent_run.title', 'parent_run.slug',

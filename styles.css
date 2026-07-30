@@ -1129,18 +1129,26 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
   margin-right: 0.15rem;
   white-space: nowrap;
 }
+/* Clickable — opens the curator profile sheet. Rendered as a <span> in the
+   gig guide and a <button> in the calendar/map modals (mirroring the promoter
+   pill in each), so the button reset below keeps the two visually identical. */
 .curator-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   padding: 3px 12px 3px 3px;
+  margin: 0;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(51, 128, 193, 0.22);
+  font-family: inherit;
   font-size: 0.76rem;
   color: var(--text);
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
   box-shadow: 0 1px 3px rgba(51, 128, 193, 0.06);
   transition: border-color 0.15s, background 0.15s;
 }
@@ -1823,80 +1831,101 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
      · Curators  → cyan-blue accent  (--id-accent: var(--scene-cyan))
      · Promoters → success green     (--id-accent: var(--success))
    Used in three places:
-     1. Bottom-sheet profile  (.sheet[data-mode="promoter"])
+     1. Bottom-sheet profile  (.sheet[data-mode="promoter"|"curator"])
      2. Curator URL mode page header   (?curator=slug)
      3. Promoter URL mode page header  (?promoter=slug)
    The base navy gradient + corner-bloom geometry are identical;
    only the accent colour rotates.
    ============================================================ */
 
-/* ── 1. BOTTOM-SHEET PROMOTER CARD ───────────────────────────
-   The whole sheet flips to green dark mode when data-mode="promoter".
-   This includes the grip, header, close button, and body — there is
-   no light-on-dark seam between the sheet chrome and the card itself. */
-.sheet[data-mode="promoter"] {
+/* ── 1. BOTTOM-SHEET PROFILE CARD ────────────────────────────
+   The whole sheet flips to dark mode when data-mode is set. This
+   includes the grip, header, close button, and body — there is no
+   light-on-dark seam between the sheet chrome and the card itself.
+
+   Promoter and curator share every rule below; only the accent
+   rotates. Each mode sets the pair of accent tokens once, and every
+   descendant rule reads them rather than a literal colour:
+     --id-accent      the flat colour (borders, text, avatar ring)
+     --id-accent-rgb  the same colour as bare channels, so the blooms
+                      and washes can vary alpha via rgba(var(--…), a)
+   Adding a third entity type means adding one token pair, nothing more. */
+.sheet[data-mode="promoter"] { --id-accent: var(--success);    --id-accent-rgb:  34, 168, 116; }
+.sheet[data-mode="curator"]  { --id-accent: var(--scene-cyan); --id-accent-rgb:  75, 185, 208; }
+
+.sheet[data-mode="promoter"],
+.sheet[data-mode="curator"] {
   background: linear-gradient(155deg, var(--id-ink) 0%, var(--id-ink-deep) 100%);
   color: #fff;
-  border: 1px solid rgba(34, 168, 116, 0.20);
+  border: 1px solid rgba(var(--id-accent-rgb), 0.20);
   border-bottom: none;
   box-shadow:
     0 -8px 32px rgba(15, 26, 46, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-.sheet[data-mode="promoter"] .sheet__footer { display: none; }
-.sheet[data-mode="promoter"] .sheet__body   { padding: 0; }
-.sheet[data-mode="promoter"] .sheet__header {
+.sheet[data-mode="promoter"] .sheet__footer,
+.sheet[data-mode="curator"]  .sheet__footer { display: none; }
+.sheet[data-mode="promoter"] .sheet__body,
+.sheet[data-mode="curator"]  .sheet__body   { padding: 0; }
+.sheet[data-mode="promoter"] .sheet__header,
+.sheet[data-mode="curator"]  .sheet__header {
   background: transparent;
   border-bottom: 1px solid var(--id-rule-dark);
   -webkit-backdrop-filter: none;
           backdrop-filter: none;
 }
-.sheet[data-mode="promoter"] .sheet__title {
+.sheet[data-mode="promoter"] .sheet__title,
+.sheet[data-mode="curator"]  .sheet__title {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: var(--success);
+  color: var(--id-accent);
   background: none;
-  -webkit-text-fill-color: var(--success);
+  -webkit-text-fill-color: var(--id-accent);
 }
-.sheet[data-mode="promoter"] .sheet__close {
+.sheet[data-mode="promoter"] .sheet__close,
+.sheet[data-mode="curator"]  .sheet__close {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.85);
 }
-.sheet[data-mode="promoter"] .sheet__close:hover {
-  background: var(--success);
+.sheet[data-mode="promoter"] .sheet__close:hover,
+.sheet[data-mode="curator"]  .sheet__close:hover {
+  background: var(--id-accent);
   color: #0F1A2E;
-  border-color: var(--success);
+  border-color: var(--id-accent);
 }
-.sheet[data-mode="promoter"] .sheet__grip {
+.sheet[data-mode="promoter"] .sheet__grip,
+.sheet[data-mode="curator"]  .sheet__grip {
   background: rgba(255, 255, 255, 0.22);
 }
 
-.promoter-sheet__loading {
+.profile-sheet__loading {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 3rem 1rem;
 }
-.sheet[data-mode="promoter"] .promoter-sheet__loading .spinner {
+.sheet[data-mode="promoter"] .profile-sheet__loading .spinner,
+.sheet[data-mode="curator"]  .profile-sheet__loading .spinner {
   border-color: rgba(255, 255, 255, 0.22);
-  border-top-color: var(--success);
+  border-top-color: var(--id-accent);
 }
 
-/* Root container — locks the green accent for all descendant rules.
-   The surface always reads as a Scene promoter card. */
-.promoter-sheet {
-  --id-accent: var(--success);
+/* Root container. It deliberately does NOT declare --id-accent: a local
+   declaration would beat the inherited one and pin every card to a single
+   colour. The tokens come from the .sheet[data-mode] above, so this card
+   must always be rendered inside one. */
+.profile-sheet {
   display: flex;
   flex-direction: column;
   padding-bottom: calc(2rem + var(--safe-bot));
   color: #fff;
 }
 
-.promoter-sheet__header {
+.profile-sheet__header {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1910,55 +1939,57 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   border-bottom: 1px solid var(--id-rule-dark);
   background: transparent;
 }
-/* Top-right green radial bloom — the signature §9 treatment. The second,
+/* Top-right accent radial bloom — the signature §9 treatment. The second,
    smaller bloom in the lower-left is the secondary harmonic that gives
    the dark surface depth without making it busy. */
-.promoter-sheet__accent-bg {
+.profile-sheet__accent-bg {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 380px 300px at 88% 12%, rgba(34, 168, 116, 0.34), transparent 62%),
-    radial-gradient(ellipse 300px 240px at 12% 88%, rgba(34, 168, 116, 0.10), transparent 60%);
+    radial-gradient(ellipse 380px 300px at 88% 12%, rgba(var(--id-accent-rgb), 0.34), transparent 62%),
+    radial-gradient(ellipse 300px 240px at 12% 88%, rgba(var(--id-accent-rgb), 0.10), transparent 60%);
   opacity: 1;
   pointer-events: none;
 }
 
-.promoter-sheet__avatar {
+.profile-sheet__avatar {
   width: 88px;
   height: 88px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--success);
+  border: 3px solid var(--id-accent);
   flex-shrink: 0;
   position: relative;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 10px 30px rgba(0, 0, 0, 0.42);
 }
-.promoter-sheet__avatar--placeholder {
+.profile-sheet__avatar--placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--success);
+  background: var(--id-accent);
   color: #0F1A2E;
   font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-/* Role marker — small uppercase JetBrains Mono lozenge in promoter green */
-.promoter-sheet__role {
+/* Role marker — small uppercase JetBrains Mono lozenge in the entity accent.
+   Curators use it for curator_type (Publication / Collective / …); promoters
+   have no equivalent field, so their cards simply omit it. */
+.profile-sheet__role {
   font-family: var(--font-mono);
   font-size: 0.6rem;
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--success);
+  color: var(--id-accent);
   position: relative;
   margin: 0;
 }
 
-.promoter-sheet__name {
+.profile-sheet__name {
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -1967,7 +1998,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   margin: 0;
 }
 
-.promoter-sheet__bio {
+.profile-sheet__bio {
   font-size: 0.86rem;
   color: var(--id-on-dark);
   line-height: 1.55;
@@ -1976,17 +2007,17 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   position: relative;
 }
 
-/* Website + socials — green mono links on dark, no pill backgrounds
+/* Website + socials — accent mono links on dark, no pill backgrounds
    (the v3 pills were designed for light surfaces; here the dark background
    provides all the contrast the link needs). */
-.promoter-sheet__website,
-.promoter-sheet__social-link {
+.profile-sheet__website,
+.profile-sheet__social-link {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.10em;
-  color: var(--success);
+  color: var(--id-accent);
   text-decoration: none;
   position: relative;
   padding: 0;
@@ -1994,15 +2025,15 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   background: transparent;
   transition: opacity 0.15s;
 }
-.promoter-sheet__website:hover,
-.promoter-sheet__social-link:hover {
+.profile-sheet__website:hover,
+.profile-sheet__social-link:hover {
   background: transparent;
   border-color: transparent;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.promoter-sheet__socials {
+.profile-sheet__socials {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.1rem;
@@ -2011,37 +2042,37 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   margin-top: 0.35rem;
 }
 
-.promoter-sheet__events { padding: 0 1.25rem; }
+.profile-sheet__events { padding: 0 1.25rem; }
 
-.promoter-sheet__events-title {
+.profile-sheet__events-title {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--success);
+  color: var(--id-accent);
   padding: 1.25rem 0.25rem 0.75rem;
   margin: 0;
 }
 
-.promoter-sheet__event-list {
+.profile-sheet__event-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.promoter-sheet__event-item {
+.profile-sheet__event-item {
   border-top: 1px solid var(--id-rule-dark);
   padding: 0.75rem 0.25rem;
   display: flex;
   align-items: center;
   gap: 0.85rem;
 }
-.promoter-sheet__event-item:last-child {
+.profile-sheet__event-item:last-child {
   border-bottom: 1px solid var(--id-rule-dark);
 }
 
-.promoter-sheet__event-link {
+.profile-sheet__event-link {
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -2049,11 +2080,11 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   color: inherit;
   width: 100%;
 }
-.promoter-sheet__event-link:hover .promoter-sheet__event-title {
-  color: var(--success);
+.profile-sheet__event-link:hover .profile-sheet__event-title {
+  color: var(--id-accent);
 }
 
-.promoter-sheet__event-thumb {
+.profile-sheet__event-thumb {
   width: 72px;
   height: 40px;
   border-radius: 6px;
@@ -2062,16 +2093,16 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   background: rgba(255, 255, 255, 0.06);
   box-shadow: none;
 }
-.promoter-sheet__event-thumb--placeholder {
-  background: linear-gradient(135deg, rgba(34, 168, 116, 0.30), rgba(34, 168, 116, 0.10));
+.profile-sheet__event-thumb--placeholder {
+  background: linear-gradient(135deg, rgba(var(--id-accent-rgb), 0.30), rgba(var(--id-accent-rgb), 0.10));
 }
 
-.promoter-sheet__event-text {
+.profile-sheet__event-text {
   flex: 1;
   min-width: 0;
 }
 
-.promoter-sheet__event-title {
+.profile-sheet__event-title {
   font-size: 0.88rem;
   font-weight: 500;
   color: #fff;
@@ -2082,7 +2113,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   text-overflow: ellipsis;
 }
 
-.promoter-sheet__event-meta {
+.profile-sheet__event-meta {
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 500;
@@ -2091,7 +2122,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   font-variant-numeric: tabular-nums;
 }
 
-.promoter-sheet__no-events {
+.profile-sheet__no-events {
   font-size: 0.86rem;
   color: var(--id-on-dark-mut);
   text-align: center;
@@ -3205,11 +3236,12 @@ body.cal-promoter .cal-day__empty-sub {
      Close: card fades + scales down 130ms; backdrop fades 100ms
    ================================================================ */
 
-/* Promoter sheet must stack above the event modal in the calendar */
-#promoter-backdrop { z-index: 940; }
-#promoter-sheet    { z-index: 950; }
+/* The profile sheet (promoter or curator) must stack above the event modal
+   in the calendar and the map — it opens from a pill inside that modal. */
+#profile-backdrop { z-index: 940; }
+#profile-sheet    { z-index: 950; }
 
-/* Gig guide reuses one sheet (#sheet) for both filters and promoter info —
+/* Gig guide reuses one sheet (#sheet) for filters and profile info alike —
    it must also stack above the event modal there, same reasoning as above. */
 #sheet-backdrop { z-index: 940; }
 #sheet          { z-index: 950; }
