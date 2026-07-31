@@ -557,9 +557,9 @@ function renderModalCard(gig) {
         ${curators.map(c => {
           const logo = imgUrl(c.logo, { width: '60', height: '60', fit: 'cover' });
           const logoEl = logo
-            ? `<img class="curator-badge__logo" src="${logo}" alt="">`
-            : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<button class="curator-badge" type="button" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</button>`;
+            ? `<img class="entity-pill__logo" src="${logo}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</button>`;
         }).join('')}
       </div>`
     : '';
@@ -580,9 +580,9 @@ function renderModalCard(gig) {
             ? imgUrl(p.profile_image, { width: '40', height: '40', fit: 'cover' })
             : null;
           const logoEl = logoSrc
-            ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
-            : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<button class="gig-card__promoter-link" type="button" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
+            ? `<img class="entity-pill__logo" src="${logoSrc}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
         }).join('')
       }</p>`
     : '';

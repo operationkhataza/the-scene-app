@@ -887,7 +887,7 @@ function renderCard(gig, index) {
     : '';
 
   // Curators — count determines card treatment via gigTier (utils.js): 2=silver, 3=gold, 4+=holographic.
-  // Each badge carries data-profile-kind/id so it opens the curator profile sheet.
+  // Each pill carries data-profile-kind/id so it opens the curator profile sheet.
   const curators = (gig.curators || []).map(c => c.curators_id).filter(Boolean);
   const curatedLevel = TEST_HOLO ? 3 : gigTier(gig);
   const curatorHtml = curators.length > 0
@@ -896,9 +896,9 @@ function renderCard(gig, index) {
         ${curators.map(c => {
           const logo = imgUrl(c.logo, { width: '60', height: '60', fit: 'cover' });
           const logoEl = logo
-            ? `<img class="curator-badge__logo" src="${logo}" alt="">`
-            : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<span class="curator-badge" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</span>`;
+            ? `<img class="entity-pill__logo" src="${logo}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</button>`;
         }).join('')}
       </div>`
     : '';
@@ -919,9 +919,9 @@ function renderCard(gig, index) {
             ? imgUrl(p.profile_image, { width: '40', height: '40', fit: 'cover' })
             : null;
           const logoEl = logoSrc
-            ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
-            : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<span class="gig-card__promoter-link" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
+            ? `<img class="entity-pill__logo" src="${logoSrc}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
         }).join(', ')
       }</p>`
     : '';
@@ -1352,7 +1352,7 @@ function startFeaturedAutoscroll(track) {
    Ported from calendar.js's openCardModal/renderModalCard/closeCardModal —
    only reachable from a featured-carousel tap (the regular feed's gig
    cards flip in place instead, see CARD FLIP below). Uses app.js's own
-   gigCategoryNames()/promoter-pill conventions rather than calendar's.
+   gigCategoryNames()/entity-pill conventions rather than calendar's.
    No lazy-hydrate branch: fetchFeatured() (api.js) always loads
    `description` eagerly, so it's never undefined here.
    ============================================================ */
@@ -1418,9 +1418,9 @@ function renderModalCard(gig) {
         ${curators.map(c => {
           const logo = imgUrl(c.logo, { width: '60', height: '60', fit: 'cover' });
           const logoEl = logo
-            ? `<img class="curator-badge__logo" src="${logo}" alt="">`
-            : `<span class="curator-badge__logo curator-badge__logo--placeholder"></span>`;
-          return `<span class="curator-badge" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</span>`;
+            ? `<img class="entity-pill__logo" src="${logo}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="curator" data-profile-id="${c.id}">${logoEl}${esc(c.name)}</button>`;
         }).join('')}
       </div>`
     : '';
@@ -1440,9 +1440,9 @@ function renderModalCard(gig) {
             ? imgUrl(p.profile_image, { width: '40', height: '40', fit: 'cover' })
             : null;
           const logoEl = logoSrc
-            ? `<img class="promoter-pill__logo" src="${logoSrc}" alt="">`
-            : `<span class="promoter-pill__logo promoter-pill__logo--placeholder"></span>`;
-          return `<span class="gig-card__promoter-link" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</span>`;
+            ? `<img class="entity-pill__logo" src="${logoSrc}" alt="">`
+            : `<span class="entity-pill__logo entity-pill__logo--placeholder"></span>`;
+          return `<button class="entity-pill" type="button" data-profile-kind="promoter" data-profile-id="${p.id}">${logoEl}${esc(p.name)}</button>`;
         }).join(', ')
       }</p>`
     : '';
