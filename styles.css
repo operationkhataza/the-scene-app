@@ -10,21 +10,9 @@
    and holo-shader.js continue to work untouched.
    ============================================================ */
 
-:root {
-  /* ── Scene palette (from studiostylesheet) ── */
-  --scene-cyan:        #4BB9D0;
-  --scene-cyan-soft:   #9FDCE7;
-  --scene-cyan-wash:   #E4F5FA;
-  --scene-cyan-deep:   #2A9BB5;
-  --scene-blue:        #3380C1;
-  --scene-blue-soft:   #8FB5DB;
-  --scene-blue-wash:   #E8F0F9;
-  --scene-blue-deep:   #1E5E96;
-  --scene-gradient:    linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
-  --selected-bg:       linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
-  --selected-shadow:   0 4px 14px rgba(51, 128, 193, 0.32),
-                       inset 0 1px 0 rgba(255, 255, 255, 0.38);
+@import './base.css';
 
+:root {
   /* ── Legacy aliases — app.js & inline styles reach for these ── */
   --primary:       var(--scene-cyan);
   --secondary:     var(--scene-blue);
@@ -34,50 +22,26 @@
   --teal-dark:     var(--scene-blue);
   --teal-light:    var(--scene-cyan-wash);
 
-  --charcoal:      #15233D;
   --slate:         #2E3E5E;
-  --warm-grey:     #F4F7FB;
   --cream:         #FFFCF7;
-
-  --text:          #15233D;
-  --text-soft:     #2E3E5E;
-  --text-muted:    #6B7A95;
   --text-dim:      #A0ADC3;
-  --text-subtle:   #A0ADC3;
 
+  /* ── Guide-specific v4 reskin values ──
+     These intentionally sit ABOVE base.css's shared tokens (which hold the
+     Scene Studio / submission-form values of 0.14 / 0.08 / 20px / 40px-0.15).
+     Confirmed 2 Aug 2026: a deliberate design direction for the guide, not
+     drift — do not "fix" these to match the base. */
   --border:        rgba(51, 128, 193, 0.16);
   --border-sub:    rgba(51, 128, 193, 0.09);
-
-  /* ── Glass tokens ── */
-  --glass-bg:           rgba(255, 255, 255, 0.62);
-  --glass-bg-strong:    rgba(255, 255, 255, 0.78);
-  --glass-bg-soft:      rgba(255, 255, 255, 0.46);
-  --glass-border:       rgba(255, 255, 255, 0.82);
-  --glass-border-sub:   rgba(255, 255, 255, 0.48);
-  --glass-blur:         blur(16px) saturate(140%);
   --glass-blur-strong:  blur(22px) saturate(160%);
-
-  --radius-sm:   10px;
-  --radius-md:   18px;
-  --radius-lg:   24px;
-  --radius-xl:   32px;
-  --radius-pill: 999px;
-
-  --shadow-xs: 0 2px 8px rgba(51, 128, 193, 0.06);
-  --shadow-sm: 0 4px 18px rgba(51, 128, 193, 0.10),
-               inset 0 1px 0 rgba(255, 255, 255, 0.70);
   --shadow-md: 0 12px 36px rgba(51, 128, 193, 0.14),
                inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --shadow-lg: 0 28px 70px rgba(51, 128, 193, 0.22),
-               inset 0 1px 0 rgba(255, 255, 255, 0.90);
+
+  --glass-bg-soft:      rgba(255, 255, 255, 0.46);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
 
-  /* ── Functional palette · graphics manual §4 ──
-     Green is the promoter signal colour. Reserved for promoter pills,
-     promoter identity cards, and the promoter dark-mode surface. */
-  --success:     #22A874;
   --success-soft:rgba(34,168,116,0.10);
 
   /* ── Identity-card dark mode · graphics manual §9 ──
@@ -88,9 +52,6 @@
   --id-on-dark:       rgba(255,255,255,0.78);
   --id-on-dark-mut:   rgba(255,255,255,0.60);
   --id-rule-dark:     rgba(255,255,255,0.12);
-
-  --safe-top: env(safe-area-inset-top, 0);
-  --safe-bot: env(safe-area-inset-bottom, 0);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -642,14 +603,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .featured-carousel__star { color: var(--scene-blue); font-size: 0.82em; }
 .featured-carousel__star svg { width: 0.85em; height: 0.85em; display: block; }
 
-/* Lucide icons (icons.js) replacing emoji/symbol glyphs throughout the app. Any icon
-   without a more specific sizing rule above falls back to 1em, inheriting whatever
-   font-size its container already used for the glyph it replaces (e.g. .suggest-trigger-btn,
-   .add-tier-btn, .venue-option.is-add, .artist-option.is-new are already font-size-driven
-   flex containers, so this alone is enough — no bespoke rule needed per class). Scoped to
-   [aria-hidden="true"] so it can't touch the pre-existing hand-rolled chevron/search/close
-   icons, which are sized explicitly above and don't carry that attribute. */
-svg[aria-hidden="true"] { width: 1em; height: 1em; flex-shrink: 0; }
+/* The app-wide svg[aria-hidden="true"] icon fallback now lives in base.css, imported
+   at the top of this file — see that file's comment for the source-order rationale.
+   (Was duplicated here until 2 Aug 2026; this is the fix for that duplication.) */
 .featured-carousel__track {
   display: flex;
   gap: 0.85rem;

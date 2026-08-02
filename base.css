@@ -1,0 +1,92 @@
+/* ============================================================
+   THE SCENE — SHARED CSS BASE
+   ────────────────────────────────────────────────────────────
+   Imported by BOTH Scene App stylesheets:
+     · styles.css                      (gig guide, calendar, map, exhibitions)
+     · event-submission-stylesheet.css (public submission form)
+
+   WHAT BELONGS HERE
+     · Design tokens whose value is identical on every page.
+     · Global safety-net rules that must be true on every page.
+
+   WHAT DOES NOT BELONG HERE
+     · The reset, `html`, `body`. The two sheets differ on these for real
+       reasons (Inter vs DM Sans, line-height 1.5 vs 1.55, the guide's fixed
+       background and hidden scrollbars, the form's `*::before, *::after`
+       box-sizing). Merging them would change rendering.
+     · Any token the two pages set differently on purpose — see the
+       "guide-specific" / "form-specific" blocks in each sheet. If a value
+       isn't the same everywhere, it stays in the page that owns it.
+
+   Vite flattens the `@import` at build time, so this ships inlined into each
+   page's bundle: no extra request, no separate asset.
+   ============================================================ */
+
+:root {
+  /* ── Scene palette ── */
+  --scene-cyan:        #4BB9D0;
+  --scene-cyan-soft:   #9FDCE7;
+  --scene-cyan-wash:   #E4F5FA;
+  --scene-cyan-deep:   #2A9BB5;
+  --scene-blue:        #3380C1;
+  --scene-blue-soft:   #8FB5DB;
+  --scene-blue-wash:   #E8F0F9;
+  --scene-blue-deep:   #1E5E96;
+  --scene-gradient:    linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
+  --selected-bg:       linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
+  --selected-shadow:   0 4px 14px rgba(51, 128, 193, 0.32),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.38);
+
+  /* ── Ink & surfaces ── */
+  --charcoal:      #15233D;
+  --warm-grey:     #F4F7FB;
+
+  --text:          #15233D;
+  --text-soft:     #2E3E5E;
+  --text-muted:    #6B7A95;
+  --text-subtle:   #A0ADC3;
+
+  /* Green is the promoter signal colour · graphics manual §4 */
+  --success:       #22A874;
+
+  /* ── Glass tokens ── */
+  --glass-bg:          rgba(255, 255, 255, 0.62);
+  --glass-bg-strong:   rgba(255, 255, 255, 0.78);
+  --glass-border:      rgba(255, 255, 255, 0.82);
+  --glass-border-sub:  rgba(255, 255, 255, 0.48);
+  --glass-blur:        blur(16px) saturate(140%);
+
+  --radius-sm:   10px;
+  --radius-md:   18px;
+  --radius-lg:   24px;
+  --radius-xl:   32px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 2px 8px rgba(51, 128, 193, 0.06);
+  --shadow-sm: 0 4px 18px rgba(51, 128, 193, 0.10),
+               inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  --shadow-lg: 0 28px 70px rgba(51, 128, 193, 0.22),
+               inset 0 1px 0 rgba(255, 255, 255, 0.90);
+
+  /* The `0px` fallback matters: it is only used by an engine that doesn't
+     understand env() at all, and a unitless `0` would make the surrounding
+     calc() invalid (you can't add a bare number to a length), silently
+     dropping the whole declaration. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+/* Lucide icons (icons.js) are authored with no width/height and are sized via CSS.
+   This is the app-wide fallback: any icon whose class has no bespoke rule falls back
+   to 1em, inheriting whatever font-size its container already used for the glyph it
+   replaced, instead of rendering at the SVG's unconstrained intrinsic size.
+
+   Scoped to [aria-hidden="true"] so it can't touch the hand-rolled chevron/search/close
+   icons, which are sized explicitly and don't carry that attribute.
+
+   Source order is load-bearing: this selector's specificity (0,1,1) ties with any
+   `.class svg` rule, so whichever comes last wins. Living in base.css puts it before
+   every per-class rule in both sheets, so those explicit sizes always win. Keep it
+   here — a page-local copy is what caused the 13 Jul 2026 oversized-icon bug on the
+   submission form, which loads its own stylesheet and not styles.css. */
+svg[aria-hidden="true"] { width: 1em; height: 1em; flex-shrink: 0; }

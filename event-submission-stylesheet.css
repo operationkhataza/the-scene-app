@@ -4,66 +4,31 @@
    Design tokens and aesthetic from studiostylesheet.css.
    ============================================================ */
 
+@import './base.css';
+
 /* ============================================================
-   DESIGN TOKENS
+   FORM-SPECIFIC DESIGN TOKENS
+   Shared tokens (palette, radii, glass, shadow-xs/sm/lg, safe-area) live in
+   base.css, imported above. Only this page's own values remain here.
    ============================================================ */
 :root {
   color-scheme: light;
 
-  --scene-cyan:        #4BB9D0;
-  --scene-cyan-soft:   #9FDCE7;
-  --scene-cyan-wash:   #E4F5FA;
-  --scene-cyan-deep:   #2A9BB5;
-  --scene-blue:        #3380C1;
-  --scene-blue-soft:   #8FB5DB;
-  --scene-blue-wash:   #E8F0F9;
-  --scene-blue-deep:   #1E5E96;
   --scene-white:       #FFFFFF;
-  --scene-gradient:    linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
-
-  --selected-bg:     linear-gradient(135deg, #3380C1 0%, #4BB9D0 100%);
-  --selected-shadow: 0 4px 14px rgba(51, 128, 193, 0.32),
-                     inset 0 1px 0 rgba(255, 255, 255, 0.38);
-
-  --charcoal:    #15233D;
-  --text:        #15233D;
-  --text-soft:   #2E3E5E;
-  --text-muted:  #6B7A95;
-  --text-subtle: #A0ADC3;
-
-  --warm-grey: #F4F7FB;
-  --border:    rgba(51, 128, 193, 0.14);
-  --border-sub:rgba(51, 128, 193, 0.08);
 
   --danger:  #E04B5A;
-  --success: #22A874;
   --amber:   #F0A422;
 
-  --radius-sm:   10px;
-  --radius-md:   18px;
-  --radius-lg:   24px;
-  --radius-xl:   32px;
-  --radius-pill: 999px;
-
-  --glass-bg:          rgba(255, 255, 255, 0.62);
-  --glass-bg-strong:   rgba(255, 255, 255, 0.78);
-  --glass-border:      rgba(255, 255, 255, 0.82);
-  --glass-border-sub:  rgba(255, 255, 255, 0.48);
-  --glass-blur:        blur(16px) saturate(140%);
-  --glass-blur-strong: blur(20px) saturate(160%);
-
-  --shadow-xs: 0 2px 8px rgba(51, 128, 193, 0.06);
-  --shadow-sm: 0 4px 18px rgba(51, 128, 193, 0.10),
-               inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  /* ── Form-specific values ──
+     These are the canonical Scene Studio values (see base.css's comment);
+     styles.css deliberately overrides these four for its v4 reskin. */
+  --border:             rgba(51, 128, 193, 0.14);
+  --border-sub:         rgba(51, 128, 193, 0.08);
+  --glass-blur-strong:  blur(20px) saturate(160%);
   --shadow-md: 0 12px 40px rgba(51, 128, 193, 0.15),
                inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --shadow-lg: 0 28px 70px rgba(51, 128, 193, 0.22),
-               inset 0 1px 0 rgba(255, 255, 255, 0.90);
 
   --font-body:    'DM Sans', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
-
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bot: env(safe-area-inset-bottom, 0px);
 }
 
 /* ============================================================
@@ -71,14 +36,11 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Lucide icons (icons.js) are authored with no width/height and are sized via CSS. This page
-   loads only this stylesheet, NOT styles.css, so it needs its own copy of the global fallback
-   that styles.css provides for the gig guide / calendar. Placed here (before the per-class
-   `.class svg` rules below) so those explicit rules win on equal specificity and keep their
-   sizes, while any icon whose class has no bespoke rule falls back to 1em instead of rendering
-   at the SVG's unconstrained intrinsic size. Scoped to [aria-hidden="true"] so it can't touch
-   the hand-rolled chevron/search icons. */
-svg[aria-hidden="true"] { width: 1em; height: 1em; flex-shrink: 0; }
+/* The app-wide svg[aria-hidden="true"] icon fallback now lives in base.css, imported
+   at the top of this file — see that file's comment for the source-order rationale.
+   (Was duplicated here until 2 Aug 2026 — that duplication is what caused the 13 Jul
+   2026 oversized-icon bug in the first place, since this page loads only this
+   stylesheet and not styles.css.) */
 
 html {
   -webkit-text-size-adjust: 100%;
