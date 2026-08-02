@@ -48,9 +48,11 @@ const CLEAR_EL     = document.getElementById('toolbar-clear');
 const BTN_TYPE     = document.getElementById('btn-type');
 const BTN_AREA     = document.getElementById('btn-area');
 const BTN_PRICE    = document.getElementById('btn-price');
+const BTN_GENRE    = document.getElementById('btn-genre');
 const BADGE_TYPE   = document.getElementById('badge-type');
 const BADGE_AREA   = document.getElementById('badge-area');
 const BADGE_PRICE  = document.getElementById('badge-price');
+const BADGE_GENRE  = document.getElementById('badge-genre');
 const SHEET        = document.getElementById('sheet');
 const SHEET_BD     = document.getElementById('sheet-backdrop');
 const SHEET_TITLE  = document.getElementById('sheet-title');
@@ -72,19 +74,26 @@ const PRICE_MAX = 300;
 const PRICE_STEP = 50;
 const PRICE_TICK_VALUES = [0, 50, 100, 150, 200, 250, 300]; // for tick labels under the slider
 
+// Genre terms that are data-entry escape hatches, not real genres — kept in
+// Directus (submitters still need them) but never offered as a filter option.
+// Card display is unaffected; this only trims computeFilterOptions()'s genre list.
+const GENRE_DENYLIST = new Set(['multiple', 'other']);
+
 const state = {
   allGigs: [],
   categories: [],
   areas: [],
   typeOptions: [],
   areaOptions: [],
+  genreOptions: [],
   selectedTypes: new Set(),
   selectedAreas: new Set(),
+  selectedGenres: new Set(),
   selectedPriceMax: null,  // null = no filter; number = show gigs priced ≤ this value
   searchQuery: '',         // name search string
-  currentSheet: null,      // 'type' | 'area' | 'price' | null
+  currentSheet: null,      // 'type' | 'area' | 'price' | 'genre' | null
   activeSheetContent: null, // 'filter' | 'promoter' | 'curator' | null
-  sheetDraft: new Set(),   // working copy while sheet open (type/area)
+  sheetDraft: new Set(),   // working copy while sheet open (type/area/genre)
   sheetDraftPrice: null,   // working copy while price sheet open
 };
 
@@ -164,6 +173,44 @@ function gigCategoryNames(gig) {
   return gigCategoryRefs(gig).map(r => r.name);
 }
 
+/* ============================================================
+   GENRE ACCESSOR
+   ────────────────────────────────────────────────────────────
+   Genre is split across two Directus taxonomies — `genre` (M2M →
+   genres, live-music vocabulary) and `dj_genres` (M2M → dj_genres,
+   DJ vocabulary) — because event_category gates which one a
+   submitter is offered. The two lists overlap (Amapiano, Deep
+   House, Hip Hop…) and one term (R&B) has different slugs in each
+   collection ("rnb" vs "r-and-b") despite an identical name. Slug
+   is therefore not a safe merge key — we derive our own key from
+   the display name via slugify(), so "R&B" from either taxonomy
+   collapses onto the same filter option. Deduping happens per-gig
+   here so a card never shows the same genre name twice.
+   ============================================================ */
+function gigGenreRefs(gig) {
+  const bySlug = new Map();
+
+  const collect = (raw, idKey) => {
+    if (!Array.isArray(raw)) return;
+    raw.forEach(item => {
+      const nested = item && item[idKey];
+      if (!nested || typeof nested !== 'object' || !nested.name) return;
+      const slug = slugify(nested.name);
+      if (!slug || bySlug.has(slug)) return;
+      bySlug.set(slug, { slug, name: nested.name });
+    });
+  };
+
+  collect(gig.genre, 'genres_id');
+  collect(gig.dj_genres, 'dj_genres_id');
+
+  return [...bySlug.values()];
+}
+
+function gigGenreSlugs(gig) {
+  return gigGenreRefs(gig).map(r => r.slug);
+}
+
 /* venue.area is a flat Dropdown string on the venues collection,
    e.g. "cbd", "southern_suburbs". Returns null if not set. */
 function gigAreaSlug(gig) {
@@ -196,6 +243,7 @@ function matchesPriceFilter(gig) {
 function computeFilterOptions() {
   const typeCounts = new Map();
   const areaCounts = new Map();
+  const genreCounts = new Map(); // slug -> { slug, name, count }
 
   state.allGigs.forEach(gig => {
     gigCategorySlugs(gig).forEach(slug => {
@@ -205,6 +253,12 @@ function computeFilterOptions() {
     if (areaSlug) {
       areaCounts.set(areaSlug, (areaCounts.get(areaSlug) || 0) + 1);
     }
+    gigGenreRefs(gig).forEach(ref => {
+      if (GENRE_DENYLIST.has(ref.slug)) return;
+      const existing = genreCounts.get(ref.slug);
+      if (existing) existing.count++;
+      else genreCounts.set(ref.slug, { slug: ref.slug, name: ref.name, count: 1 });
+    });
   });
 
   state.typeOptions = state.categories
@@ -216,6 +270,14 @@ function computeFilterOptions() {
     .filter(a => areaCounts.has(a.slug))
     .map(a => ({ slug: a.slug, name: a.name, count: areaCounts.get(a.slug) }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  state.genreOptions = [...genreCounts.values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // No genre-tagged events in the current view (e.g. a curator/promoter feed
+  // with no live-music or DJ events yet) — grey the pill out instead of
+  // letting it open onto an empty sheet.
+  if (BTN_GENRE) BTN_GENRE.disabled = state.genreOptions.length === 0;
 }
 
 /* ============================================================
@@ -232,6 +294,11 @@ function applyFilters(gigs) {
       const areaSlug = gigAreaSlug(gig);
       if (!areaSlug || !state.selectedAreas.has(areaSlug)) return false;
     }
+    if (state.selectedGenres.size > 0) {
+      const gigGenreSlugsList = gigGenreSlugs(gig);
+      const hasMatch = gigGenreSlugsList.some(s => state.selectedGenres.has(s));
+      if (!hasMatch) return false;
+    }
     if (!matchesPriceFilter(gig)) return false;
     if (state.searchQuery) {
       const q = state.searchQuery.toLowerCase();
@@ -244,6 +311,7 @@ function applyFilters(gigs) {
 function updateFilterBadges() {
   const t = state.selectedTypes.size;
   const a = state.selectedAreas.size;
+  const g = state.selectedGenres.size;
   const priceActive = state.selectedPriceMax !== null;
   BADGE_TYPE.hidden = t === 0;
   BADGE_TYPE.textContent = t;
@@ -251,6 +319,11 @@ function updateFilterBadges() {
   BADGE_AREA.hidden = a === 0;
   BADGE_AREA.textContent = a;
   BTN_AREA.classList.toggle('is-active', a > 0);
+  if (BADGE_GENRE) {
+    BADGE_GENRE.hidden = g === 0;
+    BADGE_GENRE.textContent = g;
+  }
+  if (BTN_GENRE) BTN_GENRE.classList.toggle('is-active', g > 0);
   BADGE_PRICE.hidden = !priceActive;
   // Show the chosen ceiling on the button badge (e.g. "200", "300+" as max)
   BADGE_PRICE.textContent = priceActive
@@ -258,7 +331,7 @@ function updateFilterBadges() {
     : '';
   BTN_PRICE.classList.toggle('is-active', priceActive);
 
-  const anyActive = t > 0 || a > 0 || priceActive || !!state.searchQuery;
+  const anyActive = t > 0 || a > 0 || g > 0 || priceActive || !!state.searchQuery;
   if (CLEAR_EL) CLEAR_EL.hidden = !anyActive;
 }
 
@@ -273,11 +346,14 @@ function openSheet(kind) {
     // Seed the draft from the current committed value, defaulting to PRICE_MIN if none
     state.sheetDraftPrice = state.selectedPriceMax !== null ? state.selectedPriceMax : PRICE_MIN;
   } else {
-    const selected = kind === 'type' ? state.selectedTypes : state.selectedAreas;
+    const selected = kind === 'type' ? state.selectedTypes
+                    : kind === 'genre' ? state.selectedGenres
+                    : state.selectedAreas;
     state.sheetDraft = new Set(selected);
   }
   SHEET_TITLE.textContent = kind === 'type' ? 'Filter by type'
                           : kind === 'area' ? 'Filter by area'
+                          : kind === 'genre' ? 'Filter by genre'
                           : 'Filter by price';
   renderSheetOptions();
   SHEET.classList.add('is-open');
@@ -494,7 +570,9 @@ function renderSheetOptions() {
     return;
   }
 
-  const options = state.currentSheet === 'type' ? state.typeOptions : state.areaOptions;
+  const options = state.currentSheet === 'type' ? state.typeOptions
+                 : state.currentSheet === 'genre' ? state.genreOptions
+                 : state.areaOptions;
 
   if (!options || options.length === 0) {
     SHEET_BODY.innerHTML = `
@@ -596,6 +674,7 @@ function renderPriceSlider() {
 function applySheet() {
   if (state.currentSheet === 'type')  state.selectedTypes = new Set(state.sheetDraft);
   if (state.currentSheet === 'area')  state.selectedAreas = new Set(state.sheetDraft);
+  if (state.currentSheet === 'genre') state.selectedGenres = new Set(state.sheetDraft);
   if (state.currentSheet === 'price') {
     // Slider at 0 (Free) with no engagement means "show only free" — distinct from "no filter".
     // But if the user never touched the slider, committing it anyway is expected behaviour.
@@ -680,6 +759,10 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
     'venue.location',
     'venue.status',
     'event_category',       // works for M2O (scalar) or M2M (array); accessor handles both
+    'genre.genres_id.name',           // live-music genre vocabulary (gigGenreRefs)
+    'genre.genres_id.slug',
+    'dj_genres.dj_genres_id.name',    // DJ genre vocabulary (gigGenreRefs)
+    'dj_genres.dj_genres_id.slug',
     'artists.artists_id.name',
     'curators.curators_id.id',      // needed by the curator profile sheet
     'curators.curators_id.name',
@@ -874,14 +957,16 @@ function renderCard(gig, index) {
 
   // Tags: event categories (teal) + freeform tags + age restriction (neutral)
   const categoryNames = gigCategoryNames(gig);
+  const genreNames = gigGenreRefs(gig).map(r => r.name);
   const freeformTags = Array.isArray(gig.tags) ? gig.tags : [];
   const ageTag = gig.age_restriction && gig.age_restriction !== 'all-ages'
     ? [gig.age_restriction.replace(/-/g, ' ')]
     : [];
   const allNeutral = [...freeformTags, ...ageTag];
-  const tagsHtml = (categoryNames.length > 0 || allNeutral.length > 0)
+  const tagsHtml = (categoryNames.length > 0 || genreNames.length > 0 || allNeutral.length > 0)
     ? `<div class="gig-card__tags">
         ${categoryNames.map(c => `<span class="tag">${esc(c)}</span>`).join('')}
+        ${genreNames.map(g => `<span class="tag tag--genre">${esc(g)}</span>`).join('')}
         ${allNeutral.map(t => `<span class="tag tag--neutral">${esc(t)}</span>`).join('')}
       </div>`
     : '';
@@ -1157,6 +1242,7 @@ function renderFromState() {
 function clearAllFilters() {
   state.selectedTypes = new Set();
   state.selectedAreas = new Set();
+  state.selectedGenres = new Set();
   state.selectedPriceMax = null;
   state.searchQuery = '';
   const searchEl = document.getElementById('gig-search');
@@ -1402,14 +1488,16 @@ function renderModalCard(gig) {
     : '';
 
   const categoryNames = gigCategoryNames(gig);
+  const genreNames = gigGenreRefs(gig).map(r => r.name);
   const freeformTags = Array.isArray(gig.tags) ? gig.tags : [];
   const ageTag = gig.age_restriction && gig.age_restriction !== 'all-ages'
     ? [gig.age_restriction.replace(/-/g, ' ')]
     : [];
   const allNeutral = [...freeformTags, ...ageTag];
-  const tagsHtml = (categoryNames.length > 0 || allNeutral.length > 0)
+  const tagsHtml = (categoryNames.length > 0 || genreNames.length > 0 || allNeutral.length > 0)
     ? `<div class="gig-card__tags">
         ${categoryNames.map(c => `<span class="tag">${esc(c)}</span>`).join('')}
+        ${genreNames.map(g => `<span class="tag tag--genre">${esc(g)}</span>`).join('')}
         ${allNeutral.map(t => `<span class="tag tag--neutral">${esc(t)}</span>`).join('')}
       </div>`
     : '';
@@ -1791,6 +1879,7 @@ async function init() {
 BTN_TYPE.addEventListener('click', () => openSheet('type'));
 BTN_AREA.addEventListener('click', () => openSheet('area'));
 BTN_PRICE.addEventListener('click', () => openSheet('price'));
+if (BTN_GENRE) BTN_GENRE.addEventListener('click', () => openSheet('genre'));
 SHEET_CLOSE.addEventListener('click', closeSheet);
 SHEET_BD.addEventListener('click', closeSheet);
 SHEET_CLEAR.addEventListener('click', clearSheet);
@@ -1801,6 +1890,7 @@ if (CLEAR_EL) {
   CLEAR_EL.addEventListener('click', () => {
     state.selectedTypes.clear();
     state.selectedAreas.clear();
+    state.selectedGenres.clear();
     state.selectedPriceMax = null;
     state.searchQuery = '';
     if (SEARCH_INPUT) SEARCH_INPUT.value = '';
@@ -1886,6 +1976,16 @@ window.addEventListener('scroll', () => {
   if (!STATIC_REFRACT) scheduleRefractUpdate();
 }, { passive: true });
 if (!STATIC_REFRACT) window.addEventListener('resize', scheduleRefractUpdate, { passive: true });
+
+// Toolbar is a horizontal scroll row (4 pills can outgrow a narrow phone).
+// Only show the right-edge fade mask (styles.css .toolbar--scrollable) when
+// there's actually more to scroll to — otherwise a toolbar that fits on one
+// screen would have its last pill clipped by the mask for no reason.
+function updateToolbarScrollable() {
+  TOOLBAR_EL.classList.toggle('toolbar--scrollable', TOOLBAR_EL.scrollWidth > TOOLBAR_EL.clientWidth + 1);
+}
+updateToolbarScrollable();
+window.addEventListener('resize', updateToolbarScrollable, { passive: true });
 
 // Initialise the WebGL holographic shader before kicking off the data fetch.
 // Returns false if WebGL is unavailable; refreshRefractionRefs() will then

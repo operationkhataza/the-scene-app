@@ -361,8 +361,24 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  flex-wrap: wrap;
+  /* Single scrollable row rather than wrap — added for the 4th (Genre) pill so
+     a narrow phone gets a horizontal scroll instead of a taller sticky header.
+     Scrollbar hidden (still scrollable via touch/trackpad); toolbar--scrollable
+     (app.js updateToolbarScrollable) adds a right-edge fade only when there is
+     actually more to scroll to, so a toolbar that fits doesn't get its last
+     pill clipped. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   box-shadow: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.toolbar.toolbar--scrollable {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+          mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
 }
 .toolbar.is-scrolled {
   background: var(--glass-bg-strong);
@@ -411,6 +427,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   line-height: 1;
   transition: transform 0.12s, border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
   letter-spacing: -0.005em;
+  flex-shrink: 0;       /* toolbar is now a scroll row — pills must not compress */
+  scroll-snap-align: start;
 }
 .filter-btn:active { transform: scale(0.96); }
 .filter-btn:hover {
@@ -428,6 +446,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   box-shadow: var(--selected-shadow);
 }
 .filter-btn.is-active:hover { color: white; }
+/* Genre pill when the current view has no genre-tagged events at all
+   (e.g. a curator/promoter feed with nothing from Live Music or DJs & Parties) */
+.filter-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
 .filter-btn__chevron { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.6; }
 .filter-btn.is-active .filter-btn__chevron { opacity: 0.95; }
 .filter-btn__badge {
@@ -1067,6 +1092,14 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
   background: rgba(255, 255, 255, 0.45);
   border: 1px solid var(--border);
   color: var(--text-muted);
+}
+/* Genre tag — outlined rather than filled, so it reads as a distinct third
+   kind alongside the filled category tag and the neutral freeform/age tags,
+   while staying in the blue/cyan family (not tappable, display-only). */
+.tag--genre {
+  background: transparent;
+  border: 1px solid rgba(51, 128, 193, 0.35);
+  color: var(--scene-blue);
 }
 
 /* ============================================================

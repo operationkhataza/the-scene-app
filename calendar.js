@@ -166,6 +166,10 @@ async function fetchMonth(d) {
     'event_category.id',
     'event_category.name',
     'event_category.slug',
+    'genre.genres_id.name',           // live-music genre vocabulary (modal tags)
+    'genre.genres_id.slug',
+    'dj_genres.dj_genres_id.name',    // DJ genre vocabulary (modal tags)
+    'dj_genres.dj_genres_id.slug',
     'artists.artists_id.name',
     'curators.curators_id.id',      // needed by the curator profile sheet
     'curators.curators_id.name',
@@ -522,6 +526,31 @@ function priceMarkup(gig) {
    Mirrors app.js renderCard() exactly — same HTML structure, same CSS
    class names, same data shape — so all tier/foil/curator styles apply
    identically. (No animation-delay needed since this is a single card.) */
+// Genre — merged from the two Directus taxonomies (genre + dj_genres), deduped
+// by name since the same term can carry a different slug in each collection
+// (e.g. R&B is "rnb" in genres but "r-and-b" in dj_genres). See app.js's
+// gigGenreRefs for the full rationale; kept local here since genre.genres_id
+// arrives already expanded by this file's own fetchMonth() query.
+function gigGenreNames(gig) {
+  const seen = new Set();
+  const names = [];
+  const collect = (raw, idKey) => {
+    if (!Array.isArray(raw)) return;
+    raw.forEach(item => {
+      const nested = item && item[idKey];
+      const name = nested && typeof nested === 'object' ? nested.name : null;
+      if (!name) return;
+      const key = name.toLowerCase().trim();
+      if (seen.has(key)) return;
+      seen.add(key);
+      names.push(name);
+    });
+  };
+  collect(gig.genre, 'genres_id');
+  collect(gig.dj_genres, 'dj_genres_id');
+  return names;
+}
+
 function renderModalCard(gig) {
   const AREA_LABELS = {
     'southern-suburbs':   'Southern Suburbs',
@@ -571,14 +600,16 @@ function renderModalCard(gig) {
   // event_category arrives as an expanded object { id, name, slug } because
   // the fields query requests event_category.name etc.
   const catName = gig.event_category?.name || null;
+  const genreNames = gigGenreNames(gig);
   const freeformTags = Array.isArray(gig.tags) ? gig.tags : [];
   const ageTag = gig.age_restriction && gig.age_restriction !== 'all-ages'
     ? [gig.age_restriction.replace(/-/g, ' ')]
     : [];
   const allNeutral = [...freeformTags, ...ageTag];
-  const tagsHtml = (catName || allNeutral.length > 0)
+  const tagsHtml = (catName || genreNames.length > 0 || allNeutral.length > 0)
     ? `<div class="gig-card__tags">
         ${catName ? `<span class="tag">${esc(catName)}</span>` : ''}
+        ${genreNames.map(g => `<span class="tag tag--genre">${esc(g)}</span>`).join('')}
         ${allNeutral.map(t => `<span class="tag tag--neutral">${esc(t)}</span>`).join('')}
       </div>`
     : '';
