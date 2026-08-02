@@ -953,10 +953,15 @@ function renderCard(gig, index) {
     if (prices.length > 0) backMetaParts.push(`From R${Math.min(...prices)}`);
   }
 
-  // Back face CTA
+  // Back face actions: Buy tickets (optional, 2/3) + Return (always, 1/3)
   const backCta = hasTickets
     ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
     : '';
+  const backActions = `
+    <div class="gig-card__back-actions">
+      ${backCta}
+      <button type="button" class="gig-card__back-return">Return</button>
+    </div>`;
 
   const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
   const delay = Math.min(index, 8) * 40;
@@ -981,12 +986,11 @@ function renderCard(gig, index) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
-          ${backCta}
+          ${backActions}
         </div>
 
       </div>
@@ -1474,6 +1478,11 @@ function renderModalCard(gig) {
   const backCta = hasTickets
     ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
     : '';
+  const backActions = `
+    <div class="gig-card__back-actions">
+      ${backCta}
+      <button type="button" class="gig-card__back-return">Return</button>
+    </div>`;
 
   const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
 
@@ -1497,15 +1506,15 @@ function renderModalCard(gig) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
-          ${backCta}
+          ${backActions}
         </div>
 
       </div>
+      <button type="button" class="gig-card__dismiss" aria-label="Close">${ICONS.x}</button>
     </div>`;
 }
 
@@ -1574,12 +1583,21 @@ document.addEventListener('keydown', e => {
 // Flip delegation — wired once on the card container.
 MODAL_CARD.addEventListener('click', e => {
   if (!MODAL_EL.classList.contains('is-open')) return;
+
+  // Dismiss button sits on the card shell (both faces) and closes the
+  // modal outright — checked before the flip exemptions below.
+  if (e.target.closest('.gig-card__dismiss')) {
+    e.stopPropagation();
+    closeCardModal();
+    return;
+  }
+
   if (e.target.closest('.gig-card__back-cta'))      return;
   if (e.target.closest('.gig-card__ticket-pill'))   return;
   if (e.target.closest('[data-profile-kind]'))      return;  // promoter + curator pills
 
   const inner    = MODAL_CARD.querySelector('.gig-card__inner');
-  const closeBtn = e.target.closest('.gig-card__close');
+  const closeBtn = e.target.closest('.gig-card__back-return');
   if (!inner) return;
 
   if (closeBtn) {
@@ -1844,14 +1862,15 @@ function flipCard(inner, toBack) {
 
 // Flip delegation — entire front face is the click target.
 // Exemptions: ticket pill, back-face CTA, and promoter link all pass through.
-// Tapping the close (X) button on the back face flips to front.
+// Tapping the Return button on the back face flips to front (feed cards have
+// no dismiss button — nothing to close, you just scroll away).
 // Any other tap while the back face is showing does nothing (lets content be readable).
 LIST_EL.addEventListener('click', e => {
   if (e.target.closest('.gig-card__ticket-pill'))   return;
   if (e.target.closest('.gig-card__back-cta'))      return;
   if (e.target.closest('[data-profile-kind]'))      return;  // promoter + curator pills
 
-  const closeBtn = e.target.closest('.gig-card__close');
+  const closeBtn = e.target.closest('.gig-card__back-return');
   if (closeBtn) {
     flipCard(closeBtn.closest('.gig-card__inner'), false);
     return;

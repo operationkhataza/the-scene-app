@@ -321,6 +321,11 @@ function renderCard(ex, index) {
   const backCta = visitUrl
     ? `<a class="gig-card__back-cta" href="${esc(visitUrl)}" target="_blank" rel="noopener noreferrer">Visit website →</a>`
     : '';
+  const backActions = `
+    <div class="gig-card__back-actions">
+      ${backCta}
+      <button type="button" class="gig-card__back-return">Return</button>
+    </div>`;
 
   const delay = Math.min(index, 8) * 40;
 
@@ -344,12 +349,11 @@ function renderCard(ex, index) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(ex.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
-          ${backCta}
+          ${backActions}
         </div>
 
       </div>
@@ -456,7 +460,7 @@ LIST_EL.addEventListener('click', e => {
   if (e.target.closest('.gig-card__ticket-pill')) return;
   if (e.target.closest('.gig-card__back-cta'))    return;
 
-  const closeBtn = e.target.closest('.gig-card__close');
+  const closeBtn = e.target.closest('.gig-card__back-return');
   if (closeBtn) {
     closeBtn.closest('.gig-card__inner').classList.remove('is-flipped');
     return;

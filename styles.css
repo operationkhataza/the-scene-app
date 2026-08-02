@@ -3173,38 +3173,49 @@ body.cal-promoter .cal-day__empty-sub {
 
 /* ── Back face elements ── */
 
-/* Close button */
-.gig-card__close {
+/* Dismiss button — sits on the card SHELL (sibling of .gig-card__inner, not
+   inside either face) so it stays put through the flip and is visible on
+   both faces. Only emitted on modal cards (gig guide/calendar/map modals);
+   feed cards (day strip, exhibitions list) have nothing to dismiss and use
+   the back-face Return button instead. Styling follows the .sheet__close
+   idiom (a translucent glass circle) rather than the old flat-back-face
+   close button, since this one has to read over a poster image too. */
+.gig-card__dismiss {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 44px;
-  height: 44px;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.08);
-  border: none;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--glass-border);
   border-radius: 50%;
-  color: var(--text-soft);
-  font-size: 1rem;
+  color: var(--scene-blue);
   cursor: pointer;
   line-height: 1;
-  z-index: 1;
+  box-shadow: var(--shadow-sm);
+  z-index: 2; /* above the holo-shader canvas mounted as .gig-card's first child */
+  transition: transform 0.12s, background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-.gig-card__close svg { width: 16px; height: 16px; }
-.gig-card__close:hover { background: rgba(0,0,0,0.15); color: var(--text); }
+.gig-card__dismiss svg { width: 15px; height: 15px; }
+.gig-card__dismiss:active { transform: scale(0.9); }
+.gig-card__dismiss:hover { background: var(--scene-blue); color: white; }
 
-/* Back title */
+/* Back title — only modal cards (the ones with a dismiss button riding
+   above them) need the extra clearance on the right. */
 .gig-card__back-title {
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--text);
   margin: 0 0 0.45rem;
-  padding-right: 1.6rem; /* clear the close button */
   line-height: 1.3;
   flex-shrink: 0;
+}
+.gig-card:has(.gig-card__dismiss) .gig-card__back-title {
+  padding-right: 2.75rem; /* clear the dismiss button */
 }
 
 /* Divider */
@@ -3250,9 +3261,22 @@ body.cal-promoter .cal-day__empty-sub {
   opacity: 0.8;
 }
 
+/* Back action row — Buy tickets (2/3, blue) + Return (1/3, grey). Return
+   is always present (it's the only way to flip back to the front now that
+   the corner close button no longer doubles as one); the CTA is optional
+   per-event, so when it's absent Return is the row's sole child and its
+   flex:1 naturally fills the full width. */
+.gig-card__back-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* Buy tickets CTA */
 .gig-card__back-cta {
   display: block;
+  flex: 2;
+  min-width: 0;
   text-align: center;
   background: var(--selected-bg, #1A6E8E);
   color: #fff;
@@ -3261,10 +3285,27 @@ body.cal-promoter .cal-day__empty-sub {
   padding: 0.65rem 1rem;
   border-radius: var(--radius-sm, 8px);
   text-decoration: none;
-  flex-shrink: 0;
   box-shadow: var(--selected-shadow);
 }
 .gig-card__back-cta:hover { opacity: 0.9; }
+
+/* Return (flip back to front) */
+.gig-card__back-return {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  background: rgba(0,0,0,0.08);
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.gig-card__back-return:hover { background: rgba(0,0,0,0.15); color: var(--text); }
 
 /* ================================================================
    CALENDAR — EVENT DETAIL MODAL (hero-expand)
@@ -3396,7 +3437,7 @@ body.cal-promoter .cal-day__empty-sub {
 /* ── Floating day bar: prev · label · next ─────────────────── */
 .map-bar {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 0.8rem);
+  top: 0.35rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 800;
@@ -3507,7 +3548,7 @@ body.cal-promoter .cal-day__empty-sub {
    day bar's band so the two never overlap on narrow screens. ─── */
 .map-key {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 4.6rem);
+  top: 4.15rem;
   right: 0.8rem;
   z-index: 800;
   display: grid;
@@ -3569,7 +3610,7 @@ body.cal-promoter .cal-day__empty-sub {
    chrome; the teardrop dot dims when the layer is off. */
 .map-layer-toggle {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 4.6rem);
+  top: 4.15rem;
   left: 0.8rem;
   z-index: 800;
   display: inline-flex;

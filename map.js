@@ -617,10 +617,15 @@ function renderModalCard(gig) {
     if (prices.length > 0) backMetaParts.push(`From R${Math.min(...prices)}`);
   }
 
-  // Back face CTA
+  // Back face actions: Buy tickets (optional, 2/3) + Return (always, 1/3)
   const backCta = hasTickets
     ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
     : '';
+  const backActions = `
+    <div class="gig-card__back-actions">
+      ${backCta}
+      <button type="button" class="gig-card__back-return">Return</button>
+    </div>`;
 
   const curatedAttr = curatedLevel > 0 ? ` data-curated="${curatedLevel}"` : '';
 
@@ -644,15 +649,15 @@ function renderModalCard(gig) {
         </div>
 
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(gig.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
-          ${backCta}
+          ${backActions}
         </div>
 
       </div>
+      <button type="button" class="gig-card__dismiss" aria-label="Close">${ICONS.x}</button>
     </div>`;
 }
 
@@ -725,12 +730,21 @@ document.addEventListener('keydown', e => {
 // Flip delegation — wired once on the card container.
 MODAL_CARD.addEventListener('click', e => {
   if (!MODAL_EL.classList.contains('is-open')) return;
+
+  // Dismiss button sits on the card shell (both faces) and closes the
+  // modal outright — checked before the flip exemptions below.
+  if (e.target.closest('.gig-card__dismiss')) {
+    e.stopPropagation();
+    closeCardModal();
+    return;
+  }
+
   if (e.target.closest('.gig-card__back-cta'))   return;
   if (e.target.closest('.gig-card__ticket-pill')) return;
   if (e.target.closest('[data-profile-kind]'))    return;  // promoter + curator pills
 
   const inner    = MODAL_CARD.querySelector('.gig-card__inner');
-  const closeBtn = e.target.closest('.gig-card__close');
+  const closeBtn = e.target.closest('.gig-card__back-return');
   if (!inner) return;
 
   if (closeBtn) {
@@ -1151,6 +1165,11 @@ function renderExhibitionModalCard(ex) {
   const backCta = visitUrl
     ? `<a class="gig-card__back-cta" href="${esc(visitUrl)}" target="_blank" rel="noopener noreferrer">Visit website →</a>`
     : '';
+  const backActions = `
+    <div class="gig-card__back-actions">
+      ${backCta}
+      <button type="button" class="gig-card__back-return">Return</button>
+    </div>`;
 
   return `
     <div class="exh-card gig-card">
@@ -1170,14 +1189,14 @@ function renderExhibitionModalCard(ex) {
           </div>
         </div>
         <div class="gig-card__back">
-          <button type="button" class="gig-card__close" aria-label="Close">${ICONS.x}</button>
           <h3 class="gig-card__back-title">${esc(ex.title)}</h3>
           <div class="gig-card__back-divider"></div>
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
-          ${backCta}
+          ${backActions}
         </div>
       </div>
+      <button type="button" class="gig-card__dismiss" aria-label="Close">${ICONS.x}</button>
     </div>`;
 }
 
