@@ -578,6 +578,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   scroll-snap-align: start;
   margin-bottom: 0;
 }
+/* A day with a single event has nothing to swipe to, so the peek gap beside the
+   card is just dead space. Let the lone card take the full column, matching the
+   single-day (?day=) view. Two or more cards keep the 87.5%/75% peek. Specificity
+   (0,3,0) beats both the base rule above and the >=640px override (both (0,2,0)),
+   so this one rule covers every breakpoint: media queries add no specificity. */
+.day-strip__track > .gig-card:only-child {
+  flex: 0 0 100%;
+}
 /* In a day-strip, cards are stretched to the same height (flex cross-axis).
    Switch .gig-card__front to CSS Grid so .gig-card__body fills the 1fr row
    and gets a *genuinely definite* height — the only reliable way to make
