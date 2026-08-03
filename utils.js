@@ -108,3 +108,53 @@ export function esc(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+/* ============================================================
+   VENUE / THEATRE-RUN COALESCING
+   ────────────────────────────────────────────────────────────
+   A pending (unapproved) venue must not have its name shown publicly:
+   the event still lists, but its venue reads blank until an editor
+   flips the venue to `published`. The public Directus read policy
+   deliberately RETURNS pending venues (the submit form's
+   venue-suggestion flow needs to read the new row's id back — see
+   docs/directus.md), so the leak can't be closed at the policy layer
+   without breaking suggestions; we blank it here at ingestion instead.
+   Whole-object blank (not just the name) so a pending venue's area
+   vanishes too. A venue with no `status` in the payload is left
+   untouched (safe fallback). Previously copy-pasted into app.js,
+   calendar.js, map.js and exhibitions.js — lifted here verbatim.
+   ============================================================ */
+export function publicVenue(venue) {
+  return (venue && typeof venue === 'object' && venue.status && venue.status !== 'published')
+    ? null
+    : venue;
+}
+
+/* A theatre night inherits production-wide fields from its `parent_run`;
+   per-instance + per-night relations (artists/curators/promoters, date/
+   time) stay on the child. Applied once when events are bucketed, so
+   grid pips, day cards and the modal all read one uniform shape.
+   Ordinary gigs pass through untouched. Previously copy-pasted into
+   app.js, calendar.js and map.js — lifted here verbatim. */
+export function resolveGig(event) {
+  const run = event && event.parent_run;
+  if (!run || typeof run !== 'object') {               // ordinary gig
+    if (event) event.venue = publicVenue(event.venue);
+    return event;
+  }
+  return {
+    ...event,
+    title:             run.title             ?? event.title,
+    slug:              run.slug              ?? event.slug,
+    short_description: run.short_description ?? event.short_description,
+    description:       run.description       ?? event.description,
+    poster:            run.poster            ?? event.poster,
+    ticket_url:        run.ticket_url        ?? event.ticket_url,
+    is_free:           run.is_free           ?? event.is_free,
+    ticket_tiers:      run.ticket_tiers      ?? event.ticket_tiers,
+    age_restriction:   run.age_restriction   ?? event.age_restriction,
+    tags:              run.tags              ?? event.tags,
+    venue:             publicVenue(run.venue ?? event.venue),
+    _isRun: true,   // marker for any run-aware UI later (e.g. a "multi-night" hint)
+  };
+}

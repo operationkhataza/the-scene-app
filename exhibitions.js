@@ -29,7 +29,7 @@ document.addEventListener('touchend', e => {
 }, { passive: false });
 
 import { fetchExhibitions } from './api.js';
-import { esc, isoDate, imgUrl } from './utils.js';
+import { esc, isoDate, imgUrl, publicVenue } from './utils.js';
 import { ICONS } from './icons.js';
 
 /* DOM */
@@ -90,14 +90,6 @@ const AREA_ORDER = ['cbd', 'southern-suburbs', 'northern-suburbs', 'atlantic-sea
 
 function typeLabel(slug) {
   return EXHIBITION_TYPE_LABELS[slug] || String(slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
-/* A pending (unapproved) venue must not have its name — or coordinates — shown
-   publicly. Whole-object blank, same rule as app.js/map.js publicVenue. */
-function publicVenue(venue) {
-  return (venue && typeof venue === 'object' && venue.status && venue.status !== 'published')
-    ? null
-    : venue;
 }
 
 /* ============================================================
