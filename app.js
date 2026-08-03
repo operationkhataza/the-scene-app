@@ -600,12 +600,15 @@ async function loadAreas() {
 }
 
 /* ============================================================
-   LOAD CURATOR — fetches name (and future: logo, bio, theme)
-   for curator-mode views (?curator=slug)
+   LOAD CURATOR — fetches name, avatar and bio for curator-mode
+   views (?curator=slug). profile_image is optional on curators
+   and logo is required, so the header falls back logo-ward.
+   Keep the field list inside the Public read allow-list: Directus
+   rejects the WHOLE request if any named field is outside it.
    ============================================================ */
 async function loadCurator(slug) {
   try {
-    const json = await apiGet(`/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug&limit=1`);
+    const json = await apiGet(`/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,bio,profile_image,logo&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load curator:', err);
@@ -1092,9 +1095,25 @@ async function init() {
       const titleEl = document.getElementById('gigs-header-title');
       const subtitleEl = document.getElementById('gigs-header-subtitle');
       const curatorBylineEl = document.getElementById('gigs-header-curator-byline');
+      const avatarEl = document.getElementById('gigs-header-curator-avatar');
+      const bioEl = document.getElementById('gigs-header-bio');
       if (titleEl) titleEl.textContent = curator?.name || 'Curator Picks';
       if (subtitleEl) subtitleEl.textContent = 'Curated picks';
       if (curatorBylineEl) { curatorBylineEl.hidden = false; curatorBylineEl.textContent = ''; }
+      // Avatar: profile_image is optional on curators, logo is required —
+      // fall back logo-ward, same rule the profile sheet uses.
+      const curatorAvatarSrc = curator?.profile_image || curator?.logo;
+      if (avatarEl && curatorAvatarSrc) {
+        avatarEl.src    = imgUrl(curatorAvatarSrc, { width: '128', height: '128', fit: 'cover' });
+        avatarEl.alt    = curator?.name ? `${curator.name} logo` : '';
+        avatarEl.hidden = false;
+      }
+      // Bio under the title block (300-char soft limit). textContent — no
+      // HTML injection. Shared element/class with the promoter header below.
+      if (bioEl && curator?.bio) {
+        bioEl.textContent = curator.bio;
+        bioEl.hidden = false;
+      }
     }
 
     // ── PROMOTER HEADER ──
@@ -1102,7 +1121,7 @@ async function init() {
       const titleEl    = document.getElementById('gigs-header-title');
       const subtitleEl = document.getElementById('gigs-header-subtitle');
       const avatarEl   = document.getElementById('gigs-header-promoter-avatar');
-      const bioEl      = document.getElementById('gigs-header-promoter-bio');
+      const bioEl      = document.getElementById('gigs-header-bio');
       if (titleEl)    titleEl.textContent    = promoter?.name || 'Promoter Events';
       if (subtitleEl) subtitleEl.textContent = 'Events';
       if (avatarEl && promoter?.profile_image) {

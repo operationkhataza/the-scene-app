@@ -235,8 +235,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: -0.005em;
 }
 
-/* Promoter mode — circular avatar above the title */
-.gigs-header__promoter-avatar {
+/* Promoter/curator modes — circular avatar above the title. Two classes
+   (not shared) so each mode's colour rules stay keyed to its own avatar
+   without leaking the other mode's ring colour. */
+.gigs-header__promoter-avatar,
+.gigs-header__curator-avatar {
   width: 72px;
   height: 72px;
   border-radius: 50%;
@@ -247,11 +250,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     0 8px 24px rgba(51, 128, 193, 0.25),
     0 0 0 1px rgba(51, 128, 193, 0.20);
 }
-.gigs-header__promoter-avatar:not([hidden]) { display: block; }
+.gigs-header__promoter-avatar:not([hidden]),
+.gigs-header__curator-avatar:not([hidden]) { display: block; }
 
-/* Promoter mode — bio line under the title (calendar promoter header).
-   Deliberately its own class, not .gigs-header__curator-byline: unhiding
-   the byline would trip the curator-mode :has() rules on the header. */
+/* Curator/promoter modes — bio line under the title (calendar promoter
+   header + gig guide's curator/promoter headers). Deliberately its own
+   class, not .gigs-header__curator-byline: unhiding the byline would trip
+   the curator-mode :has() rules on the header. */
 .gigs-header__promoter-bio {
   font-size: 0.94rem;
   line-height: 1.5;
@@ -259,8 +264,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   margin: 0.5rem auto 0;
   max-width: 34rem;
 }
-/* On the dark identity card (visible avatar), go light-muted instead */
-.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__promoter-bio {
+/* On the dark identity card (visible avatar or curator byline), go light-muted instead */
+.gigs-header:has(.gigs-header__promoter-avatar:not([hidden])) .gigs-header__promoter-bio,
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__promoter-bio {
   color: var(--id-on-dark-mut);
 }
 
@@ -2230,6 +2236,14 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__curator-byline {
   color: var(--id-on-dark);
   font-weight: 500;
+}
+/* The curator avatar keeps its white rim but adds a cyan outer ring,
+   mirroring the promoter avatar's green ring below */
+.gigs-header:has(.gigs-header__curator-byline:not([hidden])) .gigs-header__curator-avatar {
+  border: 3px solid var(--scene-cyan);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.42);
 }
 
 /* PROMOTER mode — green accent (manual §4: green is the promoter signal) */

@@ -69,10 +69,14 @@
 
     <header class="gigs-header">
       <img class="gigs-header__promoter-avatar" id="gigs-header-promoter-avatar" hidden alt="">
+      <img class="gigs-header__curator-avatar" id="gigs-header-curator-avatar" hidden alt="">
       <h1 class="gigs-header__title" id="gigs-header-title">The Scene</h1>
       <p class="gigs-header__subtitle" id="gigs-header-subtitle">Gig Guide</p>
-      <!-- Promoter mode only: the promoter/festival bio, under the title block. -->
-      <p class="gigs-header__promoter-bio" id="gigs-header-promoter-bio" hidden></p>
+      <!-- Curator/promoter modes only: the curator's or promoter's bio, under the
+           title block. One shared element for both (mutually exclusive modes) —
+           class name is historical (promoter shipped first) but also styles the
+           curator card via the :has(.gigs-header__curator-byline) rules below. -->
+      <p class="gigs-header__promoter-bio" id="gigs-header-bio" hidden></p>
       <p class="gigs-header__curator-byline" id="gigs-header-curator-byline" hidden>This week's picks</p>
       <p class="gigs-header__date" id="gigs-header-date"></p>
 
