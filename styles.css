@@ -397,6 +397,47 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+/* ── Day-nav: prev/next chevrons for the single-day gig-guide view ──
+   Sits inline in .gigs-header, in place of the plain #gigs-header-date text
+   (app.js swaps visibility between the two based on view mode) — not a
+   floating/sticky bar, so it scrolls away with the header exactly like the
+   date text it replaces. Cyan tint (wash bg + deep-cyan icons/text) to read
+   as a distinct interactive control against the header's blue title. */
+.day-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  width: fit-content;
+  margin: 0.55rem auto 0;
+  padding: 0.22rem;
+  background: var(--scene-cyan-wash);
+  border: 1px solid rgba(75, 185, 208, 0.28);
+  border-radius: var(--radius-pill);
+}
+.day-nav__chev {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--scene-cyan-deep);
+  cursor: pointer;
+}
+.day-nav__chev svg { width: 13px; height: 13px; }
+.day-nav__chev:active { background: rgba(75, 185, 208, 0.18); }
+.day-nav__label {
+  min-width: 7.5rem;
+  padding: 0 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--scene-cyan-deep);
+  text-align: center;
+}
+
 .toolbar__clear {
   display: flex;
   width: fit-content;
@@ -484,24 +525,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 /* ============================================================
-   DATE / SECTION HEADERS
+   SECTION HEADERS
    ============================================================ */
-.date-header {
-  font-size: 1.2rem;
-  font-weight: 700;
-  padding: 1.75rem 0 0.85rem;
-  letter-spacing: -0.025em;
-  color: var(--text);
-}
-.date-header:first-child { padding-top: 0.25rem; }
-.date-header--day-view {
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  padding: 0.25rem 0 1rem;
-  color: var(--text);
-}
-
 .section-label {
   display: flex;
   align-items: center;
@@ -1702,14 +1727,6 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 .day-strip__track > .sk-card {
   flex: 0 0 87.5%;
   margin-bottom: 0;
-}
-
-/* ── Single-day-view skeleton header — mirrors .date-header--day-view ── */
-.sk-date-header {
-  height: 1.35rem;
-  width: 55%;
-  margin: 0.25rem 0 1.4rem;
-  border-radius: 4px;
 }
 
 /* ── Calendar grid skeleton — mirrors .cal-cell, reuses .cal-grid ── */

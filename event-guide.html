@@ -80,6 +80,27 @@
       <p class="gigs-header__curator-byline" id="gigs-header-curator-byline" hidden>This week's picks</p>
       <p class="gigs-header__date" id="gigs-header-date"></p>
 
+      <!-- Single-day view only: prev/next chevrons to step through days
+           without reloading the page, in place of the static date line
+           above (app.js hides #gigs-header-date and shows this instead
+           when renderOptions.singleDay is set, no curator/promoter deep
+           link). Sits inline in the header rather than floating/sticky —
+           it replaces the date text, so it scrolls away with the header
+           like the date text always did. -->
+      <div class="day-nav" id="day-nav" hidden role="navigation" aria-label="Day navigation">
+        <button class="day-nav__chev" id="day-nav-prev" type="button" aria-label="Previous day">
+          <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <span class="day-nav__label" id="day-nav-label" aria-live="polite"></span>
+        <button class="day-nav__chev" id="day-nav-next" type="button" aria-label="Next day">
+          <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M5 2L10 7L5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
       <!-- Featured events carousel — INSIDE the header so the frosted-glass panel
            wraps it; the search bar + filters flow below. Hidden until app.js finds
            active slots (and hidden entirely in curator/promoter modes). Flyer-forward

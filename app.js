@@ -32,7 +32,7 @@ document.addEventListener('touchend', e => {
 
 import { API, apiGet, fetchFeatured } from './api.js';
 import {
-  esc, isoDate, addDays, formatCardDate, formatLongDate,
+  esc, isoDate, addDays, formatCardDate,
   formatTime, dateForDayName, getParam, imgUrl, curatorRank,
   resolveGig
 } from './utils.js';
@@ -51,6 +51,10 @@ const TEST_HOLO = new URLSearchParams(window.location.search).get('holo') === 't
 const LIST_EL      = document.getElementById('gig-list');
 const TOOLBAR_EL   = document.getElementById('toolbar');
 const CLEAR_EL     = document.getElementById('toolbar-clear');
+const DAY_NAV_EL    = document.getElementById('day-nav');
+const DAY_NAV_PREV  = document.getElementById('day-nav-prev');
+const DAY_NAV_NEXT  = document.getElementById('day-nav-next');
+const DAY_NAV_LABEL = document.getElementById('day-nav-label');
 const BTN_TYPE     = document.getElementById('btn-type');
 const BTN_AREA     = document.getElementById('btn-area');
 const BTN_PRICE    = document.getElementById('btn-price');
@@ -101,7 +105,13 @@ const state = {
   activeSheetContent: null, // 'filter' | 'promoter' | 'curator' | null
   sheetDraft: new Set(),   // working copy while sheet open (type/area/genre)
   sheetDraftPrice: null,   // working copy while price sheet open
+  dayCache: new Map(),     // iso date -> resolved gigs[], single-day view chevron nav
 };
+
+// Race guard for day-nav chevron taps, mirrors map.js's fetchToken: bumped on
+// every goToDay() call so a stale in-flight response (from a fast double-tap)
+// can be discarded instead of clobbering a newer one.
+let dayFetchToken = 0;
 
 /* ============================================================
    HELPERS — esc / imgUrl / date helpers / getParam now live in
@@ -706,10 +716,7 @@ function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
   const anySearch = !!state.searchQuery;
 
   if (!gigs.length) {
-    const dateHeader = singleDay
-      ? `<h2 class="date-header date-header--day-view">${formatLongDate(singleDay)}</h2>`
-      : '';
-    LIST_EL.innerHTML = dateHeader + `
+    LIST_EL.innerHTML = `
       <div class="state">
         <h2 class="state__title">${anyFilters || anySearch ? 'Nothing matches' : 'No gigs scheduled'}</h2>
         <p class="state__text">${anyFilters || anySearch
@@ -725,8 +732,8 @@ function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
   let html = '';
 
   if (singleDay) {
-    // ── SINGLE-DAY VIEW — vertical full-width cards ──
-    html += `<h2 class="date-header date-header--day-view">${formatLongDate(singleDay)}</h2>`;
+    // ── SINGLE-DAY VIEW — vertical full-width cards. Date is shown by the
+    // #day-nav pill above the list, not repeated here (see goToDay()/init()). ──
     html += renderFlatList(gigs);
   } else {
     // ── WEEKLY VIEW — one horizontal strip per day ──
@@ -774,8 +781,9 @@ function renderSkeleton() {
     </div>`;
 
   if (renderOptions.singleDay) {
-    // Single-day view: a date header + a vertical stack of cards.
-    LIST_EL.innerHTML = `<div class="skeleton sk-date-header"></div>` + card.repeat(4);
+    // Single-day view: a vertical stack of cards. No date-header skeleton —
+    // the #day-nav pill above the list is the date indicator now.
+    LIST_EL.innerHTML = card.repeat(4);
     return;
   }
 
@@ -796,6 +804,50 @@ let renderOptions = { groupByDate: true, singleDay: null };
 function renderFromState() {
   const filtered = applyFilters(state.allGigs);
   renderList(filtered, renderOptions);
+}
+
+/* ============================================================
+   DAY-NAV — prev/next chevrons for the single-day (?day=) view.
+   Mirrors map.js's setDay() (map.js:384-427): in-place re-render, no
+   page reload, URL rewritten via replaceState (not pushState, so
+   stepping through days doesn't grow the back-button stack). Active
+   filters stay applied (renderFromState re-runs applyFilters against
+   whatever the new day's fetch returns). Per-day results are cached
+   in state.dayCache so revisiting a day already fetched this session
+   renders instantly with no network call.
+   ============================================================ */
+async function goToDay(iso) {
+  const token = ++dayFetchToken;
+  renderOptions = { groupByDate: false, singleDay: iso };
+
+  const url = new URL(window.location);
+  url.searchParams.set('day', iso);
+  window.history.replaceState({}, '', url);
+
+  DAY_NAV_LABEL.textContent = formatDayLabel(iso);
+
+  const cached = state.dayCache.get(iso);
+  if (cached) {
+    state.allGigs = cached;
+    computeFilterOptions();
+    renderFromState();
+    return;
+  }
+
+  renderSkeleton();
+  try {
+    const gigs = await fetchEvents({ fromDate: iso, toDate: iso });
+    if (token !== dayFetchToken) return; // user already stepped to another day
+    state.allGigs = gigs.map(resolveGig);
+    state.dayCache.set(iso, state.allGigs);
+    computeFilterOptions();
+    renderFromState();
+  } catch (err) {
+    console.error('[Scene] day-nav fetch failed', err);
+    if (token !== dayFetchToken) return; // superseded — don't stomp a newer day's state
+    state.dayCache.delete(iso); // allow a retry
+    renderError();
+  }
 }
 
 function clearAllFilters() {
@@ -1060,15 +1112,23 @@ async function init() {
     if (searchEl) searchEl.hidden = true;
   }
 
-  // ── HEADER DATE ──
+  // ── HEADER DATE vs DAY-NAV ── plain single-day view (no curator/promoter
+  // deep link — those are filtered bespoke feeds, day-stepping through them
+  // isn't in scope, see the featured-carousel exclusion below for the same
+  // boundary) shows the #day-nav chevron pill in place of the static date
+  // line; every other mode keeps the plain text as before.
+  const showDayNav = !!(renderOptions.singleDay && !curatorSlug && !promoterSlug);
   const headerDateEl = document.getElementById('gigs-header-date');
-  if (headerDateEl) {
+  if (headerDateEl) headerDateEl.hidden = showDayNav;
+  if (headerDateEl && !showDayNav) {
     const dateToShow = headerDate || today;
     const dayName = dateToShow.toLocaleDateString('en-ZA', { weekday: 'long' });
     const dayNum = dateToShow.getDate();
     const month = dateToShow.toLocaleDateString('en-ZA', { month: 'long' });
     headerDateEl.textContent = `${dayName} ${dayNum} ${month}`;
   }
+  DAY_NAV_EL.hidden = !showDayNav;
+  if (showDayNav) DAY_NAV_LABEL.textContent = formatDayLabel(renderOptions.singleDay);
 
   // Paint the loading skeleton in the shape of the view we're about to render,
   // before awaiting the fetch (renderOptions is finalized above).
@@ -1089,6 +1149,10 @@ async function init() {
     // Normalize theatre nights (parent_run → coalesced fields) once, up front,
     // so filters/search/sort/render all operate on a single uniform shape.
     state.allGigs = gigs.map(resolveGig);
+
+    // Seed the day-nav cache with this load's result (when showing) so an
+    // immediate chevron tap back to the start date is instant.
+    if (showDayNav) state.dayCache.set(renderOptions.singleDay, state.allGigs);
 
     // ── CURATOR HEADER ──
     if (curatorSlug) {
@@ -1175,6 +1239,9 @@ async function init() {
 /* ============================================================
    EVENT WIRING
    ============================================================ */
+DAY_NAV_PREV.addEventListener('click', () => goToDay(isoDate(addDays(new Date(renderOptions.singleDay + 'T00:00:00'), -1))));
+DAY_NAV_NEXT.addEventListener('click', () => goToDay(isoDate(addDays(new Date(renderOptions.singleDay + 'T00:00:00'),  1))));
+
 BTN_TYPE.addEventListener('click', () => openSheet('type'));
 BTN_AREA.addEventListener('click', () => openSheet('area'));
 BTN_PRICE.addEventListener('click', () => openSheet('price'));
