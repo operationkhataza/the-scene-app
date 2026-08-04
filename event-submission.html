@@ -537,19 +537,22 @@
 
   <!-- ============================================================
        ANDROID UPLOAD NOTICE (temporary)
-       The Fabrik app's Android webview has a broken image upload
-       (immedia bug, unfixed as of 23 Jul 2026), which blocks the
-       required poster step and therefore the whole submission.
-       Shown on load to any Android user; pairs with the
-       .android-notice rule group in event-submission-stylesheet.css
-       and the init block at the bottom of the script. Remove all
-       three together once immedia ships the fix.
+       The Fabrik app's Android webview had a broken image upload
+       (immedia bug). Fixed in the app update released 4 Aug 2026,
+       but still shown to every Android user since not everyone has
+       updated yet - copy tells anyone on/after that update to carry
+       on, and points stragglers to Scene Studio in the meantime.
+       Pairs with the .android-notice rule group in
+       event-submission-stylesheet.css and the init block at the
+       bottom of the script. Remove all three once Android adoption
+       of the fixed version is high enough that the notice is no
+       longer worth showing.
        ============================================================ -->
   <div id="android-notice" role="alertdialog" aria-modal="true" aria-labelledby="android-notice-title" style="display:none;">
     <div class="android-notice-card">
       <div class="android-notice-title" id="android-notice-title">Heads up, Android users</div>
-      <p>A known bug in the app on Android is blocking image uploads, so event submissions can't be completed here for now. The app developers are on it.</p>
-      <p>In the meantime, open your phone's browser and head to</p>
+      <p>We've fixed the bug that was blocking image uploads on Android. If you updated the app, or downloaded it fresh, on or after 4 August 2026, you're good: tap "Got it" and carry on below.</p>
+      <p>Haven't updated yet? Update from the Play Store first. Or in the meantime, open your phone's browser and head to</p>
       <div class="android-notice-url">studio.thescenecapetown.co.za</div>
       <p>to upload your events as usual.</p>
       <div class="android-notice-actions">

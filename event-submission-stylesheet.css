@@ -1569,8 +1569,9 @@ select {
    ANDROID UPLOAD NOTICE (temporary)
    Pairs with the #android-notice block in event-submission.html.
    Self-contained rule group keyed only to brand tokens; delete
-   the whole group when the immedia Android webview upload bug is
-   fixed and the markup + init JS are removed.
+   the whole group once the markup + init JS are removed (see the
+   HTML comment for the removal trigger - the immedia fix already
+   shipped 4 Aug 2026, this just stays up for stragglers).
    ============================================================ */
 #android-notice {
   position: fixed;
