@@ -951,8 +951,14 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
   z-index: 1;
 }
 
-/* Curated content sits above the foil layers */
-.gig-card[data-curated] > * { position: relative; z-index: 2; }
+/* Curated content sits above the foil layers. Targets .gig-card__inner
+   specifically, NOT `> *`: the other direct children of .gig-card (the holo
+   shader canvas, the dismiss button) are absolutely positioned, and a blanket
+   `position: relative` here beats their own rules on specificity and drops them
+   into the card's flex flow. That shipped as a bug twice — the canvas stretching
+   the card, and the dismiss button landing bottom-left under the ticket row on
+   every tiered card. Keep this selector narrow. */
+.gig-card[data-curated] > .gig-card__inner { position: relative; z-index: 2; }
 
 /* Curated body washes — wash legibility over the metal */
 .gig-card[data-curated="1"] .gig-card__body { background: rgba(250,250,252,0.4); }
@@ -1813,10 +1819,8 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
 /* ============================================================
    WEBGL HOLOGRAPHIC SHADER — per-card canvas (unchanged hooks)
    holo-shader.js mounts a <canvas> as the first child of every
-   .gig-card[data-curated="3"]. The selector below must beat
-   `.gig-card[data-curated] > *` from the rule that lifts content
-   to z-index: 2 — without this the canvas would join the flex
-   flow and stretch the card.
+   .gig-card[data-curated="3"]. It is absolutely positioned over
+   the card so it never joins the flex flow and stretches it.
    ============================================================ */
 .gig-card[data-curated="3"] > .holo-shader-card-canvas {
   position: absolute;

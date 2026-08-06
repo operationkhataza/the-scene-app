@@ -34,6 +34,13 @@ export function formatLongDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
 }
+/* A multi-night theatre run's date span, e.g. for the promoter profile sheet.
+   Collapses to a single date when the run has only one remaining night. */
+export function formatDateRange(startStr, endStr) {
+  if (!startStr) return '';
+  if (!endStr || endStr === startStr) return formatCardDate(startStr);
+  return `${formatCardDate(startStr)} - ${formatCardDate(endStr)}`;
+}
 export function formatTime(timeStr) {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':');

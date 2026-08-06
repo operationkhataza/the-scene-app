@@ -13,7 +13,7 @@
    ============================================================ */
 
 import { apiGet } from './api.js';
-import { esc, isoDate, imgUrl, formatCardDate, formatTime, publicVenue } from './utils.js';
+import { esc, isoDate, imgUrl, formatCardDate, formatDateRange, formatTime, resolveGig } from './utils.js';
 
 // Directus curator_type values → the label shown above the name.
 // Promoters have no equivalent field, so their cards omit the line.
@@ -57,13 +57,45 @@ async function fetchProfileEvents(kind, id) {
     [cfg.eventFilter]:     id,
     'filter[status][_eq]': 'published',
     'filter[date][_gte]':  today,
-    'fields':              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url',
+    'fields':              'id,title,date,doors_time,poster,venue.name,venue.status,ticket_url,'
+                          + 'parent_run.id,parent_run.status,parent_run.title,parent_run.poster,'
+                          + 'parent_run.ticket_url,parent_run.venue.name,parent_run.venue.status',
     'sort':                'date,doors_time',
-    'limit':               '20'
+    // Raised from 20 to 100 raw nights so a long theatre run can't starve the
+    // list before it's collapsed to one row below.
+    'limit':                '100'
   });
+  // Parent-status guard, same as app.js/calendar.js/map.js: a published night
+  // whose parent run is draft/pending must not leak through as a blank row.
+  params.set('filter[_or][0][parent_run][_null]', 'true');
+  params.set('filter[_or][1][parent_run][status][_eq]', 'published');
+
   const json = await apiGet('/items/events', params);
-  // This sheet bypasses resolveGig, so blank pending venues here too.
-  return (json.data || []).map(ev => { ev.venue = publicVenue(ev.venue); return ev; });
+  // resolveGig coalesces theatre-run fields (title/poster/ticket_url/venue) onto
+  // each night and blanks a pending venue — this sheet used to bypass it and do
+  // its own publicVenue call; now shares the same single source as the guide.
+  const resolved = (json.data || []).map(resolveGig);
+
+  // Collapse every night of the same production into one row carrying the
+  // run's date span, so a 17-night run doesn't fill the whole list. Ordinary
+  // (non-run) events pass through untouched.
+  const runs = new Map();   // parent_run id -> the merged entry already in `out`
+  const out  = [];
+  for (const ev of resolved) {
+    const runId = (ev.parent_run && typeof ev.parent_run === 'object') ? ev.parent_run.id : null;
+    if (runId == null) { out.push(ev); continue; }
+    const merged = runs.get(runId);
+    if (!merged) {
+      const entry = { ...ev, dateStart: ev.date, dateEnd: ev.date, _runId: runId };
+      runs.set(runId, entry);
+      out.push(entry);
+    } else {
+      if (ev.date < merged.dateStart) merged.dateStart = ev.date;
+      if (ev.date > merged.dateEnd)   merged.dateEnd   = ev.date;
+    }
+  }
+  out.sort((a, b) => (a.dateStart || a.date || '').localeCompare(b.dateStart || b.date || ''));
+  return out.slice(0, 20);
 }
 
 function renderProfile(kind, entity, events) {
@@ -121,8 +153,12 @@ function renderProfile(kind, entity, events) {
         <p class="profile-sheet__events-title">Upcoming Events</p>
         <ul class="profile-sheet__event-list">
           ${events.map(ev => {
-            const timeStr  = formatTime(ev.doors_time);
-            const meta     = [formatCardDate(ev.date), timeStr, ev.venue?.name].filter(Boolean).join(' · ');
+            // A collapsed theatre run (see fetchProfileEvents) shows its date span
+            // instead of a single date + time — it has neither one true date nor
+            // a single doors_time across all its nights.
+            const meta = ev._runId != null
+              ? [formatDateRange(ev.dateStart, ev.dateEnd), ev.venue?.name].filter(Boolean).join(' · ')
+              : [formatCardDate(ev.date), formatTime(ev.doors_time), ev.venue?.name].filter(Boolean).join(' · ');
             const thumbSrc = ev.poster ? imgUrl(ev.poster, { width: '144', fit: 'contain' }) : null;
             const thumbHtml = thumbSrc
               ? `<img class="profile-sheet__event-thumb" src="${thumbSrc}" alt="" loading="lazy">`
