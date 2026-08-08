@@ -116,6 +116,27 @@ export function esc(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* ── Ticket price cleaning — used by event-submission.html ──
+   Promoters keep typing "R150" despite the "numbers only" hint. ticket_tiers.price
+   has no type in Directus, so that string saves fine — the damage happens
+   downstream: parseFloat("R150") is NaN, so the gig card (gig-card.js) shows
+   "TBA" instead of a price, and the price filter (app.js gigMinPrice) drops the
+   event entirely the moment anyone touches the price slider. Kept in sync with
+   the identical helper in Scene Studio/core.js — the two apps are separate Vite
+   builds with no shared module, so this is a deliberate duplicate, not drift.
+     ''              → ''    (empty row — caller's existing "ignore" path)
+     'R150'          → '150'
+     '150pp'         → '150'
+     'R1,200.50'     → '1200.50'
+     ' 1 500 '       → '1500'
+     'TBC' / '100-200' / 'R100/R200' → null  (nothing usable — caller must block) */
+export function cleanPrice(raw) {
+  const val = String(raw ?? '').trim();
+  if (!val) return '';
+  let stripped = val.replace(/[A-Za-z\s,’']/g, '').replace(/\.$/, '');
+  return /^\d+(\.\d{1,2})?$/.test(stripped) ? stripped : null;
+}
+
 /* ============================================================
    VENUE / THEATRE-RUN COALESCING
    ────────────────────────────────────────────────────────────

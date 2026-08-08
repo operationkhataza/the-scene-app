@@ -564,6 +564,7 @@
 
   <script type="module">
     import { ICONS } from './icons.js';
+    import { cleanPrice } from './utils.js';
 
     const API_URL = 'https://api.thescenecapetown.co.za';
     const SUBMIT_URL = `${API_URL}/submit-gate`;
@@ -1198,22 +1199,46 @@
       document.getElementById('tiers-wrap').style.display = this.checked ? 'none' : '';
     });
 
-    /* TICKET TIERS */
+    /* TICKET TIERS
+       cleanPrice (utils.js) strips a currency prefix ("R150" → "150") so the
+       most natural thing a South African submitter types doesn't silently
+       turn the event free once it hits the gig guide's price filter
+       (parseFloat("R150") is NaN — see docs/changelog.md event 237). */
+    function wireTierPriceInput(input) {
+      if (!input) return;
+      input.addEventListener('input', () => {
+        const filtered = input.value.replace(/[^0-9.\-/\s]/g, '');
+        if (filtered !== input.value) input.value = filtered;
+      });
+      input.addEventListener('blur', () => {
+        const cleaned = cleanPrice(input.value);
+        if (cleaned !== null) input.value = cleaned;
+      });
+    }
     function addTier(name = '', price = '') {
       const row = document.createElement('div'); row.className = 'tier-row';
       row.innerHTML = `<input type="text" class="tier-name" placeholder="Tier (e.g. General)" value="${esc(name)}">
-        <input type="text" class="tier-price" placeholder="Amount (numbers only, e.g. 150)" value="${esc(price)}">
+        <input type="text" inputmode="decimal" class="tier-price" placeholder="Amount (e.g. 150)" value="${esc(cleanPrice(price) ?? price)}">
         <button class="tier-remove" type="button" aria-label="Remove tier">${ICONS.x}</button>`;
       row.querySelector('.tier-remove').addEventListener('click', () => row.remove());
+      wireTierPriceInput(row.querySelector('.tier-price'));
       document.getElementById('tiers-list').appendChild(row);
     }
+    /* Returns null (not []) if any row's price can't be cleaned to a plain
+       number — the caller must block the submit, not save "R150" as-is. */
     function getTicketTiers() {
-      return Array.from(document.querySelectorAll('.tier-row')).reduce((acc, row) => {
-        const name = row.querySelector('.tier-name').value.trim();
-        const price= row.querySelector('.tier-price').value.trim();
+      let invalid = false;
+      const tiers = Array.from(document.querySelectorAll('.tier-row')).reduce((acc, row) => {
+        const priceEl = row.querySelector('.tier-price');
+        const name    = row.querySelector('.tier-name').value.trim();
+        const raw     = priceEl.value.trim();
+        const price   = cleanPrice(raw);
+        if (price === null) { invalid = true; priceEl.classList.add('has-error'); return acc; }
+        priceEl.classList.remove('has-error');
         if (name || price) acc.push({ tier_name: name, price });
         return acc;
       }, []);
+      return invalid ? null : tiers;
     }
     document.getElementById('add-tier-btn').addEventListener('click', () => addTier());
     addTier();
@@ -1586,6 +1611,14 @@
           } else {
             fgA.classList.remove('has-error');
           }
+        }
+
+        // Ticket prices — getTicketTiers itself marks the offending row(s) with
+        // has-error; null means at least one price couldn't be cleaned to a
+        // plain number (an "R" prefix, a range, "TBC").
+        if (!document.getElementById('chk-free').checked && getTicketTiers() === null) {
+          ok = false;
+          toast('Ticket price must be a number, e.g. 150 — no "R", no ranges.', 'err');
         }
       }
       if (page === 4) { req('fg-submitter', 'inp-submitter-name'); }

@@ -603,7 +603,10 @@ select {
 .fg.has-error input,
 .fg.has-error select,
 .fg.has-error textarea,
-.fg.has-error .field-trigger {
+.fg.has-error .field-trigger,
+input.has-error,
+select.has-error,
+textarea.has-error {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(224, 75, 90, 0.12);
 }
