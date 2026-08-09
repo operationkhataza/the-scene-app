@@ -569,6 +569,7 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
   // Promoter mode: filter to only events this promoter has presented
   if (promoterSlug) {
     params.set('filter[promoters][promoters_id][slug][_eq]', promoterSlug);
+    params.set('limit', '500'); // wider date window can exceed the default 200
   }
 
   const res = await fetch(`${API}/items/events?${params}`);
@@ -1085,12 +1086,13 @@ async function init() {
     renderOptions = { groupByDate: true, singleDay: null };
   }
 
-  // ── PROMOTER MODE — 30-day window ──
-  // Override whatever the default date range was: show the next 30 days so
-  // visitors can see the promoter's full upcoming schedule at a glance.
+  // ── PROMOTER MODE — 12-month window ──
+  // Override whatever the default date range was: show the next 12 months so
+  // visitors can see the promoter's full upcoming schedule, including
+  // season-ahead bookings (e.g. classical/theatre partners).
   if (promoterSlug) {
     fromDate = isoDate(today);
-    toDate   = isoDate(addDays(today, 29));
+    toDate   = isoDate(addDays(today, 365));
     renderOptions = { groupByDate: true, singleDay: null };
   }
 
@@ -1105,7 +1107,7 @@ async function init() {
   }
 
   // ── PROMOTER MODE UI ──
-  // Keep the filter toolbar visible (useful over a 30-day window) but hide the
+  // Keep the filter toolbar visible (useful over a 12-month window) but hide the
   // search bar — the promoter's name in the header is the primary context.
   if (promoterSlug) {
     const searchEl = document.querySelector('.search-bar');
