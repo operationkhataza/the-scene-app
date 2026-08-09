@@ -1096,10 +1096,15 @@ async function init() {
     renderOptions = { groupByDate: true, singleDay: null };
   }
 
-  // ── CURATOR MODE ──
+  // ── CURATOR MODE — 30-day window ──
+  // Override whatever the default date range was: show the next 30 days so
+  // visitors can see the curator's fuller upcoming picks, not just this week.
   // If ?curator=slug is present, fetch the curator record and swap the header.
   // Both the toolbar and search bar are hidden — the curator's picks are the filter.
   if (curatorSlug) {
+    fromDate = isoDate(today);
+    toDate   = isoDate(addDays(today, 29));
+    renderOptions = { groupByDate: true, singleDay: null };
     const toolbarEl = document.getElementById('toolbar');
     const searchEl = document.querySelector('.search-bar');
     if (toolbarEl) toolbarEl.hidden = true;
