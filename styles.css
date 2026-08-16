@@ -1254,6 +1254,17 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
 }
 
 .promoter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* Matches .curators above. The markup joins promoter pills with no separator
+     (gig-card.js), so the column-gap is the only thing between them; without it
+     two inline-flex pills render flush and their ::after tap targets overlap.
+     Row gap keeps the 44px targets of two wrapped rows apart. Latent until an
+     event carried two promoters — first fired by the UCT Jazz Festival profile,
+     which tags festival nights alongside their own promoter. */
+  column-gap: 0.4rem;
+  row-gap: 0.75rem;
   font-size: 0.76rem;
   color: var(--text-muted);
   margin-top: 1rem;
@@ -1273,7 +1284,9 @@ a.gig-card:active { opacity: 0.94; transform: translateY(0); }
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.6rem;
-  margin-right: 6px;
+  /* Was 6px. The container's 0.4rem column-gap (6.4px) now owns this spacing,
+     so single-promoter cards stay visually where they were. */
+  margin-right: 0;
   color: var(--success);
 }
 
