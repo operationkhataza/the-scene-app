@@ -2621,6 +2621,13 @@ body.has-cover-bg::before {
   letter-spacing: -0.02em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  /* Clears .cal-cell__count's absolute top-right badge (top: 2px, ~12px
+     tall) — without this the number's top edge sits inside the badge's
+     footprint on every 2+-event day. Applied uniformly (not just on
+     has-count days) so every date lines up at the same height across the
+     grid; the pips row below is pinned to the bottom via margin-top: auto,
+     so there's slack here already and this doesn't grow the cell. */
+  margin-top: 0.55rem;
 }
 
 /* ── Tier pips — the dense day signal ────────────────────── */
