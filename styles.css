@@ -2487,12 +2487,19 @@ body.has-cover-bg::before {
 .cal-nav__chev:active { transform: scale(0.94); }
 .cal-nav__chev svg { width: 13px; height: 13px; }
 
+/* Block + text-align, NOT flex + justify-content: center. With flex and a
+   bare text node the text becomes an anonymous flex item that shrink-wraps,
+   so the box that actually PAINTS is only as wide as the current string.
+   Inside this backdrop-filter pill, WebKit then repaints a replaced label
+   using the OLD string's damage rect and clips a longer new one at both
+   ends ("AUGUST 2026" → "UGUST 202" on iOS, 16 Aug 2026). A block box spans
+   the whole flex track, so any content change invalidates the full band. */
 .cal-nav__month-label {
   flex: 1;
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
+  line-height: 36px;
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 500;

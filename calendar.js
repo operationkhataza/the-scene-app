@@ -51,6 +51,7 @@ const DAY_EL      = document.getElementById('cal-day');
 const PREV_BTN    = document.getElementById('cal-nav-prev');
 const NEXT_BTN    = document.getElementById('cal-nav-next');
 const MONTH_LABEL = document.getElementById('cal-nav-month-label');
+const MONTH_TEXT  = document.getElementById('cal-nav-month-text');
 const MODAL_EL    = document.getElementById('cal-modal');
 const MODAL_CARD  = document.getElementById('cal-modal-card');
 const PROFILE_BD    = document.getElementById('profile-backdrop');
@@ -607,7 +608,7 @@ async function goToMonth(d, direction = 0) {
 function updateHeader() {
   const monthName = formatMonth(state.viewMonth);
   const year      = String(state.viewMonth.getFullYear());
-  MONTH_LABEL.textContent = `${monthName} ${year}`;
+  MONTH_TEXT.textContent = `${monthName} ${year}`;
 }
 
 /* ============================================================
