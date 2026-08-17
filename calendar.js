@@ -44,6 +44,7 @@ import {
 import { renderGigCard, renderDayCard, renderFeaturedCard } from './gig-card.js';
 import { createCardModal } from './card-modal.js';
 import { createProfileSheet } from './profile-sheet.js';
+import { applyCoverMode } from './cover-mode.js';
 
 /* DOM */
 const GRID_EL     = document.getElementById('cal-grid');
@@ -697,7 +698,7 @@ function startFeaturedAutoscroll(track) {
    just stays generic while the event filter still applies. */
 async function loadPromoter(slug) {
   try {
-    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio,cover_image&limit=1`);
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio,cover_image,cover_text_tone,cover_focal&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Calendar] Could not load promoter:', err);
@@ -709,7 +710,12 @@ async function loadPromoter(slug) {
    text and unhiding the avatar is the whole mode switch — the dark
    identity styling is pure CSS (:has() on the visible avatar), shared
    with the gig guide. Avatar only unhides when there's an image, same
-   as app.js (no image → light header with just the name swapped). */
+   as app.js (no image → light header with just the name swapped).
+
+   Returns the Promise from applyCoverMode (resolved immediately when
+   there's no cover) so init() can gate the loading reveal on it — the
+   cover artwork must actually be painted before the wireframe drops,
+   not just requested. */
 function renderPromoterHeader(promoter) {
   const titleEl  = document.getElementById('calendar-eyebrow');
   const avatarEl = document.getElementById('cal-header-avatar');
@@ -727,37 +733,14 @@ function renderPromoterHeader(promoter) {
     bioEl.textContent = promoter.bio;
     bioEl.hidden = false;
   }
-  // Cover image → whole-page background (festival mode, v2 experiment).
-  // When the promoter has a cover_image, the art becomes the fixed
-  // background of the ENTIRE calendar page (body.has-cover-bg repurposes
-  // the bloom layer, body::before) and the header ribbon becomes a heavy
-  // frosted-glass pane over it — no navy, no image inside the ribbon.
-  // See the "--cover" rules in styles.css. The custom property lives on
-  // <body> so it inherits everywhere (incl. the header, if ever needed).
-  // Null cover → classes never added, the plain navy identity card stays.
-  if (promoter?.cover_image) {
-    // Request the cover at the device's real pixel size (screen × DPR,
-    // capped at 3x). A fixed width-1280 request gets upscaled to fill a
-    // full-viewport cover on a high-DPR phone (height is the binding
-    // dimension there) and reads blurry. fit=cover with both dims makes
-    // Directus serve the same centre crop CSS shows, at native sharpness;
-    // it never upscales past the source file. screen.* is orientation-
-    // normalised via the window aspect (iOS reports portrait-fixed,
-    // Android swaps — this handles both).
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const sw = window.screen.width  || 390;
-    const sh = window.screen.height || 844;
-    const landscape = window.innerWidth > window.innerHeight;
-    const coverW = Math.round((landscape ? Math.max(sw, sh) : Math.min(sw, sh)) * dpr);
-    const coverH = Math.round((landscape ? Math.min(sw, sh) : Math.max(sw, sh)) * dpr);
-    document.body.style.setProperty(
-      '--promoter-cover',
-      `url("${imgUrl(promoter.cover_image, { width: String(coverW), height: String(coverH), fit: 'cover' })}")`
-    );
-    document.body.classList.add('has-cover-bg');
-    const headerEl = document.querySelector('.calendar-header');
-    if (headerEl) headerEl.classList.add('gigs-header--cover');
-  }
+  // Cover image → whole-page background (festival mode). When the promoter
+  // has a cover_image, the art becomes the fixed background of the ENTIRE
+  // calendar page and the header ribbon becomes a frosted-glass pane over
+  // it — no navy, no image inside the ribbon. Text colour and framing are
+  // both editor-set (cover_text_tone / cover_focal), not computed — see
+  // cover-mode.js. Null cover → nothing applied, plain navy identity card
+  // stays exactly as before.
+  return applyCoverMode(promoter?.cover_image, promoter?.cover_text_tone, promoter?.cover_focal, document.querySelector('.calendar-header'));
 }
 
 /* Auto-jump lookahead: the promoter's first upcoming event date, so the
@@ -830,10 +813,14 @@ async function init() {
   // mode the auto-jump lookahead below runs before the month fetch).
   renderGridSkeleton();
 
-  // Promoter identity header — independent of the month data, so it loads in
-  // parallel and lands whenever it lands (null → header just stays generic).
+  // Promoter identity + cover — started here (not awaited) so it overlaps
+  // the auto-jump lookahead and month fetch below, but coverReady is
+  // awaited just before the loading hold lifts near the end of this
+  // function, so the reveal never happens before the cover artwork is
+  // actually painted. See "loading hold" below and cover-mode.js.
+  let coverReady = Promise.resolve();
   if (state.promoterSlug) {
-    loadPromoter(state.promoterSlug).then(renderPromoterHeader);
+    coverReady = loadPromoter(state.promoterSlug).then(renderPromoterHeader);
   }
 
   let focused = today;
@@ -871,6 +858,20 @@ async function init() {
 
   renderGrid();
   renderDay();
+
+  // Loading hold, promoter mode only — calendar.html's inline <head> script
+  // set html.cover-pending before this script even ran, whenever ?promoter=
+  // is present (see the head of that file). That suppressed the normal
+  // background/header from painting; lifting it here, once the events above
+  // are already rendered AND the cover artwork has either loaded or failed,
+  // is what turns "normal page, then flash into cover mode" into one single
+  // correct reveal. The 2s cut-off means a slow/broken image can never
+  // strand the page on the wireframe. A normal load (no ?promoter=) never
+  // set the class in the first place, so this block never runs for it.
+  if (state.promoterSlug) {
+    await Promise.race([coverReady, new Promise(resolve => setTimeout(resolve, 2000))]);
+    document.documentElement.classList.remove('cover-pending');
+  }
 
   // Featured spotlight — independent of the month data, so fire-and-forget.
   renderFeatured();

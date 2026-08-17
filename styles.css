@@ -2290,7 +2290,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: 0.18em;
-  color: var(--success);
+  color: var(--id-on-dark);
   text-transform: uppercase;
 }
 /* The avatar in promoter mode keeps its white rim but adds a green
@@ -2323,17 +2323,21 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
   margin-top: -3.5rem;
 }
 
-/* ── Promoter cover mode (v2 experiment, 22 Jul 2026) ────────
-   calendar.js, ?promoter= mode, when the promoter has a cover_image:
-   sets --promoter-cover (a url(...)) + .has-cover-bg on <body> and
-   .gigs-header--cover on the header. v2: the cover art is the fixed
-   background of the WHOLE page (repurposing the bloom layer,
-   body::before) and the header ribbon is a heavy frosted-glass pane
-   over it — no navy, no image inside the ribbon. (v1 — blurred art
-   inside the ribbon — replaced this same day.) Header selectors are
-   (0,3,x) like the :has() identity rules above; being later in the
-   file they win the ties. No cover image → classes absent, plain navy
-   identity card as before. */
+/* ── Cover mode (promoter: calendar.js + app.js; curator: app.js only) ──
+   cover-mode.js's applyCoverMode(), when the promoter/curator has a
+   cover_image: sets --cover-image (a url(...)) + --cover-focal (a
+   background-position) + .has-cover-bg on <body>, and .gigs-header--cover
+   on the header. The cover art is the fixed background of the WHOLE page
+   (repurposing the bloom layer, body::before) and the header ribbon is a
+   heavy frosted-glass pane over it — no navy, no image inside the ribbon.
+   Header selectors are (0,3,x) like the :has() identity rules above;
+   being later in the file they win the ties. No cover image → classes
+   absent, plain navy identity card as before.
+
+   Text colour (default dark below, body[data-cover-text="light"]
+   overrides further down) and the focal point are both editor-set in
+   Scene Studio (cover_text_tone / cover_focal), not computed from the
+   image — see docs/decisions.md. */
 
 /* Whole-page cover: the fixed bloom layer becomes the artwork, with a
    light veil on top so the glass grid/cards over it stay legible.
@@ -2354,7 +2358,7 @@ body.has-cover-bg::before {
   height: 100lvh;
   background:
     linear-gradient(180deg, rgba(238, 244, 250, 0.30) 0%, rgba(238, 244, 250, 0.52) 100%),
-    var(--promoter-cover) center / cover no-repeat;
+    var(--cover-image) var(--cover-focal, 50% 50%) / cover no-repeat;
   animation: none;
 }
 
@@ -2399,6 +2403,15 @@ body.has-cover-bg::before {
 .gigs-page .gigs-header.gigs-header--cover .gigs-header__promoter-bio {
   color: #000;
 }
+/* Subtitle ("Events") — without this, it keeps the near-white colour the
+   plain identity-card :has() rule gives it (that rule matches on the
+   avatar being visible, which is true in cover mode too), so it wouldn't
+   track the tone toggle at all: black title/bio next to a pale subtitle
+   regardless of what cover_text_tone says. This makes it follow the same
+   default-black / light-override split as title and bio. */
+.gigs-page .gigs-header.gigs-header--cover .gigs-header__subtitle {
+  color: #000;
+}
 /* Identity mode's heavy dark avatar shadow (designed for the navy
    card) is too much on light frost — soften, keep the green ring. */
 .gigs-page .gigs-header.gigs-header--cover .gigs-header__promoter-avatar {
@@ -2406,6 +2419,112 @@ body.has-cover-bg::before {
   box-shadow:
     0 8px 24px rgba(15, 26, 46, 0.22),
     0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* ── Cover mode TEXT TONE (editor-set: cover_text_tone) ──────
+   Absence of body[data-cover-text="light"] — the check hasn't been set,
+   OR was explicitly set to "dark", OR there's no cover at all — leaves
+   every rule above/below this block as the default: black header text,
+   the normal translucent-white .filter-btn, dark day-strip labels. That
+   default is deliberate (unset = dark text, matching the behaviour
+   before this field existed), not a placeholder.
+
+   These header-text overrides are a strict superset of the #000 rules
+   above (same chain plus one ancestor attribute selector), so they win
+   regardless of source order — placed after anyway per this file's
+   existing "later wins ties" convention. */
+body[data-cover-text="light"] .gigs-page .gigs-header.gigs-header--cover .gigs-header__title {
+  -webkit-text-fill-color: #fff;
+  color: #fff;
+}
+body[data-cover-text="light"] .gigs-page .gigs-header.gigs-header--cover .gigs-header__promoter-bio {
+  color: #fff;
+}
+body[data-cover-text="light"] .gigs-page .gigs-header.gigs-header--cover .gigs-header__subtitle {
+  color: #fff;
+}
+
+/* Filter chips (gig guide, promoter mode only — the toolbar is hidden
+   entirely in curator mode, so no .filter-btn ever exists to match this
+   on a curator page). Scoped by body.has-cover-bg as well, which JS only
+   ever adds when a cover image exists — a normal load can never match
+   this selector at all. Dark frosted pill echoing the header's own
+   frost treatment, using the identity-card ink tone. */
+body.has-cover-bg[data-cover-text="light"] .filter-btn {
+  background: rgba(21, 35, 61, 0.55);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.92);
+}
+body.has-cover-bg[data-cover-text="light"] .filter-btn:hover {
+  background: rgba(21, 35, 61, 0.72);
+  border-color: #fff;
+  color: #fff;
+}
+/* .filter-btn.is-active is untouched — it already uses the saturated
+   --selected-bg gradient with white text, legible on either tone. */
+
+/* Day-strip date headings (gig guide only — the calendar has no
+   .day-strip markup). Confirmed to have no background of their own
+   (nor does .gigs-page), so they sit directly on the cover artwork. */
+body.has-cover-bg[data-cover-text="light"] .day-strip__label {
+  color: #fff;
+}
+body.has-cover-bg[data-cover-text="light"] .day-strip__count {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Loading hold, promoter/curator views only ────────────────
+   calendar.html / event-guide.html each carry a tiny inline <head>
+   script that adds html.cover-pending BEFORE first paint, whenever the
+   URL has a ?promoter= (both pages) or ?curator= (gig guide only) — see
+   the head of each file. That's checkable synchronously from the URL,
+   before any network request, which is what lets this suppress the
+   WRONG page (default background, generic header text) from ever
+   painting, rather than painting it and correcting a moment later.
+   init() in calendar.js/app.js removes the class once events are
+   rendered AND the cover artwork (if any) has settled, with a ~2s
+   cut-off. A normal load never gets this class in the first place, so
+   none of this can affect it. */
+
+/* html html.cover-pending body::before beats body.has-cover-bg::before
+   on specificity regardless of source order (one more type selector),
+   so this keeps winning even after applyCoverMode() has already added
+   has-cover-bg synchronously — the whole point: the cover classes can
+   be applied immediately without the artwork becoming visible early.
+   Background: none lets the page's own calm base gradient (body, not
+   body::before) show through untouched — that gradient IS the "flat,
+   quiet ice-tone wash" this needs, so nothing new to invent here. */
+html.cover-pending body::before {
+  background: none;
+  animation: none;
+}
+
+/* Header identity content hidden during the hold — otherwise the
+   generic "The Scene" / "Gig Guide" placeholder text (or the calendar's
+   equivalent) is what's visible for that brief window, which is exactly
+   the wrong-content flash this mechanism exists to remove. The
+   surrounding skeleton stays fully visible throughout; this only hides
+   the header text/avatar riding on top of it. Shared classes across
+   both pages — .gigs-header__subtitle and the curator ones simply don't
+   match on calendar.html, which doesn't have them. */
+html.cover-pending .gigs-header__title,
+html.cover-pending .gigs-header__subtitle,
+html.cover-pending .gigs-header__promoter-bio,
+html.cover-pending .gigs-header__curator-byline,
+html.cover-pending .gigs-header__promoter-avatar,
+html.cover-pending .gigs-header__curator-avatar {
+  opacity: 0;
+}
+/* Declared unconditionally (not scoped to .cover-pending) so removing
+   the class animates the reveal instead of cutting to it. Inert on a
+   normal load, where opacity here never changes. */
+.gigs-header__title,
+.gigs-header__subtitle,
+.gigs-header__promoter-bio,
+.gigs-header__curator-byline,
+.gigs-header__promoter-avatar,
+.gigs-header__curator-avatar {
+  transition: opacity 0.35s ease;
 }
 
 /* ============================================================

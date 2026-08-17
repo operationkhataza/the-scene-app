@@ -42,6 +42,7 @@ import {
 } from './gig-card.js';
 import { createCardModal, attachCardFlip } from './card-modal.js';
 import { createProfileSheet } from './profile-sheet.js';
+import { applyCoverMode } from './cover-mode.js';
 
 // Dev preview: ?holo=test forces every event card into the holographic tier
 // so the WebGL shader is visible regardless of curator count in Directus.
@@ -619,7 +620,7 @@ async function loadAreas() {
    ============================================================ */
 async function loadCurator(slug) {
   try {
-    const json = await apiGet(`/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,bio,profile_image,logo&limit=1`);
+    const json = await apiGet(`/items/curators?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,bio,profile_image,logo,cover_image,cover_text_tone,cover_focal&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load curator:', err);
@@ -633,7 +634,7 @@ async function loadCurator(slug) {
    ============================================================ */
 async function loadPromoter(slug) {
   try {
-    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio&limit=1`);
+    const json = await apiGet(`/items/promoters?filter[slug][_eq]=${encodeURIComponent(slug)}&fields=id,name,slug,profile_image,bio,cover_image,cover_text_tone,cover_focal&limit=1`);
     return json.data?.[0] || null;
   } catch (err) {
     console.warn('[Scene] Could not load promoter:', err);
@@ -1126,8 +1127,10 @@ async function init() {
   // line; every other mode keeps the plain text as before.
   const showDayNav = !!(renderOptions.singleDay && !curatorSlug && !promoterSlug);
   const headerDateEl = document.getElementById('gigs-header-date');
-  if (headerDateEl) headerDateEl.hidden = showDayNav;
-  if (headerDateEl && !showDayNav) {
+  // Promoter feeds don't need today's date in the header — it's the promoter's
+  // name/identity that matters there, not the date the feed happens to load on.
+  if (headerDateEl) headerDateEl.hidden = showDayNav || !!promoterSlug;
+  if (headerDateEl && !showDayNav && !promoterSlug) {
     const dateToShow = headerDate || today;
     const dayName = dateToShow.toLocaleDateString('en-ZA', { weekday: 'long' });
     const dayNum = dateToShow.getDate();
@@ -1161,6 +1164,11 @@ async function init() {
     // immediate chevron tap back to the start date is instant.
     if (showDayNav) state.dayCache.set(renderOptions.singleDay, state.allGigs);
 
+    // Resolves once the cover artwork (if any) has painted — set inside
+    // whichever header block below actually runs, awaited near the end of
+    // this function before the loading hold lifts. See cover-mode.js.
+    let coverReady = Promise.resolve();
+
     // ── CURATOR HEADER ──
     if (curatorSlug) {
       const titleEl = document.getElementById('gigs-header-title');
@@ -1185,6 +1193,7 @@ async function init() {
         bioEl.textContent = curator.bio;
         bioEl.hidden = false;
       }
+      coverReady = applyCoverMode(curator?.cover_image, curator?.cover_text_tone, curator?.cover_focal, document.querySelector('.gigs-header'));
     }
 
     // ── PROMOTER HEADER ──
@@ -1206,6 +1215,7 @@ async function init() {
         bioEl.textContent = promoter.bio;
         bioEl.hidden = false;
       }
+      coverReady = applyCoverMode(promoter?.cover_image, promoter?.cover_text_tone, promoter?.cover_focal, document.querySelector('.gigs-header'));
     }
 
     // ── DIAGNOSTIC — visible in browser console, helps debug filter issues ──
@@ -1234,6 +1244,21 @@ async function init() {
     });
 
     renderFromState();
+
+    // Loading hold, curator/promoter mode only — event-guide.html's inline
+    // <head> script set html.cover-pending before this script even ran,
+    // whenever ?curator= or ?promoter= is present. That suppressed the
+    // normal background/header from painting; lifting it here, once events
+    // are already rendered above AND the cover artwork has either loaded or
+    // failed, turns "normal page, then flash into cover mode" into one
+    // single correct reveal. The 2s cut-off means a slow/broken image can
+    // never strand the page on the wireframe. A normal load (no curator/
+    // promoter param) never set the class in the first place, so this
+    // block never runs for it.
+    if (curatorSlug || promoterSlug) {
+      await Promise.race([coverReady, new Promise(resolve => setTimeout(resolve, 2000))]);
+      document.documentElement.classList.remove('cover-pending');
+    }
 
     // Featured spotlight — independent of the feed query, so fire-and-forget.
     renderFeatured();

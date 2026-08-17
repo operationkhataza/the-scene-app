@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Loading hold: suppress the normal bloom background + generic header
+       text on the very first frame when this is a promoter or curator
+       cover-mode view, so app.js never has to correct a wrongly-painted
+       page a moment later. The mode is knowable synchronously from the
+       URL, before any network request — see the "Loading hold" rules in
+       styles.css and the reveal-gate in app.js's init(). -->
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      if (p.get('promoter') || p.get('curator')) {
+        document.documentElement.classList.add('cover-pending');
+      }
+    })();
+  </script>
   <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
        maximum-scale=1 + user-scalable=no together disable all manual zoom.
        iOS Safari still respects user-scalable=no when maximum-scale is also set. -->

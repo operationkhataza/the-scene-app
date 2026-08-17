@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Loading hold: suppress the normal bloom background + generic header
+       text on the very first frame when this is a promoter cover-mode
+       view, so calendar.js never has to correct a wrongly-painted page a
+       moment later. The mode is knowable synchronously from the URL,
+       before any network request — see the "Loading hold" rules in
+       styles.css and the reveal-gate in calendar.js's init(). Promoter
+       only: ?curator= is not a page mode on this calendar, so it must
+       not be checked here — nothing would ever clear the hold it'd set. -->
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      if (p.get('promoter')) {
+        document.documentElement.classList.add('cover-pending');
+      }
+    })();
+  </script>
   <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
        Same viewport contract as event-guide.html so the calendar feels
        native inside Fabrik's WebView. -->
