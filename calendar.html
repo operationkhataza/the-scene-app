@@ -6,10 +6,10 @@
        text on the very first frame when this is a promoter cover-mode
        view, so calendar.js never has to correct a wrongly-painted page a
        moment later. The mode is knowable synchronously from the URL,
-       before any network request — see the "Loading hold" rules in
+       before any network request; see the "Loading hold" rules in
        styles.css and the reveal-gate in calendar.js's init(). Promoter
        only: ?curator= is not a page mode on this calendar, so it must
-       not be checked here — nothing would ever clear the hold it'd set. -->
+       not be checked here, or nothing would ever clear the hold it'd set. -->
   <script>
     (function () {
       var p = new URLSearchParams(location.search);

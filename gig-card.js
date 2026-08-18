@@ -176,13 +176,22 @@ export function gigGenreNames(gig) {
      categoryLookup — resolves a scalar event_category FK to {slug,name};
                       omit where the fields query already expands it
      forceTier      — dev preview (?holo=test): force the holo tier
+     eager          — skip lazy-loading for this card's poster (feed only, for
+                      the handful of cards that are on screen at first paint)
    ============================================================ */
 export function renderGigCard(gig, opts = {}) {
-  const { index = null, dismiss = false, categoryLookup = null, forceTier = false } = opts;
+  const { index = null, dismiss = false, categoryLookup = null, forceTier = false, eager = false } = opts;
 
   const posterSrc = imgUrl(gig.poster, { width: '800', fit: 'contain' });
+  // Posters are lazy by default, which is right for a long feed but wrong for
+  // the cards already visible at first paint: those would sit blank until the
+  // lazy observer fired, which reads as "the images are slow to load". The feed
+  // marks its top few eager so they start immediately and at high priority;
+  // everything else stays lazy. Callers that don't pass `eager` are unaffected
+  // (modals, map, calendar), where the card is always a single on-demand open.
+  const loadAttrs = eager ? 'fetchpriority="high"' : 'loading="lazy"';
   const poster = posterSrc
-    ? `<img class="gig-card__poster" src="${posterSrc}" alt="${esc(gig.title)} poster" loading="lazy">`
+    ? `<img class="gig-card__poster" src="${posterSrc}" alt="${esc(gig.title)} poster" ${loadAttrs}>`
     : `<div class="gig-card__poster-placeholder">The Scene</div>`;
 
   // Meta line: DATE · DOORS TIME. A featured whole run has no single date/time

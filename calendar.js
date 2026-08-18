@@ -713,7 +713,7 @@ async function loadPromoter(slug) {
    as app.js (no image → light header with just the name swapped).
 
    Returns the Promise from applyCoverMode (resolved immediately when
-   there's no cover) so init() can gate the loading reveal on it — the
+   there's no cover) so init() can gate the loading reveal on it: the
    cover artwork must actually be painted before the wireframe drops,
    not just requested. */
 function renderPromoterHeader(promoter) {
@@ -736,8 +736,8 @@ function renderPromoterHeader(promoter) {
   // Cover image → whole-page background (festival mode). When the promoter
   // has a cover_image, the art becomes the fixed background of the ENTIRE
   // calendar page and the header ribbon becomes a frosted-glass pane over
-  // it — no navy, no image inside the ribbon. Text colour and framing are
-  // both editor-set (cover_text_tone / cover_focal), not computed — see
+  // it: no navy, no image inside the ribbon. Text colour and framing are
+  // both editor-set (cover_text_tone / cover_focal), not computed; see
   // cover-mode.js. Null cover → nothing applied, plain navy identity card
   // stays exactly as before.
   return applyCoverMode(promoter?.cover_image, promoter?.cover_text_tone, promoter?.cover_focal, document.querySelector('.calendar-header'));
@@ -792,6 +792,12 @@ function renderGridSkeleton() {
   DAY_EL.innerHTML = `<div class="skeleton sk-day__header"></div>` + dayCard.repeat(3);
 }
 
+/* Lift the loading hold set by the inline <head> script (see calendar.html).
+   Idempotent, so every path that might finish first can call it freely. */
+function revealHeader() {
+  document.documentElement.classList.remove('cover-pending');
+}
+
 async function init() {
   const today = new Date();
 
@@ -813,14 +819,19 @@ async function init() {
   // mode the auto-jump lookahead below runs before the month fetch).
   renderGridSkeleton();
 
-  // Promoter identity + cover — started here (not awaited) so it overlaps
-  // the auto-jump lookahead and month fetch below, but coverReady is
-  // awaited just before the loading hold lifts near the end of this
-  // function, so the reveal never happens before the cover artwork is
-  // actually painted. See "loading hold" below and cover-mode.js.
-  let coverReady = Promise.resolve();
+  // Promoter identity + cover, on its own track. The promoter row is one tiny
+  // record and lands long before the month data, so the loading hold lifts as
+  // soon as the header is painted (and its cover artwork, if any, downloaded)
+  // rather than waiting on the grid. The 2.5s cap only bites when a cover image
+  // is genuinely slow: a promoter without one resolves immediately. See
+  // cover-mode.js and the "loading hold" rules in styles.css.
   if (state.promoterSlug) {
-    coverReady = loadPromoter(state.promoterSlug).then(renderPromoterHeader);
+    const headerReady = loadPromoter(state.promoterSlug)
+      .then(renderPromoterHeader)
+      .catch(err => { console.warn('[Calendar] identity header failed:', err); });
+
+    Promise.race([headerReady, new Promise(resolve => setTimeout(resolve, 2500))])
+      .then(revealHeader);
   }
 
   let focused = today;
@@ -858,20 +869,6 @@ async function init() {
 
   renderGrid();
   renderDay();
-
-  // Loading hold, promoter mode only — calendar.html's inline <head> script
-  // set html.cover-pending before this script even ran, whenever ?promoter=
-  // is present (see the head of that file). That suppressed the normal
-  // background/header from painting; lifting it here, once the events above
-  // are already rendered AND the cover artwork has either loaded or failed,
-  // is what turns "normal page, then flash into cover mode" into one single
-  // correct reveal. The 2s cut-off means a slow/broken image can never
-  // strand the page on the wireframe. A normal load (no ?promoter=) never
-  // set the class in the first place, so this block never runs for it.
-  if (state.promoterSlug) {
-    await Promise.race([coverReady, new Promise(resolve => setTimeout(resolve, 2000))]);
-    document.documentElement.classList.remove('cover-pending');
-  }
 
   // Featured spotlight — independent of the month data, so fire-and-forget.
   renderFeatured();
@@ -948,4 +945,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && PROFILE_SHEET.classList.contains('is-open')) closeProfileSheet();
 });
 
-init();
+// Last-resort guard: a failed month fetch must still not leave the page sitting
+// behind an invisible header.
+init().catch(err => {
+  console.error('[Calendar] init failed:', err);
+  revealHeader();
+});

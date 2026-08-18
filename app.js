@@ -584,6 +584,66 @@ async function fetchEvents({ fromDate, toDate, curatorSlug = null, promoterSlug 
 }
 
 /* ============================================================
+   IDENTITY HEADER (curator / promoter modes)
+   ────────────────────────────────────────────────────────────
+   Paints the promoter/curator name, avatar and bio into the shared
+   header, and kicks off cover mode. Deliberately NOT coupled to the
+   events feed: the profile is one tiny row and lands in ~100-200ms,
+   while the feed is a much larger query. Keeping these together (they
+   used to share one Promise.all) meant the header stayed hidden behind
+   the loading hold until the SLOWEST request in the batch finished, so
+   on a cold connection a slow load looked like a broken page rather
+   than a loading one. See the loading-hold note in init().
+
+   Returns a promise that resolves when the view is safe to reveal:
+   identity painted, and the cover artwork (if any) actually downloaded
+   rather than merely requested.
+   ============================================================ */
+function renderIdentityHeader(profile, { curatorSlug, promoterSlug }) {
+  const titleEl    = document.getElementById('gigs-header-title');
+  const subtitleEl = document.getElementById('gigs-header-subtitle');
+  const bioEl      = document.getElementById('gigs-header-bio');
+
+  if (curatorSlug) {
+    const curatorBylineEl = document.getElementById('gigs-header-curator-byline');
+    const avatarEl = document.getElementById('gigs-header-curator-avatar');
+    if (titleEl) titleEl.textContent = profile?.name || 'Curator Picks';
+    if (subtitleEl) subtitleEl.textContent = 'Curated picks';
+    if (curatorBylineEl) { curatorBylineEl.hidden = false; curatorBylineEl.textContent = ''; }
+    // Avatar: profile_image is optional on curators, logo is required, so fall
+    // back logo-ward, same rule the profile sheet uses.
+    const curatorAvatarSrc = profile?.profile_image || profile?.logo;
+    if (avatarEl && curatorAvatarSrc) {
+      avatarEl.src    = imgUrl(curatorAvatarSrc, { width: '128', height: '128', fit: 'cover' });
+      avatarEl.alt    = profile?.name ? `${profile.name} logo` : '';
+      avatarEl.hidden = false;
+    }
+  } else if (promoterSlug) {
+    const avatarEl = document.getElementById('gigs-header-promoter-avatar');
+    if (titleEl)    titleEl.textContent    = profile?.name || 'Promoter Events';
+    if (subtitleEl) subtitleEl.textContent = 'Events';
+    if (avatarEl && profile?.profile_image) {
+      avatarEl.src    = imgUrl(profile.profile_image, { width: '128', height: '128', fit: 'cover' });
+      avatarEl.alt    = profile.name ? `${profile.name} logo` : '';
+      avatarEl.hidden = false;
+    }
+  }
+
+  // Bio under the title block. Curator field has a 300-char soft limit, promoter
+  // a 200-char hard one; both render into the same element. textContent only,
+  // no HTML injection.
+  if (bioEl && profile?.bio) {
+    bioEl.textContent = profile.bio;
+    bioEl.hidden = false;
+  }
+
+  return applyCoverMode(
+    profile?.cover_image, profile?.cover_text_tone, profile?.cover_focal,
+    document.querySelector('.gigs-header')
+  );
+}
+
+/* ============================================================
    LOAD TAXONOMIES — categories (always) and areas (if present)
    These populate the filter UI. Both are fetched separately
    from the events call so the filter shows ALL options from
@@ -649,8 +709,8 @@ async function loadPromoter(slug) {
    with the featured-carousel modal below and with calendar.js /
    map.js. TEST_HOLO maps to opts.forceTier.
    ============================================================ */
-function renderCard(gig, index) {
-  return renderGigCard(gig, { index, categoryLookup: lookupCategory, forceTier: TEST_HOLO });
+function renderCard(gig, index, eager = false) {
+  return renderGigCard(gig, { index, eager, categoryLookup: lookupCategory, forceTier: TEST_HOLO });
 }
 
 /* ============================================================
@@ -691,13 +751,25 @@ function sortByTime(gigs) {
   });
 }
 
-/* One horizontal swipe strip for a single day. */
-function renderDayStrip(dateStr, gigs) {
+/* Poster eager-loading budget. Deliberately expressed as "the first couple of
+   cards in the first couple of rows" rather than a flat count of cards: the
+   weekly view is horizontal strips, so a flat count would eagerly load three
+   cards of the FIRST day only, two of which are off the right edge, while the
+   second day's visible card stayed lazy. Rows are what stack down the screen,
+   so that is the axis that matches what's actually on screen at first paint. */
+const EAGER_ROWS = 2;
+const EAGER_PER_ROW = 2;
+
+/* One horizontal swipe strip for a single day. `rowIndex` is the strip's
+   position down the page, used only for the eager-poster budget above. */
+function renderDayStrip(dateStr, gigs, rowIndex = 0) {
   if (!gigs.length) return '';
   const sorted = sortByTime(gigs);
   const label = formatDayLabel(dateStr);
   const count = `${gigs.length} event${gigs.length === 1 ? '' : 's'}`;
-  const cards = sorted.map((g, i) => renderCard(g, i)).join('');
+  const cards = sorted
+    .map((g, i) => renderCard(g, i, rowIndex < EAGER_ROWS && i < EAGER_PER_ROW))
+    .join('');
   return `
     <div class="day-strip">
       <div class="day-strip__header">
@@ -708,9 +780,12 @@ function renderDayStrip(dateStr, gigs) {
     </div>`;
 }
 
-/* Vertical full-width list for single-day (?day=) view. */
+/* Vertical full-width list for single-day (?day=) view. One card per row here,
+   so the eager budget is simply the top few. */
 function renderFlatList(gigs) {
-  return sortByTime(gigs).map((g, i) => renderCard(g, i)).join('');
+  return sortByTime(gigs)
+    .map((g, i) => renderCard(g, i, i < EAGER_ROWS))
+    .join('');
 }
 
 function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
@@ -745,8 +820,8 @@ function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
       (acc[gig.date] = acc[gig.date] || []).push(gig);
       return acc;
     }, {});
-    Object.keys(grouped).sort().forEach(date => {
-      html += renderDayStrip(date, grouped[date]);
+    Object.keys(grouped).sort().forEach((date, rowIndex) => {
+      html += renderDayStrip(date, grouped[date], rowIndex);
     });
   }
 
@@ -1053,6 +1128,13 @@ const cardModal = createCardModal({
 /* ============================================================
    ROUTING & INIT
    ============================================================ */
+
+/* Lift the loading hold set by the inline <head> script (see event-guide.html).
+   Idempotent, so every path that might finish first can call it freely. */
+function revealHeader() {
+  document.documentElement.classList.remove('cover-pending');
+}
+
 async function init() {
   const day = getParam('day');
   const curatorSlug = getParam('curator');
@@ -1127,7 +1209,7 @@ async function init() {
   // line; every other mode keeps the plain text as before.
   const showDayNav = !!(renderOptions.singleDay && !curatorSlug && !promoterSlug);
   const headerDateEl = document.getElementById('gigs-header-date');
-  // Promoter feeds don't need today's date in the header — it's the promoter's
+  // Promoter feeds don't need today's date in the header: it's the promoter's
   // name/identity that matters there, not the date the feed happens to load on.
   if (headerDateEl) headerDateEl.hidden = showDayNav || !!promoterSlug;
   if (headerDateEl && !showDayNav && !promoterSlug) {
@@ -1144,15 +1226,30 @@ async function init() {
   // before awaiting the fetch (renderOptions is finalized above).
   renderSkeleton();
 
+  // ── IDENTITY HEADER + LOADING HOLD ──
+  // The profile row is tiny and lands long before the events feed, so it runs
+  // on its own track and lifts the hold by itself. The feed keeps its skeleton
+  // underneath in the meantime: there is no reason to hide a promoter's name
+  // behind a list that takes longer to arrive. Failure is non-fatal, the feed
+  // still renders with the generic header.
+  //
+  // The 2.5s cap only ever bites when a cover image is genuinely slow, since a
+  // profile with no cover_image resolves immediately (most of them). It exists
+  // so a stalled image can never strand the page on the wireframe.
+  if (curatorSlug || promoterSlug) {
+    const headerReady = (curatorSlug ? loadCurator(curatorSlug) : loadPromoter(promoterSlug))
+      .then(profile => renderIdentityHeader(profile, { curatorSlug, promoterSlug }))
+      .catch(err => { console.warn('[Scene] identity header failed:', err); });
+
+    Promise.race([headerReady, new Promise(resolve => setTimeout(resolve, 2500))])
+      .then(revealHeader);
+  }
+
   try {
-    // Load curator/promoter metadata in parallel with taxonomies + events.
-    // If either fetch fails, we still render the feed — just with a generic header.
-    const [categories, areas, gigs, curator, promoter] = await Promise.all([
+    const [categories, areas, gigs] = await Promise.all([
       loadCategories(),
       loadAreas(),
       fetchEvents({ fromDate, toDate, curatorSlug, promoterSlug }),
-      curatorSlug  ? loadCurator(curatorSlug)   : Promise.resolve(null),
-      promoterSlug ? loadPromoter(promoterSlug) : Promise.resolve(null),
     ]);
     state.categories = categories;
     state.areas = areas;
@@ -1163,60 +1260,6 @@ async function init() {
     // Seed the day-nav cache with this load's result (when showing) so an
     // immediate chevron tap back to the start date is instant.
     if (showDayNav) state.dayCache.set(renderOptions.singleDay, state.allGigs);
-
-    // Resolves once the cover artwork (if any) has painted — set inside
-    // whichever header block below actually runs, awaited near the end of
-    // this function before the loading hold lifts. See cover-mode.js.
-    let coverReady = Promise.resolve();
-
-    // ── CURATOR HEADER ──
-    if (curatorSlug) {
-      const titleEl = document.getElementById('gigs-header-title');
-      const subtitleEl = document.getElementById('gigs-header-subtitle');
-      const curatorBylineEl = document.getElementById('gigs-header-curator-byline');
-      const avatarEl = document.getElementById('gigs-header-curator-avatar');
-      const bioEl = document.getElementById('gigs-header-bio');
-      if (titleEl) titleEl.textContent = curator?.name || 'Curator Picks';
-      if (subtitleEl) subtitleEl.textContent = 'Curated picks';
-      if (curatorBylineEl) { curatorBylineEl.hidden = false; curatorBylineEl.textContent = ''; }
-      // Avatar: profile_image is optional on curators, logo is required —
-      // fall back logo-ward, same rule the profile sheet uses.
-      const curatorAvatarSrc = curator?.profile_image || curator?.logo;
-      if (avatarEl && curatorAvatarSrc) {
-        avatarEl.src    = imgUrl(curatorAvatarSrc, { width: '128', height: '128', fit: 'cover' });
-        avatarEl.alt    = curator?.name ? `${curator.name} logo` : '';
-        avatarEl.hidden = false;
-      }
-      // Bio under the title block (300-char soft limit). textContent — no
-      // HTML injection. Shared element/class with the promoter header below.
-      if (bioEl && curator?.bio) {
-        bioEl.textContent = curator.bio;
-        bioEl.hidden = false;
-      }
-      coverReady = applyCoverMode(curator?.cover_image, curator?.cover_text_tone, curator?.cover_focal, document.querySelector('.gigs-header'));
-    }
-
-    // ── PROMOTER HEADER ──
-    if (promoterSlug) {
-      const titleEl    = document.getElementById('gigs-header-title');
-      const subtitleEl = document.getElementById('gigs-header-subtitle');
-      const avatarEl   = document.getElementById('gigs-header-promoter-avatar');
-      const bioEl      = document.getElementById('gigs-header-bio');
-      if (titleEl)    titleEl.textContent    = promoter?.name || 'Promoter Events';
-      if (subtitleEl) subtitleEl.textContent = 'Events';
-      if (avatarEl && promoter?.profile_image) {
-        avatarEl.src    = imgUrl(promoter.profile_image, { width: '128', height: '128', fit: 'cover' });
-        avatarEl.alt    = promoter.name ? `${promoter.name} logo` : '';
-        avatarEl.hidden = false;
-      }
-      // Bio under the title block (200-char field). textContent — no HTML
-      // injection. Same class + rules as the calendar's promoter header.
-      if (bioEl && promoter?.bio) {
-        bioEl.textContent = promoter.bio;
-        bioEl.hidden = false;
-      }
-      coverReady = applyCoverMode(promoter?.cover_image, promoter?.cover_text_tone, promoter?.cover_focal, document.querySelector('.gigs-header'));
-    }
 
     // ── DIAGNOSTIC — visible in browser console, helps debug filter issues ──
     console.log('[Scene] loaded:', {
@@ -1245,26 +1288,17 @@ async function init() {
 
     renderFromState();
 
-    // Loading hold, curator/promoter mode only — event-guide.html's inline
-    // <head> script set html.cover-pending before this script even ran,
-    // whenever ?curator= or ?promoter= is present. That suppressed the
-    // normal background/header from painting; lifting it here, once events
-    // are already rendered above AND the cover artwork has either loaded or
-    // failed, turns "normal page, then flash into cover mode" into one
-    // single correct reveal. The 2s cut-off means a slow/broken image can
-    // never strand the page on the wireframe. A normal load (no curator/
-    // promoter param) never set the class in the first place, so this
-    // block never runs for it.
-    if (curatorSlug || promoterSlug) {
-      await Promise.race([coverReady, new Promise(resolve => setTimeout(resolve, 2000))]);
-      document.documentElement.classList.remove('cover-pending');
-    }
-
     // Featured spotlight — independent of the feed query, so fire-and-forget.
     renderFeatured();
   } catch (err) {
     console.error('Failed to fetch gigs:', err);
     renderError();
+    // An error page has nothing to wait for, so drop the hold immediately
+    // rather than letting the header track's cap run down. Deliberately NOT in
+    // a finally: on the happy path the header track owns the reveal, and firing
+    // here as soon as events land would reveal a cover promoter's header before
+    // its artwork arrived, which is the exact flash the hold exists to prevent.
+    revealHeader();
   }
 }
 
@@ -1349,19 +1383,14 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 if (!STATIC_REFRACT) window.addEventListener('resize', scheduleRefractUpdate, { passive: true });
 
-// Toolbar is a horizontal scroll row (4 pills can outgrow a narrow phone).
-// Only show the right-edge fade mask (styles.css .toolbar--scrollable) when
-// there's actually more to scroll to — otherwise a toolbar that fits on one
-// screen would have its last pill clipped by the mask for no reason.
-function updateToolbarScrollable() {
-  TOOLBAR_EL.classList.toggle('toolbar--scrollable', TOOLBAR_EL.scrollWidth > TOOLBAR_EL.clientWidth + 1);
-}
-updateToolbarScrollable();
-window.addEventListener('resize', updateToolbarScrollable, { passive: true });
-
 // Initialise the WebGL holographic shader before kicking off the data fetch.
 // Returns false if WebGL is unavailable; refreshRefractionRefs() will then
 // call HoloShader.refresh() as a no-op and the CSS fallback stays visible.
 if (window.HoloShader) window.HoloShader.init();
 
-init();
+// Last-resort guard: if init() rejects before its own finally runs, the page
+// must still not sit behind an invisible header on a blank wash.
+init().catch(err => {
+  console.error('[Scene] init failed:', err);
+  revealHeader();
+});

@@ -369,10 +369,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   align-items: center;
   /* Single scrollable row rather than wrap — added for the 4th (Genre) pill so
      a narrow phone gets a horizontal scroll instead of a taller sticky header.
-     Scrollbar hidden (still scrollable via touch/trackpad); toolbar--scrollable
-     (app.js updateToolbarScrollable) adds a right-edge fade only when there is
-     actually more to scroll to, so a toolbar that fits doesn't get its last
-     pill clipped. */
+     Scrollbar hidden (still scrollable via touch/trackpad). No right-edge fade
+     mask: it masked the whole element, so the frosted bar itself dissolved at
+     its right end rather than just the overflowing pill. The bar stays solid
+     edge to edge. */
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -382,10 +382,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   box-shadow: none;
 }
 .toolbar::-webkit-scrollbar { display: none; }
-.toolbar.toolbar--scrollable {
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-          mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-}
 .toolbar.is-scrolled {
   background: var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
@@ -2329,7 +2325,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
    background-position) + .has-cover-bg on <body>, and .gigs-header--cover
    on the header. The cover art is the fixed background of the WHOLE page
    (repurposing the bloom layer, body::before) and the header ribbon is a
-   heavy frosted-glass pane over it — no navy, no image inside the ribbon.
+   heavy frosted-glass pane over it: no navy, no image inside the ribbon.
    Header selectors are (0,3,x) like the :has() identity rules above;
    being later in the file they win the ties. No cover image → classes
    absent, plain navy identity card as before.
@@ -2337,7 +2333,7 @@ a.gig-card:hover .cta__arrow { transform: translateX(3px); }
    Text colour (default dark below, body[data-cover-text="light"]
    overrides further down) and the focal point are both editor-set in
    Scene Studio (cover_text_tone / cover_focal), not computed from the
-   image — see docs/decisions.md. */
+   image; see docs/decisions.md. */
 
 /* Whole-page cover: the fixed bloom layer becomes the artwork, with a
    light veil on top so the glass grid/cards over it stay legible.
@@ -2403,7 +2399,7 @@ body.has-cover-bg::before {
 .gigs-page .gigs-header.gigs-header--cover .gigs-header__promoter-bio {
   color: #000;
 }
-/* Subtitle ("Events") — without this, it keeps the near-white colour the
+/* Subtitle ("Events"): without this, it keeps the near-white colour the
    plain identity-card :has() rule gives it (that rule matches on the
    avatar being visible, which is true in cover mode too), so it wouldn't
    track the tone toggle at all: black title/bio next to a pale subtitle
@@ -2422,8 +2418,8 @@ body.has-cover-bg::before {
 }
 
 /* ── Cover mode TEXT TONE (editor-set: cover_text_tone) ──────
-   Absence of body[data-cover-text="light"] — the check hasn't been set,
-   OR was explicitly set to "dark", OR there's no cover at all — leaves
+   Absence of body[data-cover-text="light"] (the check hasn't been set,
+   OR was explicitly set to "dark", OR there's no cover at all) leaves
    every rule above/below this block as the default: black header text,
    the normal translucent-white .filter-btn, dark day-strip labels. That
    default is deliberate (unset = dark text, matching the behaviour
@@ -2431,7 +2427,7 @@ body.has-cover-bg::before {
 
    These header-text overrides are a strict superset of the #000 rules
    above (same chain plus one ancestor attribute selector), so they win
-   regardless of source order — placed after anyway per this file's
+   regardless of source order; placed after anyway per this file's
    existing "later wins ties" convention. */
 body[data-cover-text="light"] .gigs-page .gigs-header.gigs-header--cover .gigs-header__title {
   -webkit-text-fill-color: #fff;
@@ -2444,10 +2440,10 @@ body[data-cover-text="light"] .gigs-page .gigs-header.gigs-header--cover .gigs-h
   color: #fff;
 }
 
-/* Filter chips (gig guide, promoter mode only — the toolbar is hidden
+/* Filter chips (gig guide, promoter mode only: the toolbar is hidden
    entirely in curator mode, so no .filter-btn ever exists to match this
    on a curator page). Scoped by body.has-cover-bg as well, which JS only
-   ever adds when a cover image exists — a normal load can never match
+   ever adds when a cover image exists, so a normal load can never match
    this selector at all. Dark frosted pill echoing the header's own
    frost treatment, using the identity-card ink tone. */
 body.has-cover-bg[data-cover-text="light"] .filter-btn {
@@ -2460,14 +2456,23 @@ body.has-cover-bg[data-cover-text="light"] .filter-btn:hover {
   border-color: #fff;
   color: #fff;
 }
-/* .filter-btn.is-active is untouched — it already uses the saturated
+/* .filter-btn.is-active is untouched: it already uses the saturated
    --selected-bg gradient with white text, legible on either tone. */
 
-/* Day-strip date headings (gig guide only — the calendar has no
+/* Day-strip date headings (gig guide only; the calendar has no
    .day-strip markup). Confirmed to have no background of their own
    (nor does .gigs-page), so they sit directly on the cover artwork. */
 body.has-cover-bg[data-cover-text="light"] .day-strip__label {
   color: #fff;
+}
+/* The count normally uses --scene-blue as an accent, which assumes the
+   default pale page background. Over cover artwork that accent can land
+   on anything (a blue cover made it invisible), so in cover mode it drops
+   the accent and follows the editor-set text tone exactly like the label
+   above: near-black on a dark-tone cover, white on a light-tone one.
+   Slightly softer than the label so it still reads as secondary. */
+body.has-cover-bg .day-strip__count {
+  color: rgba(0, 0, 0, 0.72);
 }
 body.has-cover-bg[data-cover-text="light"] .day-strip__count {
   color: rgba(255, 255, 255, 0.85);
@@ -2476,36 +2481,34 @@ body.has-cover-bg[data-cover-text="light"] .day-strip__count {
 /* ── Loading hold, promoter/curator views only ────────────────
    calendar.html / event-guide.html each carry a tiny inline <head>
    script that adds html.cover-pending BEFORE first paint, whenever the
-   URL has a ?promoter= (both pages) or ?curator= (gig guide only) — see
+   URL has a ?promoter= (both pages) or ?curator= (gig guide only); see
    the head of each file. That's checkable synchronously from the URL,
-   before any network request, which is what lets this suppress the
-   WRONG page (default background, generic header text) from ever
-   painting, rather than painting it and correcting a moment later.
-   init() in calendar.js/app.js removes the class once events are
-   rendered AND the cover artwork (if any) has settled, with a ~2s
-   cut-off. A normal load never gets this class in the first place, so
-   none of this can affect it. */
+   before any network request, which is what stops the GENERIC header
+   ("The Scene" / "Gig Guide") painting and then being corrected to the
+   promoter's identity a moment later.
 
-/* html html.cover-pending body::before beats body.has-cover-bg::before
-   on specificity regardless of source order (one more type selector),
-   so this keeps winning even after applyCoverMode() has already added
-   has-cover-bg synchronously — the whole point: the cover classes can
-   be applied immediately without the artwork becoming visible early.
-   Background: none lets the page's own calm base gradient (body, not
-   body::before) show through untouched — that gradient IS the "flat,
-   quiet ice-tone wash" this needs, so nothing new to invent here. */
-html.cover-pending body::before {
-  background: none;
-  animation: none;
-}
+   Scope is deliberately narrow: it hides the header identity text and
+   avatar, and nothing else. The page background is NOT touched, so a
+   slow load still shows the normal iridescent app background rather
+   than a blank wash. An earlier version flattened the background too,
+   which made a slow first load (after a deploy, when the app
+   re-downloads everything) read as a broken page instead of a loading
+   one. The cover artwork now swaps the background in only once its
+   bytes have arrived, so there is nothing left to compensate for here.
+   See cover-mode.js.
 
-/* Header identity content hidden during the hold — otherwise the
+   The class is lifted by the identity-header track in init(), which
+   runs independently of the events feed, so the header appears as soon
+   as the (tiny) profile row lands rather than waiting on the whole
+   query. A normal load never gets this class at all. */
+
+/* Header identity content hidden during the hold: otherwise the
    generic "The Scene" / "Gig Guide" placeholder text (or the calendar's
    equivalent) is what's visible for that brief window, which is exactly
    the wrong-content flash this mechanism exists to remove. The
    surrounding skeleton stays fully visible throughout; this only hides
    the header text/avatar riding on top of it. Shared classes across
-   both pages — .gigs-header__subtitle and the curator ones simply don't
+   both pages: .gigs-header__subtitle and the curator ones simply don't
    match on calendar.html, which doesn't have them. */
 html.cover-pending .gigs-header__title,
 html.cover-pending .gigs-header__subtitle,
