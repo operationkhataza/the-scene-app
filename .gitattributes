@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Basemap data for map.html: binary, never line-ending normalise.
+*.pmtiles binary
+*.pbf binary

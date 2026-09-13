@@ -14,3 +14,16 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Self-hosted basemap (map.html). The .pmtiles filename carries its build
+# date, so it never changes in place; regenerate under a new name.
+[[headers]]
+  for = "/*.pmtiles"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Basemap fonts + sprites: unversioned paths, so a week rather than immutable.
+[[headers]]
+  for = "/basemap-assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

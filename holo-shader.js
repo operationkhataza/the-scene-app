@@ -333,6 +333,7 @@ void main() {
       if (!seen.has(el)) {
         cardObserver.unobserve(el);
         visible.delete(el);
+        releaseContext(card);
         card.canvas.remove();
         el.classList.remove(ACTIVE_CLASS);
         cards.delete(el);
@@ -340,6 +341,15 @@ void main() {
     }
 
     console.log('[HoloShader] refresh:', cards.size, 'card(s) total,', added, 'added');
+  }
+
+  /* Free the GPU context now rather than whenever the detached canvas is
+     garbage-collected, which WebKit can defer. Matters on map.html, where
+     MapLibre holds a long-lived context of its own and browsers evict the
+     oldest context once a page exceeds its WebGL context cap. */
+  function releaseContext(card) {
+    const ext = card.gl.getExtension('WEBGL_lose_context');
+    if (ext) ext.loseContext();
   }
 
   /* Force one render frame for all known cards, ignoring intersection state.

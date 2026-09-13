@@ -3599,21 +3599,23 @@ body.cal-promoter .cal-day__empty-sub {
 
 /* ================================================================
    MAP VIEW  (map.html / map.js)
-   Full-viewport Leaflet map with floating glass chrome. z-index
-   contract: map canvas 1 (own stacking context, so Leaflet's
-   internal 100-1000 pane/control z-indexes stay caged inside it)
-   < floating chrome 800 < event modal 900 < sheets 940/950.
+   Full-viewport MapLibre GL map with floating glass chrome. z-index
+   contract: map canvas 1 (own stacking context, so the map library's
+   internal control z-indexes stay caged inside it) < floating chrome
+   800 < event modal 900 < sheets 940/950.
    The event modal + promoter sheet reuse the calendar's classes
-   wholesale — nothing map-specific needed there.
+   wholesale; nothing map-specific needed there.
+   Map-library overrides below are all #map-canvas-prefixed so they
+   outrank maplibre-gl.css regardless of stylesheet order.
    ================================================================ */
 
 #map-canvas {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: #E8F2FB;   /* ice tint while tiles load */
+  background: #E8F2FB;   /* ice tint while the basemap loads */
 }
-.leaflet-container { font-family: var(--font); }
+#map-canvas.maplibregl-map { font-family: var(--font); }
 
 /* ── Floating day bar: prev · label · next ─────────────────── */
 .map-bar {
@@ -3660,12 +3662,18 @@ body.cal-promoter .cal-day__empty-sub {
   cursor: pointer;
 }
 
-/* ── Teardrop pin — rotated-square technique. The wrapper class
-   neutralises Leaflet's default divIcon chrome; the tip of the
-   drop lands on the icon anchor (17, 43). Tier fills mirror the
-   card/pip signal palette: scene blue (uncurated), silver, gold,
-   holo conic. ────────────────────────────────────────────────── */
-.map-pin-wrap { background: none; border: none; }
+/* ── Teardrop pin, rotated-square technique. .map-pin-wrap is the box
+   MapLibre positions (anchor bottom + 3px, so the drop's tip at
+   (17, 43) lands on the venue). Its explicit size is load-bearing:
+   the card modal hero-expands from its getBoundingClientRect(), and
+   an unsized wrapper measures 0x0 (expand from the screen corner).
+   Tier fills mirror the card/pip signal palette: white (uncurated),
+   silver, gold, holo conic. ─────────────────────────────────────── */
+.map-pin-wrap {
+  width: 34px;
+  height: 46px;
+  cursor: pointer;
+}
 .map-pin {
   position: absolute;
   left: 2px;
@@ -3942,41 +3950,36 @@ body.cal-promoter .cal-day__empty-sub {
   padding: 0.25rem 0 1rem;
 }
 
-/* ── Leaflet control restyles — soften toward the glass system.
+/* ── Map control restyles: soften toward the glass system.
    Attribution stays visible and tappable (licence condition);
    just smaller and translucent. ─────────────────────────────── */
-.leaflet-control-attribution {
-  background: rgba(255, 255, 255, 0.68) !important;
+#map-canvas .maplibregl-ctrl-attrib {
+  background: rgba(255, 255, 255, 0.68);
   font-size: 0.58rem;
+  line-height: 1.6;
   color: var(--text-muted);
   padding: 2px 6px;
 }
-.leaflet-control-attribution a { color: var(--scene-blue); }
-.leaflet-bar {
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--shadow-sm) !important;
-  border-radius: var(--radius-sm) !important;
+#map-canvas .maplibregl-ctrl-attrib a { color: var(--scene-blue); }
+#map-canvas .maplibregl-ctrl-group {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
-.leaflet-bar a {
-  background: var(--glass-bg-strong);
-  color: var(--scene-blue-deep);
-  border-bottom-color: var(--border-sub);
-}
+#map-canvas .maplibregl-ctrl-group button + button { border-top-color: var(--border-sub); }
 
-/* Zoom +/- — visible on ALL devices. Pinch still zooms on touch, but
+/* Zoom +/-: visible on ALL devices. Pinch still zooms on touch, but
    the buttons were hidden there and a user asked for them back
    (23 Jul 2026): not everyone finds pinch, and one-handed use wants
-   buttons. Sized up to real tap targets — the #map-canvas id selector
-   outranks Leaflet's own .leaflet-touch sizing (30px) regardless of
-   stylesheet order. Bottom margin lifts the control clear of the
-   iPhone home-bar safe area; attribution keeps the bottom edge. */
-#map-canvas .leaflet-control-zoom {
+   buttons. Sized up from the library's 29px to real 40px tap targets.
+   Bottom margin lifts the control clear of the iPhone home-bar safe
+   area; attribution keeps the bottom edge. */
+#map-canvas .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
   margin: 0 0.8rem calc(env(safe-area-inset-bottom, 0px) + 0.8rem) 0;
 }
-#map-canvas .leaflet-bar a {
+#map-canvas .maplibregl-ctrl-group button {
   width: 40px;
   height: 40px;
-  line-height: 40px;
-  font-size: 1.2rem;
 }

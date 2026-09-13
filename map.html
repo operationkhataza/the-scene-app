@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <!-- Native-app feel: lock zoom entirely (no pinch, no double-tap zoom).
-       Same viewport contract as event-guide.html / calendar.html — the MAP
-       itself still pinch-zooms (Leaflet touch handling), only page zoom is
+       Same viewport contract as event-guide.html / calendar.html: the MAP
+       itself still pinch-zooms (MapLibre touch handling), only page zoom is
        locked. See the scoped touchend guard in map.js. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#F4F7FB">
@@ -26,7 +26,7 @@
 
   <main class="map-page">
 
-    <!-- The Leaflet container — fills the viewport; everything else floats
+    <!-- The MapLibre container: fills the viewport; everything else floats
          above it. z-index contract: map 1 < chrome 800 < modal 900 < sheets
          940/950 (see the MAP VIEW section of styles.css). -->
     <div id="map-canvas" aria-label="Map of events in Cape Town"></div>

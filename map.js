@@ -1,12 +1,13 @@
 /* ============================================================
    THE SCENE — MAP VIEW
    ────────────────────────────────────────────────────────────
-   One evening's events as teardrop pins on a Leaflet map —
+   One evening's events as teardrop pins on a MapLibre GL map,
    sibling to the gig guide and calendar. Same Directus endpoint,
    same data shape, same design system.
 
    What's here:
-     • Full-viewport Leaflet map (Carto Positron raster tiles)
+     • Full-viewport MapLibre map over a self-hosted Protomaps
+       vector basemap (public/basemap-2026-09.pmtiles)
      • One pin per venue with events that night, coloured by the
        HIGHEST curator tier among them (silver / gold / holo),
        count badge when a venue has 2+ events
@@ -23,17 +24,17 @@
    requested field is forbidden.
    ============================================================ */
 
-/* Page-zoom lock — same contract as calendar.js, with one difference:
-   the double-tap guard is SCOPED to skip the map container, so Leaflet's
-   double-tap-to-zoom still works. The gesture* events only fire for
-   page pinch-zoom on iOS; Leaflet's own pinch handling rides the touch*
-   events and is unaffected. */
+/* Page-zoom lock (same contract as calendar.js), with one difference:
+   the double-tap guard is SCOPED to skip the map container, so the
+   map's own double-tap-to-zoom still works. The gesture* events only
+   fire for page pinch-zoom on iOS; the map's pinch handling does not
+   depend on them. */
 document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
 document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
 document.addEventListener('gestureend',    e => e.preventDefault(), { passive: false });
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => {
-  // Leaflet owns map taps; buttons and links own their own clicks. Cancelling
+  // The map owns its own taps; buttons and links own their clicks. Cancelling
   // touchend on a control cancels the synthesised click with it, which is what
   // made rapid day-chevron taps feel dead (every second tap inside 350ms was
   // thrown away). Page zoom is already locked by the viewport meta and by
@@ -44,8 +45,14 @@ document.addEventListener('touchend', e => {
   lastTouchEnd = now;
 }, { passive: false });
 
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+// MapLibre v6 looks for its worker beside its own module file, which no longer
+// exists once Vite bundles it into /assets/. Vite builds the worker and hands
+// back its URL; map setup passes it to setWorkerUrl.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import { Protocol } from 'pmtiles';
+import { layers, namedFlavor } from '@protomaps/basemaps';
 
 import { apiGet, fetchExhibitions } from './api.js';
 import {
@@ -178,20 +185,26 @@ async function fetchDay(iso) {
 }
 
 /* ============================================================
-   COORDINATES — Directus geometry.Point arrives as GeoJSON:
-     { type: "Point", coordinates: [lng, lat] }   ← lng FIRST
-   Leaflet wants [lat, lng]. Guard shape and range so one malformed
-   row can never take the whole marker layer down. The sanity box is
-   greater Cape Town — anything outside it is a data-entry error and
-   is treated as "no coordinates" (lands in the unmapped pill).
+   COORDINATES: Directus geometry.Point arrives as GeoJSON
+     { type: "Point", coordinates: [lng, lat] }   <- lng FIRST
+   MapLibre takes the same [lng, lat] order, so the pair passes
+   straight through. Guard shape and range so one malformed row can
+   never take the whole marker set down. The range is the basemap
+   file's own coverage: a venue outside it would sit on blank map,
+   so it is treated as "no coordinates" and lands in the unmapped pill.
    ============================================================ */
-function gigLatLng(gig) {
+// [[west, south], [east, north]]: the bbox basemap-2026-09.pmtiles was cut to.
+// Re-cutting the file with a different bbox means updating this too.
+const BASEMAP_BOUNDS = [[18.20, -34.50], [19.15, -33.60]];
+
+function gigLngLat(gig) {
   const p = gig.venue?.location_point;
   if (!p || p.type !== 'Point' || !Array.isArray(p.coordinates)) return null;
   const [lng, lat] = p.coordinates.map(Number);
   if (!isFinite(lat) || !isFinite(lng)) return null;
-  if (lat < -35.5 || lat > -33 || lng < 17.5 || lng > 19.5) return null;
-  return [lat, lng];
+  const [[west, south], [east, north]] = BASEMAP_BOUNDS;
+  if (lng < west || lng > east || lat < south || lat > north) return null;
+  return [lng, lat];
 }
 
 /* Group a day's gigs into one pin per coordinate. Keyed by rounded
@@ -203,11 +216,11 @@ function groupByPin(gigs) {
   const pins = new Map();
   const unmapped = [];
   for (const gig of gigs) {
-    const ll = gigLatLng(gig);
-    if (!ll) { unmapped.push(gig); continue; }
-    const key = ll[0].toFixed(6) + ',' + ll[1].toFixed(6);
+    const lngLat = gigLngLat(gig);
+    if (!lngLat) { unmapped.push(gig); continue; }
+    const key = lngLat[0].toFixed(6) + ',' + lngLat[1].toFixed(6);   // "lng,lat", never parsed back
     if (!pins.has(key)) {
-      pins.set(key, { latlng: ll, venueName: gig.venue?.name || '', gigs: [] });
+      pins.set(key, { lngLat, venueName: gig.venue?.name || '', gigs: [] });
     }
     pins.get(key).gigs.push(gig);
   }
@@ -215,45 +228,100 @@ function groupByPin(gigs) {
 }
 
 /* ============================================================
-   MAP — Leaflet with Carto Positron raster tiles (light basemap
-   that sits under the liquid-glass UI; the tier colours carry the
-   signal). Attribution is a licence condition — restyled small in
-   CSS, never hidden. divIcon-only markers: Leaflet's default icon
-   PNGs are never requested.
+   MAP: MapLibre GL rendering a self-hosted Protomaps vector basemap.
+   public/basemap-2026-09.pmtiles is a Cape Town extract the browser
+   reads in small HTTP range requests; its fonts and sprites sit
+   beside it in public/basemap-assets/, so no third party is in the
+   map's runtime path. Style = Protomaps "white" flavor nudged toward
+   the old Carto Positron look (off-white ground, blue-grey water) so
+   the pin contrast work (charcoal outlines, pewter silver) still
+   holds. Attribution is a licence condition (OSM ODbL): restyled
+   small in CSS, never hidden.
    ============================================================ */
-const CITY_CENTRE = [-33.9249, 18.4241];   // Cape Town city bowl
+const CITY_CENTRE = [18.4241, -33.9249];   // Cape Town city bowl, [lng, lat]
+const SITE_ROOT   = window.location.origin + import.meta.env.BASE_URL;
+const BASEMAP_URL = SITE_ROOT + 'basemap-2026-09.pmtiles';
+const ASSETS_URL  = SITE_ROOT + 'basemap-assets/';
 
-const map = L.map(CANVAS_EL, {
-  zoomControl: false,
-  attributionControl: true,
+const POSITRON_FLAVOR = {
+  ...namedFlavor('white'),
+  background:  '#FAFAF8',
+  earth:       '#FAFAF8',
+  water:       '#D4DADC',
+  park_a:      '#EEF1EC',
+  park_b:      '#E6EAE4',
+  wood_a:      '#EEF1EC',
+  wood_b:      '#E6EAE4',
+  scrub_a:     '#F2F4F0',
+  scrub_b:     '#EEF1EC',
+  ocean_label: '#8E9CA1',
+};
+
+// Both must run before the Map is constructed.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
+maplibregl.addProtocol('pmtiles', new Protocol().tile);
+
+const map = new maplibregl.Map({
+  container: CANVAS_EL,
+  style: {
+    version: 8,
+    glyphs: ASSETS_URL + 'fonts/{fontstack}/{range}.pbf',
+    sprite: ASSETS_URL + 'sprites/v4/white',
+    sources: {
+      protomaps: {
+        type: 'vector',
+        url: 'pmtiles://' + BASEMAP_URL,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://protomaps.com" target="_blank" rel="noopener noreferrer">Protomaps</a>',
+      },
+    },
+    layers: layers('protomaps', POSITRON_FLAVOR, { lang: 'en' }),
+  },
+  center: CITY_CENTRE,
+  zoom: 12,
+  maxBounds: BASEMAP_BOUNDS,   // no panning off the extract onto blank map
+  attributionControl: { compact: false },
+  // Flat north-up map: MapLibre rotates and tilts by default.
+  dragRotate: false,
+  pitchWithRotate: false,
+  touchPitch: false,
 });
-L.control.zoom({ position: 'bottomright' }).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  subdomains: 'abcd',
-  maxZoom: 20,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
-}).addTo(map);
-map.setView(CITY_CENTRE, 12);
+map.touchZoomRotate.disableRotation();
+map.keyboard.disableRotation();
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-const markerLayer = L.layerGroup().addTo(map);
-// Exhibitions ride their own layer so the toggle can show/hide them without
-// touching the gig markers, and so their blue family reads as distinct.
-const exhibitionLayer = L.layerGroup().addTo(map);
+// Separate sets so the exhibitions toggle clears the blue family without
+// touching gig pins. Plain arrays: they only ever need bulk-clearing.
+const gigMarkers = [];
+const exhibitionMarkers = [];
 
-/* Teardrop divIcon. Pin tier = the HIGHEST tier among the venue's
-   events that night (brightest signal wins — same rule as the
-   calendar's pips). The teardrop itself is pure CSS (.map-pin);
-   the wrapper class neutralises Leaflet's default divIcon chrome. */
-function pinIcon(pin) {
-  const tier  = Math.max(...pin.gigs.map(gigTier));
+function clearMarkers(markers) {
+  for (const m of markers) m.remove();
+  markers.length = 0;
+}
+
+/* Teardrop pin as a DOM marker. The teardrop is pure CSS (.map-pin);
+   .map-pin-wrap is the 34x46 box MapLibre positions, and its CSS size
+   is load-bearing (see styles.css). anchor 'bottom' + 3px lands the
+   drop's tip, 43px down the box, on the venue. */
+function createPinMarker(pin, pinClass, label, onTap) {
   const count = pin.gigs.length;
-  const badge = count > 1 ? `<span class="map-pin__count">${count}</span>` : '';
-  return L.divIcon({
-    className: 'map-pin-wrap',
-    html: `<div class="map-pin map-pin--t${tier}">${badge}</div>`,
-    iconSize:   [34, 46],
-    iconAnchor: [17, 43],   // the teardrop tip sits on the venue
+  const el = document.createElement('div');
+  el.className = 'map-pin-wrap';
+  el.innerHTML = `<div class="map-pin ${pinClass}">${count > 1 ? `<span class="map-pin__count">${count}</span>` : ''}</div>`;
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', label);
+  // MapLibre already swallows a click that ends a map drag, but gives custom
+  // markers no keyboard activation, so Enter/Space opens a focused pin here.
+  el.addEventListener('click', () => onTap(el));
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onTap(el);
   });
+  return new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, 3] })
+    .setLngLat(pin.lngLat)
+    .addTo(map);
 }
 
 /* Tap a pin → gig card modal (single event) or venue chooser (2+).
@@ -267,28 +335,28 @@ function openPin(pin, markerEl) {
 }
 
 /* ============================================================
-   RENDER — clear + refill the marker layer for the focused day,
-   then frame the night: fitBounds over the pins (padded, zoom-capped
-   so one lone venue doesn't open at street level), or the city-bowl
-   default when nothing is mapped.
+   RENDER: clear + refill the pins for the focused day, then frame
+   the night: fitBounds over the pins (padded, zoom-capped so one
+   lone venue doesn't open at street level), or the city-bowl
+   default when nothing is mapped. Gig pin tier = the HIGHEST tier
+   among the venue's events that night (brightest signal wins, same
+   rule as the calendar's pips).
    ============================================================ */
 function renderMarkers(iso) {
   const gigs = state.gigsByDay.get(iso) || [];
   const { pins, unmapped } = groupByPin(gigs);
   state.unmapped = unmapped;
 
-  markerLayer.clearLayers();
+  clearMarkers(gigMarkers);
   for (const pin of pins) {
-    const marker = L.marker(pin.latlng, {
-      icon: pinIcon(pin),
-      keyboard: true,
-      alt: `${pin.venueName} — ${pin.gigs.length} event${pin.gigs.length === 1 ? '' : 's'}`,
-    });
-    marker.on('click', e => openPin(pin, e.target.getElement()));
-    marker.addTo(markerLayer);
+    const tier = Math.max(...pin.gigs.map(gigTier));
+    const n = pin.gigs.length;
+    gigMarkers.push(createPinMarker(pin, `map-pin--t${tier}`,
+      `${pin.venueName || 'Venue'}: ${n} event${n === 1 ? '' : 's'}`,
+      el => openPin(pin, el)));
   }
 
-  // Exhibitions — a separate blue-pin family, date-scoped to this day and
+  // Exhibitions: a separate blue-pin family, date-scoped to this day and
   // gated by the layer toggle. groupByPin works on them unchanged (they carry
   // venue.name + venue.location_point just like gigs). We keep the RAW list
   // (pre-toggle) for the empty-state test so hiding the layer never fakes an
@@ -297,22 +365,24 @@ function renderMarkers(iso) {
   const exhibitions = state.showExhibitions ? rawExhibitions : [];
   const { pins: exPins } = groupByPin(exhibitions);
 
-  exhibitionLayer.clearLayers();
+  clearMarkers(exhibitionMarkers);
   for (const pin of exPins) {
-    const marker = L.marker(pin.latlng, {
-      icon: exhibitionPinIcon(pin),
-      keyboard: true,
-      alt: `${pin.venueName} — ${pin.gigs.length} exhibition${pin.gigs.length === 1 ? '' : 's'}`,
-    });
-    marker.on('click', e => openExhibitionPin(pin, e.target.getElement()));
-    marker.addTo(exhibitionLayer);
+    const n = pin.gigs.length;
+    exhibitionMarkers.push(createPinMarker(pin, 'map-pin--exhibition',
+      `${pin.venueName || 'Gallery'}: ${n} exhibition${n === 1 ? '' : 's'}`,
+      el => openExhibitionPin(pin, el)));
   }
 
-  const allLatLngs = [...pins.map(p => p.latlng), ...exPins.map(p => p.latlng)];
-  if (allLatLngs.length > 0) {
-    map.fitBounds(L.latLngBounds(allLatLngs), { padding: [48, 48], maxZoom: 15 });
+  const allLngLats = [...pins.map(p => p.lngLat), ...exPins.map(p => p.lngLat)];
+  if (allLngLats.length > 0) {
+    const bounds = allLngLats.reduce(
+      (b, lngLat) => b.extend(lngLat),
+      new maplibregl.LngLatBounds(allLngLats[0], allLngLats[0]));
+    // duration 0: MapLibre animates fitBounds by default, which would add a
+    // camera flight to every day step.
+    map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 0 });
   } else {
-    map.setView(CITY_CENTRE, 12);
+    map.jumpTo({ center: CITY_CENTRE, zoom: 12 });
   }
 
   // Empty state: only when the day has NO gigs AND NO exhibitions at all. A day
@@ -400,8 +470,8 @@ async function setDay(iso) {
     // a cached day, which resolves on a microtask with no paint in between —
     // clearing there would just flash a blank map on fast repeat visits.
     hideEmpty();
-    markerLayer.clearLayers();
-    exhibitionLayer.clearLayers();
+    clearMarkers(gigMarkers);
+    clearMarkers(exhibitionMarkers);
     state.unmapped = [];
     MISSING_EL.hidden = true;
   }
@@ -414,7 +484,8 @@ async function setDay(iso) {
     if (token === fetchToken) {
       state.gigsByDay.delete(iso);   // allow a retry on the next visit
       LOADING_EL.hidden = true;
-      markerLayer.clearLayers();
+      clearMarkers(gigMarkers);
+      clearMarkers(exhibitionMarkers);
       state.unmapped = [];
       MISSING_EL.hidden = true;
       showEmpty('Couldn’t load events', 'Check your connection, then tap the date above to try again.');
@@ -538,7 +609,7 @@ document.addEventListener('keydown', e => {
    EXHIBITIONS ON THE MAP — blue-pin family, date-scoped
    ────────────────────────────────────────────────────────────
    Art + museum shows active on the focused day, as scene-blue teardrop
-   pins on their own layer (toggled by the Exhibitions switch). gigLatLng
+   pins in their own marker set (toggled by the Exhibitions switch). gigLngLat
    + groupByPin already operate on any object carrying venue.location_point
    + venue.name, so they're reused as-is. Tap → the shared #cal-modal
    (single, via cardModal.open with a render override) or the venue
@@ -586,18 +657,6 @@ function exhEntryMarkup(ex) {
   if (ex.is_free)    return `<div class="price price--free"><span class="price__prefix">Entry</span><span class="price__value">Free</span></div>`;
   if (ex.entry_info) return `<div class="price"><span class="price__prefix">Entry</span><span class="price__value">${esc(ex.entry_info)}</span></div>`;
   return '';
-}
-
-/* Blue teardrop divIcon — same shape/anchor as the tier pins, scene-blue fill. */
-function exhibitionPinIcon(pin) {
-  const count = pin.gigs.length;
-  const badge = count > 1 ? `<span class="map-pin__count">${count}</span>` : '';
-  return L.divIcon({
-    className: 'map-pin-wrap',
-    html: `<div class="map-pin map-pin--exhibition">${badge}</div>`,
-    iconSize:   [34, 46],
-    iconAnchor: [17, 43],
-  });
 }
 
 function renderExhibitionModalCard(ex) {

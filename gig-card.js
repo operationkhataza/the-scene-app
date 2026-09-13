@@ -176,7 +176,7 @@ export function gigGenreNames(gig) {
      categoryLookup — resolves a scalar event_category FK to {slug,name};
                       omit where the fields query already expands it
      forceTier      — dev preview (?holo=test): force the holo tier
-     eager          — skip lazy-loading for this card's poster (feed only, for
+     eager          - skip lazy-loading for this card's poster (feed only, for
                       the handful of cards that are on screen at first paint)
    ============================================================ */
 export function renderGigCard(gig, opts = {}) {
