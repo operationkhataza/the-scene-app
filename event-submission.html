@@ -520,6 +520,19 @@
     </div>
   </div>
 
+  <!-- HUMAN CHECK — shown only when a write needs a fresh wristband (see requestHumanCheck). -->
+  <div id="human-check-modal" class="picker-modal">
+    <div class="picker-sheet">
+      <div class="picker-time-title">Quick human check</div>
+      <div class="form-hint" style="margin-bottom:12px;">One quick check before we send this through. Your form is safe.</div>
+      <div id="human-check-widget"></div>
+      <div class="form-hint" id="human-check-msg" style="margin-top:8px;"></div>
+      <div class="picker-actions">
+        <button type="button" class="picker-btn picker-btn-cancel" id="human-check-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CROP MODAL -->
   <div id="crop-modal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(10,15,30,0.92); flex-direction:column;">
     <div style="flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; padding:0; touch-action:none;">
@@ -686,44 +699,47 @@
        The form no longer writes to Directus directly. On load, Turnstile produces a
        token; we trade it once for a short-lived "wristband" (see the submit-gate
        extension). Every write (poster, venue, artist, event) goes through SUBMIT_URL
-       carrying that wristband in its body. On a 403 (expired) we re-challenge + retry. */
+       carrying that wristband in its body. The wristband outlives the Turnstile token
+       it was traded for, so a token expiring later must NEVER discard it. If a write
+       finds no wristband, or the server rejects it (403, expired), we ask for a fresh
+       human check in a visible modal and retry: the page-1 widget is hidden on pages
+       2-4, so it cannot be relied on to re-challenge there. */
     let wristband = null;
-    let wristbandResolve;
-    let wristbandReady = newWristbandReady();
-    function newWristbandReady() { return new Promise(r => { wristbandResolve = r; }); }
 
-    /* Re-challenge Turnstile: reset() discards the current token and asks for a fresh
-       one, which fires onTurnstile again. Used when a token expires/times out while the
-       form sits idle, and when a /session exchange fails — so the page recovers instead
-       of being stuck with no wristband until a manual reload. */
-    function rechallengeTurnstile() {
-      try { if (window.turnstile) window.turnstile.reset(); } catch (e) {}
+    async function exchangeToken(token) {
+      const res = await fetch(`${SUBMIT_URL}/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.wristband) throw new Error(d?.errors?.[0]?.message || `Session exchange failed (${res.status})`);
+      return d.wristband;
     }
 
+    /* Page-1 widget callback. Also fires when Turnstile auto-refreshes an expired
+       token, which simply swaps in a newer wristband. On a failed exchange, only
+       re-challenge if we have nothing to fall back on. */
     async function onTurnstile(token) {
       try {
-        const res = await fetch(`${SUBMIT_URL}/session`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        const d = await res.json().catch(() => ({}));
-        if (res.ok && d.wristband) { wristband = d.wristband; wristbandResolve(wristband); }
-        else { console.error('[submit-gate] session exchange failed', d); rechallengeTurnstile(); }
-      } catch (e) { console.error('[submit-gate] session exchange error', e); rechallengeTurnstile(); }
+        wristband = await exchangeToken(token);
+      } catch (e) {
+        console.error('[submit-gate] session exchange failed', e);
+        if (!wristband) { try { window.turnstile.reset(turnstileWidgetId); } catch (err) {} }
+      }
     }
 
+    let turnstileWidgetId = null;
     function renderTurnstile() {
       const el = document.getElementById('turnstile-container');
       if (window.turnstile && el) {
-        window.turnstile.render(el, {
+        turnstileWidgetId = window.turnstile.render(el, {
           sitekey: TURNSTILE_SITE_KEY,
           callback: onTurnstile,
-          // A token left unused while the form is filled will expire/time out; re-mint
-          // the wristband proactively so it is always fresh by submit time (was the
-          // "captcha failed after ~30s idle, but fine when submitted immediately" bug).
-          'expired-callback': () => { console.warn('[submit-gate] turnstile token expired'); refreshWristband().catch(() => {}); },
-          'timeout-callback': () => { console.warn('[submit-gate] turnstile timeout'); refreshWristband().catch(() => {}); },
+          // Token expiry is harmless once it has been traded for a wristband: log only.
+          // (Nulling the wristband here was the "verification timed out" bug, Oct 2026.)
+          'expired-callback': () => console.warn('[submit-gate] turnstile token expired'),
+          'timeout-callback': () => console.warn('[submit-gate] turnstile timeout'),
           'error-callback': () => console.warn('[submit-gate] turnstile error'),
         });
       } else {
@@ -731,26 +747,59 @@
       }
     }
 
-    /* How long a submit waits for a wristband before failing loudly. Without this a
-       stuck/never-resolving exchange would hang the submit indefinitely instead of
-       surfacing an error the user can act on. */
-    const WRISTBAND_WAIT_MS = 20000;
+    /* Visible human check: a modal with its own Turnstile widget, shown wherever the
+       user is in the form. Resolves with a fresh wristband; rejects if cancelled.
+       Concurrent callers share one modal. */
+    let humanCheckPromise = null;
+    function requestHumanCheck() {
+      if (humanCheckPromise) return humanCheckPromise;
+      humanCheckPromise = new Promise((resolve, reject) => {
+        const modal     = document.getElementById('human-check-modal');
+        const slot      = document.getElementById('human-check-widget');
+        const msg       = document.getElementById('human-check-msg');
+        const cancelBtn = document.getElementById('human-check-cancel');
+        let widgetId = null;
+        const finish = (err, wb) => {
+          modal.classList.remove('is-open');
+          cancelBtn.removeEventListener('click', onCancel);
+          try { if (widgetId !== null) window.turnstile.remove(widgetId); } catch (e) {}
+          slot.innerHTML = '';
+          msg.textContent = '';
+          humanCheckPromise = null;
+          if (err) reject(err); else resolve(wb);
+        };
+        const onCancel = () => finish(new Error('Human check not completed. Tap the button to try again.'));
+        if (!window.turnstile) {
+          finish(new Error('Human check could not load. Check your connection and try again.'));
+          return;
+        }
+        cancelBtn.addEventListener('click', onCancel);
+        modal.classList.add('is-open');
+        widgetId = window.turnstile.render(slot, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: async (token) => {
+            try {
+              wristband = await exchangeToken(token);
+              finish(null, wristband);
+            } catch (e) {
+              console.error('[submit-gate] session exchange failed', e);
+              msg.textContent = 'That did not go through. Please try the check again.';
+              try { window.turnstile.reset(widgetId); } catch (err) {}
+            }
+          },
+          'error-callback': () => console.warn('[submit-gate] turnstile error (modal)'),
+        });
+      });
+      return humanCheckPromise;
+    }
 
     async function ensureWristband() {
-      if (wristband) return wristband;
-      let timer;
-      const timeout = new Promise((_, rej) => {
-        timer = setTimeout(() => rej(new Error('Verification timed out — please reload and try again.')), WRISTBAND_WAIT_MS);
-      });
-      try { return await Promise.race([wristbandReady, timeout]); }
-      finally { clearTimeout(timer); }
+      return wristband || requestHumanCheck();
     }
 
     async function refreshWristband() {
       wristband = null;
-      wristbandReady = newWristbandReady();
-      rechallengeTurnstile();
-      return ensureWristband();
+      return requestHumanCheck();
     }
 
     const GATE_TIMEOUT_MS = 60000;
