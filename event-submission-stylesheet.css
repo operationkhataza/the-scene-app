@@ -592,6 +592,30 @@ select {
   line-height: 1.4;
 }
 
+/* "Repeats over multiple evenings?" note under the Event date field. The
+   address is selectable (data-selectable) with a Copy button beside it; it is
+   long, so it may break anywhere rather than overflow a phone. */
+.multi-night-note .mn-email {
+  color: var(--scene-blue-deep);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.multi-night-note .mn-copy-btn {
+  display: inline-block;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 9px;
+  margin: 0 2px;
+  border-radius: 99px;
+  border: 1px solid var(--scene-blue-soft);
+  background: var(--scene-blue-wash);
+  color: var(--scene-blue-deep);
+  cursor: pointer;
+  vertical-align: baseline;
+}
+
 .form-error {
   font-size: 0.78rem;
   color: var(--danger);

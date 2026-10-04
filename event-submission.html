@@ -197,6 +197,9 @@
               </button>
               <input type="hidden" id="inp-date">
               <div class="form-error">Please pick a date.</div>
+              <!-- Multi-night events (theatre runs) are Scene Studio only; this points
+                   repeat-event submitters to the team for an account. -->
+              <div class="form-hint multi-night-note">Planning an event that repeats over multiple evenings? Contact <span class="mn-email" data-selectable>hello@thescenecapetown.co.za</span> <button type="button" class="mn-copy-btn" id="mn-copy-btn">Copy</button> and our team will set you up with a Scene Studio account.</div>
             </div>
             <div class="fg-row">
               <div class="fg" id="fg-doors">
@@ -1890,6 +1893,33 @@
     });
     document.getElementById('cal-cancel').addEventListener('click', closeDatePicker);
     dateModal.addEventListener('click', e => { if (e.target === dateModal) closeDatePicker(); });
+
+    /* MULTI-NIGHT NOTE — copy the team address. Clipboard API first, then the
+       execCommand fallback for webviews that don't expose it; if both fail the
+       address stays selectable (data-selectable) so it can be copied by hand. */
+    document.getElementById('mn-copy-btn').addEventListener('click', async e => {
+      const btn = e.currentTarget;
+      const email = 'hello@thescenecapetown.co.za';
+      let ok = false;
+      try { await navigator.clipboard.writeText(email); ok = true; }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = email;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch { ok = false; }
+        ta.remove();
+      }
+      if (ok) {
+        btn.textContent = 'Copied';
+        toast('Email address copied.', 'ok');
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      } else {
+        toast('Couldn\'t copy automatically. Press and hold the address to copy it.', 'err');
+      }
+    });
 
     /* TIME PICKER — shared by doors/start + end time; 30-min increments plus a
        custom H/M entry for times that fall between them. */
