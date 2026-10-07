@@ -132,7 +132,7 @@ async function attachRunDateRanges(runItems) {
     const json = await apiGet('/items/events', {
       'filter[parent_run][_in]': ids.join(','),
       'filter[status][_eq]': 'published',
-      'fields': 'date,parent_run',
+      'fields': 'id,date,parent_run',
       'sort': 'date',
       'limit': '500',
     });
@@ -146,9 +146,18 @@ async function attachRunDateRanges(runItems) {
     const pid = (n.parent_run && typeof n.parent_run === 'object') ? n.parent_run.id : n.parent_run;
     if (pid == null || !n.date) continue;
     if (!byRun.has(pid)) byRun.set(pid, []);
-    byRun.get(pid).push(n.date);
+    byRun.get(pid).push(n);
   }
-  for (const item of runItems) item.dateRange = fmtRunDates(byRun.get(item._runId) || []);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  for (const item of runItems) {
+    const runNights = byRun.get(item._runId) || [];
+    item.dateRange = fmtRunDates(runNights.map(n => n.date));
+    // The Share button links to one night's event page (a run has no page of
+    // its own): the next upcoming night, else the last one. Nights arrive
+    // date-sorted. No nights → no shareEventId → no Share button (share.js).
+    const next = runNights.find(n => n.date >= todayIso) || runNights[runNights.length - 1];
+    if (next) item.shareEventId = next.id;
+  }
 }
 
 /* Returns the items to spotlight RIGHT NOW (status=active AND now inside the

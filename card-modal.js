@@ -13,6 +13,13 @@
    in Scene App", filed during the map-view build (Jul 2026).
    ============================================================ */
 
+import { wireShare } from './share.js';
+
+/* The Share button and its fallback panel (share.js) handle their own taps
+   on a document-level listener; both flip handlers below skip them so a tap
+   there never flips the card. */
+const SHARE_CONTROLS = '.gig-card__share, .share-panel';
+
 /* createCardModal({ modal, card, render, blockedBy, onProfilePill, onOpen })
    → { open(item, originEl, opts), close(), get activeItem() }
 
@@ -30,6 +37,7 @@
                       the listener (the card never renders pills). */
 export function createCardModal({ modal, card, render, blockedBy = [], onProfilePill, onOpen }) {
   let activeItem = null;
+  wireShare();
 
   /* Open the modal, animating from the origin of the tapped element
      (a card, pin, or chooser row; null centres it). */
@@ -120,6 +128,7 @@ export function createCardModal({ modal, card, render, blockedBy = [], onProfile
     if (e.target.closest('.gig-card__back-cta'))   return;
     if (e.target.closest('.gig-card__ticket-pill')) return;
     if (e.target.closest('[data-profile-kind]'))    return;  // promoter + curator pills
+    if (e.target.closest(SHARE_CONTROLS))           return;  // handled by share.js
 
     const inner    = card.querySelector('.gig-card__inner');
     const closeBtn = e.target.closest('.gig-card__back-return');
@@ -166,10 +175,12 @@ export function createCardModal({ modal, card, render, blockedBy = [], onProfile
    close, the user just scrolls away.
    ============================================================ */
 export function attachCardFlip(host) {
+  wireShare();
   host.addEventListener('click', e => {
     if (e.target.closest('.gig-card__ticket-pill')) return;
     if (e.target.closest('.gig-card__back-cta'))    return;
     if (e.target.closest('[data-profile-kind]'))    return;  // promoter + curator pills
+    if (e.target.closest(SHARE_CONTROLS))           return;  // handled by share.js
 
     const closeBtn = e.target.closest('.gig-card__back-return');
     if (closeBtn) {

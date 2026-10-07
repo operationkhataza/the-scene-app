@@ -3488,6 +3488,84 @@ body.cal-promoter .cal-day__empty-sub {
 }
 .gig-card__back-return:hover { background: rgba(0,0,0,0.15); color: var(--text); }
 
+/* Share (share.js): icon-only, square, between Buy tickets and Return, so
+   the row still fits a narrow day-strip card. Same grey as Return so the
+   blue Buy tickets stays the one primary action. */
+.gig-card__share {
+  flex: 0 0 auto;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.08);
+  color: var(--scene-blue);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.gig-card__share svg { width: 18px; height: 18px; }
+.gig-card__share:hover { background: rgba(0,0,0,0.15); color: var(--scene-blue-deep); }
+.gig-card__share:active { transform: scale(0.94); }
+
+/* Fallback share panel: only shown where the phone's own share menu isn't
+   available (Android inside the Fabrik app). Overlays the back face it
+   lives in (.gig-card__back is its containing block), so it inherits the
+   flip and needs no z-index games with the card shell. */
+.share-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.25rem 1.15rem;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: inherit;
+}
+.share-panel[hidden] { display: none; }
+.share-panel__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 0.25rem;
+}
+.share-panel__wa,
+.share-panel__copy,
+.share-panel__cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-sm, 8px);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.share-panel__wa {
+  background: var(--selected-bg, #1A6E8E);
+  color: #fff;
+  box-shadow: var(--selected-shadow);
+}
+.share-panel__copy {
+  background: rgba(0,0,0,0.08);
+  color: var(--text-soft);
+  border: none;
+}
+.share-panel__copy:hover { background: rgba(0,0,0,0.15); color: var(--text); }
+.share-panel__cancel {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* ================================================================
    CALENDAR — EVENT DETAIL MODAL (hero-expand)
    Opens when the user taps a cal-day-card. The card scales up from

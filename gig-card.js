@@ -15,6 +15,7 @@
 
 import { esc, imgUrl, formatCardDate, formatTime, gigTier } from './utils.js';
 import { ICONS } from './icons.js';
+import { shareMarkup } from './share.js';
 
 /* venue.area is a flat Dropdown string on the venues collection,
    e.g. "cbd", "southern-suburbs" — mapped to a display label. */
@@ -312,13 +313,17 @@ export function renderGigCard(gig, opts = {}) {
     if (prices.length > 0) backMetaParts.push(`From R${Math.min(...prices)}`);
   }
 
-  // Back face actions: Buy tickets (optional, 2/3) + Return (always, 1/3)
+  // Back face actions: Buy tickets (optional, 2/3) + Share (icon, optional)
+  // + Return (always). Share links to the event's page on the marketing
+  // site (share.js); its fallback panel overlays the back face.
   const backCta = hasTickets
     ? `<a class="gig-card__back-cta" href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Buy tickets →</a>`
     : '';
+  const share = shareMarkup(gig);
   const backActions = `
     <div class="gig-card__back-actions">
       ${backCta}
+      ${share.button}
       <button type="button" class="gig-card__back-return">Return</button>
     </div>`;
 
@@ -351,6 +356,7 @@ export function renderGigCard(gig, opts = {}) {
           ${backDesc}
           <div class="gig-card__back-meta">${esc(backMetaParts.join(' · '))}</div>
           ${backActions}
+          ${share.panel}
         </div>
 
       </div>
