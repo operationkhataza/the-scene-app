@@ -3565,6 +3565,41 @@ body.cal-promoter .cal-day__empty-sub {
   color: var(--text-muted);
   font-weight: 600;
 }
+.share-panel__note {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-soft);
+  text-align: center;
+  margin: 0;
+}
+.share-panel__text {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: 9rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  background: #fff;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  resize: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Per-mode controls (share.js sets data-mode). choose: WhatsApp + Copy.
+   copied: the "paste it" note only (Android webview, after an automatic
+   copy). manual: the message box + its hint, when copying failed. */
+.share-panel__note,
+.share-panel__text { display: none; }
+.share-panel[data-mode="copied"] .share-panel__note--copied,
+.share-panel[data-mode="manual"] .share-panel__note--manual { display: block; }
+.share-panel[data-mode="manual"] .share-panel__text { display: block; }
+.share-panel:not([data-mode="choose"]) .share-panel__wa,
+.share-panel:not([data-mode="choose"]) .share-panel__copy { display: none; }
 
 /* ================================================================
    CALENDAR — EVENT DETAIL MODAL (hero-expand)

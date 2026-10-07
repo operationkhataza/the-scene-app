@@ -1,20 +1,21 @@
 /* ============================================================
-   THE SCENE — SHARE AN EVENT (public app)
+   THE SCENE: SHARE AN EVENT (public app)
    ────────────────────────────────────────────────────────────
    The Share button on a gig card's back face. A shared link points
    at the marketing site's event page, thescenecapetown.co.za/event/<id>
    (Scene Website/event.html), which anyone can open without the app
    and which carries a "get the app" banner.
 
-   Two paths, chosen at tap time:
+   Three paths, chosen at tap time:
      - navigator.share exists (iOS webview, most mobile browsers):
        open the phone's own share menu directly. It already lists
        WhatsApp and Copy, so our panel would only add a tap.
-     - it doesn't (Android's WebView never implements it, so this is
-       every Android user inside the Fabrik app): show a small panel
-       on the card's back face with WhatsApp (a wa.me click-to-chat
-       link, same target="_blank" route the ticket buttons use) and
-       Copy message.
+     - Android's WebView (every Android user inside the Fabrik app; it
+       never implements navigator.share): copy the message at once and
+       confirm it in a small panel on the card's back face. No WhatsApp
+       option here, see IN_ANDROID_WEBVIEW below for why it dead-ends.
+     - anything else without a share menu (e.g. some desktop browsers):
+       the panel offers WhatsApp (a wa.me click-to-chat link) and Copy.
 
    Links use the event's numeric id, never its slug: slugs repeat for
    recurring nights and theatre-run nights borrow their run's.
@@ -98,17 +99,36 @@ async function copyText(text) {
   }
 }
 
+/* Android's System WebView (what the Fabrik app runs us in on Android) tags
+   its user agent with "; wv)". Inside it a wa.me link is a dead end: wa.me
+   immediately hands off to WhatsApp's app link, and the WebView only follows
+   that if the host app passes it to the OS, which Fabrik doesn't, so the user
+   lands on an error page (confirmed on-device 7 Oct 2026). Ticket links work
+   there only because they're ordinary web pages. So in this one environment
+   the panel never offers WhatsApp: Share copies the message straight away. */
+const IN_ANDROID_WEBVIEW = /Android/i.test(navigator.userAgent) && /\bwv\b/.test(navigator.userAgent);
+
+/* Panel modes (CSS shows/hides the controls per data-mode):
+     choose: WhatsApp + Copy message + Cancel (browsers without a share menu)
+     copied: confirmation after an automatic copy + Done
+     manual: copying failed, so the message sits in a read-only box to press-and-hold + Done */
+const PANEL_TITLES = {
+  choose: 'Share this event',
+  copied: 'Message copied',
+  manual: 'Copy this message',
+};
+
 function closePanel(panel) {
   if (panel) panel.hidden = true;
 }
 
-function openPanel(btn) {
-  const panel = btn.closest('.gig-card__back')?.querySelector('.share-panel');
-  if (!panel) return;
-  const copyBtn = panel.querySelector('.share-panel__copy');
-  if (copyBtn) copyBtn.textContent = 'Copy message';
+function showPanel(panel, mode) {
+  panel.dataset.mode = mode;
+  panel.querySelector('.share-panel__title').textContent = PANEL_TITLES[mode];
+  panel.querySelector('.share-panel__cancel').textContent = mode === 'choose' ? 'Cancel' : 'Done';
   panel.hidden = false;
-  panel.querySelector('.share-panel__wa')?.focus();
+  if (mode === 'choose') panel.querySelector('.share-panel__wa')?.focus();
+  else panel.querySelector('.share-panel__cancel')?.focus();
 }
 
 let wired = false;
@@ -131,7 +151,13 @@ export function wireShare() {
           // Anything else (e.g. the host app refusing it): fall back to our panel.
         }
       }
-      openPanel(openBtn);
+      const panel = openBtn.closest('.gig-card__back')?.querySelector('.share-panel');
+      if (!panel) return;
+      if (IN_ANDROID_WEBVIEW) {
+        showPanel(panel, (await copyText(text)) ? 'copied' : 'manual');
+      } else {
+        showPanel(panel, 'choose');
+      }
       return;
     }
 
@@ -149,11 +175,8 @@ export function wireShare() {
       return;
     }
 
-    const copyBtn = e.target.closest('.share-panel__copy');
-    if (copyBtn) {
-      const ok = await copyText(panel.dataset.shareText);
-      copyBtn.textContent = ok ? 'Copied' : 'Couldn\'t copy';
-      setTimeout(() => closePanel(panel), ok ? 1200 : 2000);
+    if (e.target.closest('.share-panel__copy')) {
+      showPanel(panel, (await copyText(panel.dataset.shareText)) ? 'copied' : 'manual');
     }
   });
 }
@@ -171,8 +194,11 @@ export function shareMarkup(gig) {
   return {
     button: `<button type="button" class="gig-card__share" aria-label="Share this event" data-share-text="${text}">${ICONS.share}</button>`,
     panel: `
-      <div class="share-panel" hidden data-share-text="${text}">
+      <div class="share-panel" hidden data-mode="choose" data-share-text="${text}">
         <p class="share-panel__title">Share this event</p>
+        <p class="share-panel__note share-panel__note--copied">Paste it into WhatsApp or any chat.</p>
+        <textarea class="share-panel__text" readonly rows="5" aria-label="Message to share">${text}</textarea>
+        <p class="share-panel__note share-panel__note--manual">Press and hold the text to copy it.</p>
         <a class="share-panel__wa" href="${waHref}" target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
         <button type="button" class="share-panel__copy">Copy message</button>
         <button type="button" class="share-panel__cancel">Cancel</button>
