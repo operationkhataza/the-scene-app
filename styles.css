@@ -2477,6 +2477,16 @@ body.has-cover-bg .day-strip__count {
 body.has-cover-bg[data-cover-text="light"] .day-strip__count {
   color: rgba(255, 255, 255, 0.85);
 }
+/* Empty state and contact footer also sit directly on the cover artwork, so
+   they follow the tone too (their default navy/grey ink vanished on a dark
+   cover with a light tone). */
+body.has-cover-bg[data-cover-text="light"] .state__title {
+  color: #fff;
+}
+body.has-cover-bg[data-cover-text="light"] .state,
+body.has-cover-bg[data-cover-text="light"] .app-footer-contact {
+  color: rgba(255, 255, 255, 0.85);
+}
 
 /* ── Loading hold, promoter/curator views only ────────────────
    calendar.html / event-guide.html each carry a tiny inline <head>

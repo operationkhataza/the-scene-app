@@ -783,7 +783,7 @@ function renderList(gigs, { groupByDate = false, singleDay = null } = {}) {
   if (!gigs.length) {
     LIST_EL.innerHTML = `
       <div class="state">
-        <h2 class="state__title">${anyFilters || anySearch ? 'Nothing matches' : 'No gigs scheduled'}</h2>
+        <h2 class="state__title">${anyFilters || anySearch ? 'Nothing matches' : 'Nothing to see here'}</h2>
         <p class="state__text">${anyFilters || anySearch
           ? 'Try adjusting your search or clearing a filter.'
           : "Nothing lined up for this view just yet. Check back soon — new events are added every week."}</p>
