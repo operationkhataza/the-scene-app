@@ -437,6 +437,13 @@
               <div id="summary-content"></div>
             </div>
 
+            <!-- Pitch to a curator (optional). Hidden until the curator list loads. -->
+            <div class="fg" id="fg-pitch" style="display:none;">
+              <label>Pitch to a curator <span class="opt">(optional)</span></label>
+              <div class="form-hint" style="margin-bottom:10px;">Think this event suits one of our curators' guides? Pick them and they'll see it once it's on the gig guide. It's up to them whether they include it.</div>
+              <div class="chips" id="pitch-chips"></div>
+            </div>
+
             <div class="fg" id="fg-submitter">
               <label>Your name <span class="req">*</span></label>
               <input type="text" id="inp-submitter-name" placeholder="Your full name" autocomplete="name">
@@ -653,6 +660,7 @@
       pendingFile: null,      // original File object — uploaded directly, no canvas
       pendingCropData: null,  // Cropper.js getData() result — sent to events.poster_crop
       selectedArtists: [], selectedGenres: [], tags: [],
+      pitchCurators: [], selectedPitches: [],   // pitch-to-curator: [{id,name}] / [id]
     };
 
     /* TOAST */
@@ -1650,6 +1658,45 @@
       return ok;
     }
 
+    /* PITCH TO A CURATOR — optional chips on the review page. Each pick is sent
+       as a nested `pitches` row with the event; the curator sees it once an
+       editor has published the event. ?pitchtest adds the hidden TEST Curator
+       for test rounds; ?pitchtest=<id> names its id, ?pitchtest=1 falls back to
+       PITCH_TEST_CURATOR_ID (mirrors Scene Studio's curator-pitch.js). */
+    const PITCH_TEST_CURATOR_ID = 8;   // was 7 until the profile was recreated, 11 Oct 2026
+    function pitchTestCurator() {
+      const raw = new URLSearchParams(location.search).get('pitchtest');
+      if (raw === null) return null;
+      const id = parseInt(raw, 10);
+      return { id: id > 1 ? id : PITCH_TEST_CURATOR_ID, name: 'TEST Curator' };
+    }
+    async function loadPitchCurators() {
+      try {
+        const r = await apiGet('/items/curators', { 'fields': 'id,name', 'sort': 'name', 'limit': '100', 'filter[status][_eq]': 'published' });
+        state.pitchCurators = r.data || [];
+      } catch (err) {
+        console.error('Pitch curators load failed:', err);   // optional card: just stays hidden
+        return;
+      }
+      const testCurator = pitchTestCurator();
+      if (testCurator && !state.pitchCurators.some(c => c.id === testCurator.id)) state.pitchCurators.push(testCurator);
+      if (!state.pitchCurators.length) return;
+      const wrap = document.getElementById('pitch-chips');
+      wrap.innerHTML = state.pitchCurators.map(c =>
+        `<button type="button" class="chip" data-pitch-id="${esc(c.id)}">${esc(c.name)}</button>`
+      ).join('');
+      wrap.addEventListener('click', e => {
+        const chip = e.target.closest('[data-pitch-id]');
+        if (!chip) return;
+        const id = parseInt(chip.dataset.pitchId);
+        const idx = state.selectedPitches.indexOf(id);
+        if (idx === -1) state.selectedPitches.push(id); else state.selectedPitches.splice(idx, 1);
+        chip.classList.toggle('is-on', idx === -1);
+        buildSummary();
+      });
+      document.getElementById('fg-pitch').style.display = '';
+    }
+
     /* SUMMARY */
     function buildSummary() {
       const title  = document.getElementById('inp-title').value.trim() || '—';
@@ -1662,6 +1709,7 @@
       const catEl = document.getElementById('inp-category');
       const catLabel = config.showCategory ? (catEl.options[catEl.selectedIndex]?.text || '—') : null;
       const dateStr = date ? new Date(date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'long', year:'numeric' }) : '—';
+      const pitchedNames = state.pitchCurators.filter(c => state.selectedPitches.includes(c.id)).map(c => c.name).join(', ');
       document.getElementById('summary-content').innerHTML = `
         <div class="summary-title">${esc(title)}</div>
         <div class="summary-meta">
@@ -1671,7 +1719,8 @@
         </div>
         <div class="${(state.posterFileId || state.pendingFile) ? 'summary-poster-ok' : 'summary-poster-missing'}">
           ${(state.posterFileId || state.pendingFile) ? `${ICONS.check} Poster ready` : `${ICONS.triangleAlert} No poster — consider going back to add one`}
-        </div>`;
+        </div>
+        ${pitchedNames ? `<div class="summary-meta" style="margin-top:8px;">Pitched to: ${esc(pitchedNames)}</div>` : ''}`;
     }
 
     /* PAGE NAVIGATION */
@@ -1738,6 +1787,9 @@
       if (config.showGenres && config.genreJunction && state.selectedGenres.length) {
         payload[config.genreJunction] = state.selectedGenres.map(g => ({ [config.genreIdKey]: g.id }));
       }
+      if (state.selectedPitches.length) {
+        payload.pitches = state.selectedPitches.map(id => ({ curator: id }));
+      }
       try {
         await gatedPost('/event', payload);
         showSuccess();
@@ -1791,7 +1843,8 @@
       if (cropper) { cropper.destroy(); cropper = null; }
       if (pendingObjectURL) { URL.revokeObjectURL(pendingObjectURL); pendingObjectURL = null; }
       artistsSelected.innerHTML = '';
-      document.querySelectorAll('#genre-chips .chip').forEach(c => c.classList.remove('is-on'));
+      document.querySelectorAll('#genre-chips .chip, #pitch-chips .chip').forEach(c => c.classList.remove('is-on'));
+      state.selectedPitches = [];
       document.getElementById('tiers-list').innerHTML = ''; addTier();
       document.getElementById('tiers-wrap').style.display = '';
       suggestPanel.classList.remove('is-open');
@@ -1979,6 +2032,7 @@
     initFormType();
     renderTurnstile();
     loadLookups();
+    loadPitchCurators();
   </script>
 </body>
 </html>

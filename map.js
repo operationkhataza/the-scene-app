@@ -17,6 +17,8 @@
        to today. URL routing: ?day=today|tomorrow|<dayname>|YYYY-MM-DD
      • "N gigs not on the map yet" pill for events whose venue has
        no location_point (dismissible per session)
+     • Filters pill → one sheet with Type (incl. Exhibitions), Genre
+       and Price; session-only, persists across day changes
 
    Data prerequisite: the Public policy's venues Read rule must
    allow `location_point` — the events fetch requests it via
@@ -58,10 +60,10 @@ import { apiGet, fetchExhibitions } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate, formatLongDate,
   formatTime, getParam, imgUrl, dateForDayName, gigTier,
-  publicVenue, resolveGig
+  publicVenue, resolveGig, gigMinPrice
 } from './utils.js';
 import { ICONS } from './icons.js';
-import { renderGigCard, renderDayCard } from './gig-card.js';
+import { renderGigCard, renderDayCard, gigCategoryRefs, gigGenreRefs } from './gig-card.js';
 import { createCardModal } from './card-modal.js';
 import { createProfileSheet } from './profile-sheet.js';
 
@@ -74,6 +76,7 @@ const LOADING_EL   = document.getElementById('map-loading');
 const EMPTY_EL     = document.getElementById('map-empty');
 const EMPTY_TITLE  = EMPTY_EL.querySelector('.map-empty__title');
 const EMPTY_SUB    = EMPTY_EL.querySelector('.map-empty__sub');
+const EMPTY_CLEAR  = document.getElementById('map-empty-clear');
 const MISSING_EL      = document.getElementById('map-missing-pill');
 const MISSING_LABEL   = document.getElementById('map-missing-label');
 const MISSING_DISMISS = document.getElementById('map-missing-dismiss');
@@ -89,7 +92,14 @@ const VENUE_SHEET  = document.getElementById('venue-sheet');
 const VENUE_TITLE  = document.getElementById('venue-sheet-title');
 const VENUE_BODY   = document.getElementById('venue-sheet-body');
 const VENUE_CLOSE  = document.getElementById('venue-sheet-close');
-const EXH_TOGGLE   = document.getElementById('map-exhibition-toggle');
+const FILTER_BTN   = document.getElementById('map-filter-btn');
+const FILTER_BADGE = document.getElementById('map-filter-badge');
+const FILTER_BD    = document.getElementById('filter-backdrop');
+const FILTER_SHEET = document.getElementById('filter-sheet');
+const FILTER_BODY  = document.getElementById('filter-sheet-body');
+const FILTER_CLOSE = document.getElementById('filter-sheet-close');
+const FILTER_CLEAR = document.getElementById('filter-sheet-clear');
+const FILTER_APPLY = document.getElementById('filter-sheet-apply');
 
 /* ============================================================
    STATE — the focused day, a per-day event cache, and the pill
@@ -100,11 +110,84 @@ const state = {
   day:        null,        // focused day as ISO string YYYY-MM-DD
   gigsByDay:  new Map(),   // ISO date -> array of resolved gigs
   exhibitionsByDay: new Map(), // ISO date -> array of exhibitions active that day
-  showExhibitions:  true,  // Exhibitions layer toggle (session state)
-  unmapped:   [],          // current day's gigs with no usable coordinates
+  filters:    emptyFilters(),  // committed Type / Genre / Price (see FILTERS)
+  draft:      emptyFilters(),  // working copy while the filter sheet is open
+  unmapped:   [],          // current day's FILTERED gigs with no usable coordinates
   pillDismissed: false,    // "not on the map yet" pill, per session
 };
 let fetchToken = 0;
+
+/* ============================================================
+   FILTERS — Type, Genre, Price, in one sheet behind the Filters pill
+   ────────────────────────────────────────────────────────────
+   Same semantics as the gig guide's toolbar (app.js): OR within a
+   group, AND across groups, genres merged from genre + dj_genres
+   with the same denylist, and the same price slider. No Area filter
+   (panning the map IS the area filter) and no title search.
+   Exhibitions are one more Type option, which replaced the old
+   standalone layer toggle. They carry no genre or price, so either of
+   those filters being active hides them.
+   Filters persist across day changes for the session and reset on a
+   page load (nothing goes in the URL). Changing them never moves the
+   camera; only a day change re-frames, and it frames the filtered pins.
+   ============================================================ */
+const EXHIBITIONS_TYPE = '__exhibitions';   // can't collide with a Directus category slug
+const GENRE_DENYLIST = new Set(['multiple', 'other']);   // mirrors app.js
+const PRICE_MIN  = 0;
+const PRICE_MAX  = 300;
+const PRICE_STEP = 50;
+const PRICE_TICK_VALUES = [0, 50, 100, 150, 200, 250, 300];
+
+function emptyFilters() {
+  return { types: new Set(), genres: new Set(), priceMax: null };   // priceMax null = any price
+}
+function copyFilters(f) {
+  return { types: new Set(f.types), genres: new Set(f.genres), priceMax: f.priceMax };
+}
+function activeFilterCount(f) {
+  return f.types.size + f.genres.size + (f.priceMax !== null ? 1 : 0);
+}
+
+// slug -> display name, kept across days so a selection carried onto a
+// night that doesn't have it can still be listed (with a 0 count).
+const filterNames = new Map([[EXHIBITIONS_TYPE, 'Exhibitions']]);
+
+function gigCategorySlugs(gig) { return gigCategoryRefs(gig).map(r => r.slug); }
+function gigGenreSlugs(gig)    { return gigGenreRefs(gig).map(r => r.slug); }
+
+// Same rule as app.js's matchesPriceFilter: unpriced events drop out once a
+// price is set, and the 300+ end means "everything with a price".
+function matchesPrice(gig, priceMax) {
+  if (priceMax === null) return true;
+  const price = gigMinPrice(gig);
+  if (price === null) return false;
+  if (priceMax >= PRICE_MAX) return true;
+  return price <= priceMax;
+}
+
+function gigMatches(gig, f) {
+  if (f.types.size > 0 && !gigCategorySlugs(gig).some(s => f.types.has(s))) return false;
+  if (f.genres.size > 0 && !gigGenreSlugs(gig).some(s => f.genres.has(s))) return false;
+  return matchesPrice(gig, f.priceMax);
+}
+
+function exhibitionsPass(f) {
+  if (f.genres.size > 0 || f.priceMax !== null) return false;
+  return f.types.size === 0 || f.types.has(EXHIBITIONS_TYPE);
+}
+
+function filteredDay(iso, f) {
+  const gigs = (state.gigsByDay.get(iso) || []).filter(g => gigMatches(g, f));
+  const exhibitions = exhibitionsPass(f) ? (state.exhibitionsByDay.get(iso) || []) : [];
+  return { gigs, exhibitions };
+}
+
+// What a filter set would put on screen: every matching gig (mapped or in the
+// unmapped pill) plus the exhibitions that actually get a pin.
+function filteredCount(iso, f) {
+  const { gigs, exhibitions } = filteredDay(iso, f);
+  return gigs.length + exhibitions.filter(gigLngLat).length;
+}
 
 // TIER + THEATRE COALESCING — gigTier, resolveGig and publicVenue are
 // all single-sourced in utils.js, shared with app.js and calendar.js.
@@ -289,8 +372,7 @@ map.touchZoomRotate.disableRotation();
 map.keyboard.disableRotation();
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-// Separate sets so the exhibitions toggle clears the blue family without
-// touching gig pins. Plain arrays: they only ever need bulk-clearing.
+// Separate sets for the gig and exhibition pin families. Plain arrays: they only ever need bulk-clearing.
 const gigMarkers = [];
 const exhibitionMarkers = [];
 
@@ -335,15 +417,19 @@ function openPin(pin, markerEl) {
 }
 
 /* ============================================================
-   RENDER: clear + refill the pins for the focused day, then frame
-   the night: fitBounds over the pins (padded, zoom-capped so one
-   lone venue doesn't open at street level), or the city-bowl
-   default when nothing is mapped. Gig pin tier = the HIGHEST tier
-   among the venue's events that night (brightest signal wins, same
-   rule as the calendar's pips).
+   RENDER: clear + refill the pins for the focused day (after the
+   filters), then, on a day change only, frame the night: fitBounds
+   over the pins (padded, zoom-capped so one lone venue doesn't open
+   at street level), or the city-bowl default when nothing is mapped.
+   A filter change passes frame: false so the camera stays where the
+   user left it. Gig pin tier = the HIGHEST tier among the venue's
+   events that night (brightest signal wins, same rule as the
+   calendar's pips).
    ============================================================ */
-function renderMarkers(iso) {
-  const gigs = state.gigsByDay.get(iso) || [];
+function renderMarkers(iso, { frame = true } = {}) {
+  const rawGigs = state.gigsByDay.get(iso) || [];
+  const rawExhibitions = state.exhibitionsByDay.get(iso) || [];
+  const { gigs, exhibitions } = filteredDay(iso, state.filters);
   const { pins, unmapped } = groupByPin(gigs);
   state.unmapped = unmapped;
 
@@ -357,12 +443,9 @@ function renderMarkers(iso) {
   }
 
   // Exhibitions: a separate blue-pin family, date-scoped to this day and
-  // gated by the layer toggle. groupByPin works on them unchanged (they carry
-  // venue.name + venue.location_point just like gigs). We keep the RAW list
-  // (pre-toggle) for the empty-state test so hiding the layer never fakes an
-  // empty night.
-  const rawExhibitions = state.exhibitionsByDay.get(iso) || [];
-  const exhibitions = state.showExhibitions ? rawExhibitions : [];
+  // gated by the Type filter. groupByPin works on them unchanged (they carry
+  // venue.name + venue.location_point just like gigs). The RAW lists drive
+  // the "nothing listed" test, so filtering never fakes an empty night.
   const { pins: exPins } = groupByPin(exhibitions);
 
   clearMarkers(exhibitionMarkers);
@@ -374,7 +457,9 @@ function renderMarkers(iso) {
   }
 
   const allLngLats = [...pins.map(p => p.lngLat), ...exPins.map(p => p.lngLat)];
-  if (allLngLats.length > 0) {
+  if (!frame) {
+    // filter change: leave the camera alone
+  } else if (allLngLats.length > 0) {
     const bounds = allLngLats.reduce(
       (b, lngLat) => b.extend(lngLat),
       new maplibregl.LngLatBounds(allLngLats[0], allLngLats[0]));
@@ -388,7 +473,7 @@ function renderMarkers(iso) {
   // Empty state: only when the day has NO gigs AND NO exhibitions at all. A day
   // whose gigs are all unmapped shows the pill instead — the night exists, the
   // map just can't place it yet.
-  if (gigs.length === 0 && rawExhibitions.length === 0) {
+  if (rawGigs.length === 0 && rawExhibitions.length === 0) {
     // Date-aware wording: "check back" reads as nonsense on a day that's
     // already passed, so past and future/today get their own copy. ISO date
     // strings compare lexically, so no extra parsing is needed here.
@@ -399,6 +484,11 @@ function renderMarkers(iso) {
         ? 'No events made the map on this day.'
         : 'No events on the map for this day. New listings land through the week.'
     );
+  } else if (gigs.length === 0 && exPins.length === 0) {
+    // The night has events, the filters hid them all: its own panel with a
+    // way out, so a busy night never reads as a dead one.
+    showEmpty('No events match your filters',
+      'Try fewer filters, or another day.', { clearable: true });
   } else {
     hideEmpty();
   }
@@ -406,9 +496,10 @@ function renderMarkers(iso) {
   updateMissingPill();
 }
 
-function showEmpty(title, sub) {
+function showEmpty(title, sub, { clearable = false } = {}) {
   EMPTY_TITLE.textContent = title;
   EMPTY_SUB.textContent   = sub;
+  EMPTY_CLEAR.hidden = !clearable;
   EMPTY_EL.hidden = false;
 }
 function hideEmpty() { EMPTY_EL.hidden = true; }
@@ -416,6 +507,7 @@ function hideEmpty() { EMPTY_EL.hidden = true; }
 /* "N gigs not on the map yet" — events whose venue has no usable
    coordinates. Silent omission would make a real night look dead, so
    they surface here, one tap from their full card via the chooser.
+   Counts and lists only the gigs that pass the filters.
    Dismissal is per session, not per day: the user said "stop telling
    me", not "stop telling me about Tuesday". */
 function updateMissingPill() {
@@ -609,7 +701,7 @@ document.addEventListener('keydown', e => {
    EXHIBITIONS ON THE MAP — blue-pin family, date-scoped
    ────────────────────────────────────────────────────────────
    Art + museum shows active on the focused day, as scene-blue teardrop
-   pins in their own marker set (toggled by the Exhibitions switch). gigLngLat
+   pins in their own marker set (shown or hidden by the Type filter). gigLngLat
    + groupByPin already operate on any object carrying venue.location_point
    + venue.name, so they're reused as-is. Tap → the shared #cal-modal
    (single, via cardModal.open with a render override) or the venue
@@ -798,15 +890,170 @@ async function fetchExhibitionsDay(iso) {
   return list;
 }
 
-/* Exhibitions layer toggle — re-renders the current day's markers (no refetch). */
-if (EXH_TOGGLE) {
-  EXH_TOGGLE.addEventListener('click', () => {
-    state.showExhibitions = !state.showExhibitions;
-    EXH_TOGGLE.classList.toggle('is-active', state.showExhibitions);
-    EXH_TOGGLE.setAttribute('aria-pressed', String(state.showExhibitions));
-    if (state.day) renderMarkers(state.day);
-  });
+/* ============================================================
+   FILTER SHEET — one sheet, three sections (Type, Genre, Price).
+   Edits a draft; "Show N events" commits it and re-renders in place
+   (no camera move), Clear empties the draft. Options come from the
+   focused night's events with counts; a selection the night doesn't
+   have stays listed at 0 so an empty map explains itself.
+   ============================================================ */
+function filterOptions(iso, selected, refsOf) {
+  const counts = new Map();
+  for (const gig of state.gigsByDay.get(iso) || []) {
+    for (const ref of refsOf(gig)) {
+      filterNames.set(ref.slug, ref.name);
+      counts.set(ref.slug, (counts.get(ref.slug) || 0) + 1);
+    }
+  }
+  for (const slug of selected) if (!counts.has(slug)) counts.set(slug, 0);
+  return [...counts.entries()]
+    .map(([slug, count]) => ({ slug, name: filterNames.get(slug) || slug, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+function typeOptions(iso) {
+  const opts = filterOptions(iso, [...state.draft.types].filter(s => s !== EXHIBITIONS_TYPE), gigCategoryRefs);
+  const exCount = (state.exhibitionsByDay.get(iso) || []).filter(gigLngLat).length;
+  if (exCount > 0 || state.draft.types.has(EXHIBITIONS_TYPE)) {
+    opts.push({ slug: EXHIBITIONS_TYPE, name: 'Exhibitions', count: exCount });
+  }
+  return opts;
+}
+
+function genreOptions(iso) {
+  const refsOf = gig => gigGenreRefs(gig).filter(r => !GENRE_DENYLIST.has(r.slug));
+  return filterOptions(iso, state.draft.genres, refsOf);
+}
+
+const CHECK_SVG = `<svg viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function optionsMarkup(group, options, selected, emptyText) {
+  if (options.length === 0) return `<p class="map-filter-section__empty">${esc(emptyText)}</p>`;
+  return options.map(opt => {
+    const on = selected.has(opt.slug);
+    return `
+      <button type="button" class="sheet-option${on ? ' is-selected' : ''}" data-group="${group}" data-slug="${esc(opt.slug)}" aria-pressed="${on}">
+        <span class="sheet-option__label">${esc(opt.name)}</span>
+        <span class="sheet-option__count">${opt.count}</span>
+        <span class="sheet-option__check" aria-hidden="true">${CHECK_SVG}</span>
+      </button>`;
+  }).join('');
+}
+
+function renderFilterSheet() {
+  const iso = state.day;
+  const d = state.draft;
+  const tickCols = PRICE_TICK_VALUES.map(v =>
+    `<span>${v === 0 ? 'Free' : v === PRICE_MAX ? `${v}+` : v}</span>`).join('');
+
+  FILTER_BODY.innerHTML = `
+    <section class="map-filter-section">
+      <h3 class="map-filter-section__title">Type</h3>
+      ${optionsMarkup('types', typeOptions(iso), d.types, 'Nothing listed on this day yet.')}
+    </section>
+    <section class="map-filter-section">
+      <h3 class="map-filter-section__title">Genre</h3>
+      ${optionsMarkup('genres', genreOptions(iso), d.genres, 'No genres tagged on this day.')}
+    </section>
+    <section class="map-filter-section">
+      <h3 class="map-filter-section__title">Price</h3>
+      <div class="price-slider">
+        <div class="price-slider__value-row">
+          <span class="price-slider__label">Maximum price</span>
+          <span class="price-slider__value" id="map-price-value"></span>
+        </div>
+        <input type="range" class="price-slider__range" id="map-price-input"
+          min="${PRICE_MIN}" max="${PRICE_MAX}" step="${PRICE_STEP}"
+          value="${d.priceMax !== null ? d.priceMax : PRICE_MAX}" aria-label="Maximum price">
+        <div class="price-slider__ticks">${tickCols}</div>
+      </div>
+    </section>`;
+
+  FILTER_BODY.querySelectorAll('.sheet-option').forEach(el => {
+    el.addEventListener('click', () => {
+      const set = d[el.dataset.group];
+      const slug = el.dataset.slug;
+      if (set.has(slug)) set.delete(slug); else set.add(slug);
+      const on = set.has(slug);
+      el.classList.toggle('is-selected', on);
+      el.setAttribute('aria-pressed', String(on));
+      updateApplyLabel();
+    });
+  });
+
+  // Untouched, the slider rests at the top end and reads "Any price" (no
+  // filter). Once dragged it behaves exactly like the gig guide's.
+  const input = document.getElementById('map-price-input');
+  const valueEl = document.getElementById('map-price-value');
+  const readout = () => {
+    const n = d.priceMax !== null ? d.priceMax : PRICE_MAX;
+    input.style.setProperty('--slider-fill', ((n - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100 + '%');
+    valueEl.textContent = d.priceMax === null ? 'Any price'
+      : n === 0 ? 'Free'
+      : n >= PRICE_MAX ? `R${PRICE_MAX}+`
+      : `Up to R${n}`;
+    valueEl.classList.toggle('price-slider__value--free', d.priceMax === 0);
+  };
+  readout();
+  input.addEventListener('input', e => {
+    d.priceMax = Number(e.target.value);
+    readout();
+    updateApplyLabel();
+  });
+
+  updateApplyLabel();
+}
+
+function updateApplyLabel() {
+  const n = state.day ? filteredCount(state.day, state.draft) : 0;
+  FILTER_APPLY.textContent = `Show ${n} ${n === 1 ? 'event' : 'events'}`;
+}
+
+function updateFilterButton() {
+  const n = activeFilterCount(state.filters);
+  FILTER_BADGE.hidden = n === 0;
+  FILTER_BADGE.textContent = n;
+  FILTER_BTN.classList.toggle('is-active', n > 0);
+  FILTER_BTN.setAttribute('aria-label', n > 0 ? `Filters, ${n} active` : 'Filters');
+}
+
+function openFilterSheet() {
+  state.draft = copyFilters(state.filters);
+  renderFilterSheet();
+  FILTER_BODY.scrollTop = 0;
+  FILTER_SHEET.classList.add('is-open');
+  FILTER_BD.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFilterSheet() {
+  FILTER_SHEET.classList.remove('is-open');
+  FILTER_BD.classList.remove('is-open');
+  document.body.style.overflow = '';
+}
+
+function commitFilters(f) {
+  state.filters = f;
+  updateFilterButton();
+  // A day still loading renders itself (with these filters) when it lands.
+  if (state.day && state.gigsByDay.has(state.day)) renderMarkers(state.day, { frame: false });
+}
+
+FILTER_BTN.addEventListener('click', openFilterSheet);
+FILTER_CLOSE.addEventListener('click', closeFilterSheet);
+FILTER_BD.addEventListener('click', closeFilterSheet);
+FILTER_CLEAR.addEventListener('click', () => {
+  state.draft = emptyFilters();
+  renderFilterSheet();
+});
+FILTER_APPLY.addEventListener('click', () => {
+  commitFilters(copyFilters(state.draft));
+  closeFilterSheet();
+});
+EMPTY_CLEAR.addEventListener('click', () => commitFilters(emptyFilters()));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && FILTER_SHEET.classList.contains('is-open')) closeFilterSheet();
+});
 
 /* ============================================================
    BOOT

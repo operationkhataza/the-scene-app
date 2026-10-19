@@ -137,6 +137,19 @@ export function cleanPrice(raw) {
   return /^\d+(\.\d{1,2})?$/.test(stripped) ? stripped : null;
 }
 
+/* Minimum ticket price in ZAR, 0 for free, or null if unknown. Drives the
+   price filter on the gig guide and the map (moved here from app.js). */
+export function gigMinPrice(gig) {
+  if (gig.is_free) return 0;
+  if (Array.isArray(gig.ticket_tiers) && gig.ticket_tiers.length > 0) {
+    const prices = gig.ticket_tiers
+      .map(t => parseFloat(t.price))
+      .filter(p => !isNaN(p) && p >= 0);
+    if (prices.length > 0) return Math.min(...prices);
+  }
+  return null;
+}
+
 /* ============================================================
    VENUE / THEATRE-RUN COALESCING
    ────────────────────────────────────────────────────────────

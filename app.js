@@ -34,7 +34,7 @@ import { API, apiGet, fetchFeatured } from './api.js';
 import {
   esc, isoDate, addDays, formatCardDate,
   formatTime, dateForDayName, getParam, imgUrl, curatorRank,
-  resolveGig
+  resolveGig, gigMinPrice
 } from './utils.js';
 import {
   gigCategoryRefs as gigCategoryRefsBase, gigGenreRefs,
@@ -171,18 +171,6 @@ function gigGenreSlugs(gig) {
    e.g. "cbd", "southern_suburbs". Returns null if not set. */
 function gigAreaSlug(gig) {
   return gig.venue?.location || null;
-}
-
-/* Returns the minimum ticket price in ZAR, 0 for free, or null if unknown. */
-function gigMinPrice(gig) {
-  if (gig.is_free) return 0;
-  if (Array.isArray(gig.ticket_tiers) && gig.ticket_tiers.length > 0) {
-    const prices = gig.ticket_tiers
-      .map(t => parseFloat(t.price))
-      .filter(p => !isNaN(p) && p >= 0);
-    if (prices.length > 0) return Math.min(...prices);
-  }
-  return null;
 }
 
 /* True when the gig's minimum price is at or below the selected threshold.

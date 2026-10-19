@@ -3907,10 +3907,11 @@ body.cal-promoter .cal-day__empty-sub {
   border-top: 1px solid var(--border-sub);
 }
 
-/* ── Exhibitions layer toggle (top-left, mirrors the key top-right) ──────
-   Shows/hides the blue exhibition-pin layer. Glass pill matching the map
-   chrome; the teardrop dot dims when the layer is off. */
-.map-layer-toggle {
+/* ── Filters pill (top-left, mirrors the key top-right) ─────────────────
+   Opens the filter sheet. Glass pill matching the map chrome; goes solid
+   scene-blue with a count badge (the gig guide's .filter-btn__badge) while
+   any filter is active. Replaced the Exhibitions layer toggle. */
+.map-filter-btn {
   position: fixed;
   top: 4.15rem;
   left: 0.8rem;
@@ -3918,7 +3919,8 @@ body.cal-promoter .cal-day__empty-sub {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.72rem;
+  min-height: 34px;
+  padding: 0.4rem 0.8rem;
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   background: var(--glass-bg-strong);
@@ -3929,24 +3931,54 @@ body.cal-promoter .cal-day__empty-sub {
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--scene-blue-deep);
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(15, 26, 46, 0.12);
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s, background 0.15s, color 0.15s;
 }
-.map-layer-toggle__dot {
-  width: 11px;
-  height: 11px;
-  flex-shrink: 0;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  background: var(--scene-blue);
-  border: 1.5px solid var(--charcoal);
-  opacity: 0.32;
-  transition: opacity 0.15s ease;
+.map-filter-btn:active { transform: scale(0.96); }
+.map-filter-btn__icon { width: 13px; height: 13px; flex-shrink: 0; }
+.map-filter-btn.is-active {
+  background: var(--selected-bg);
+  border-color: transparent;
+  color: white;
+  box-shadow: var(--selected-shadow);
 }
-.map-layer-toggle.is-active { color: var(--scene-blue-deep); }
-.map-layer-toggle.is-active .map-layer-toggle__dot { opacity: 1; }
+.map-filter-btn.is-active .filter-btn__badge {
+  background: white;
+  color: var(--scene-blue-deep);
+  box-shadow: none;
+}
+
+/* ── Filter sheet — same tier as the sibling sheets. Options are
+   <button>s (not the gig guide's divs) so the scoped touchend guard
+   in map.js never swallows a rapid second tap. ─────────────────── */
+#filter-backdrop { z-index: 940; }
+#filter-sheet    { z-index: 950; }
+.map-filter-section + .map-filter-section { border-top: 1px solid var(--border-sub); }
+.map-filter-section__title {
+  padding: 1rem 1.25rem 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--scene-blue);
+}
+.map-filter-section__empty {
+  padding: 0.4rem 1.25rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.map-filter-sheet .sheet-option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+}
+.map-filter-sheet .sheet-option:hover { background: rgba(75, 185, 208, 0.08); }
+.map-filter-sheet .price-slider { padding-top: 0.75rem; }
 
 /* ── Bottom-centre status pills (loading / not-on-map-yet) ─── */
 .map-pills {
@@ -4048,7 +4080,20 @@ body.cal-promoter .cal-day__empty-sub {
   line-height: 1.45;
   color: var(--text-muted);
 }
-
+.map-empty__clear {                                 /* filtered-to-empty only */
+  pointer-events: auto;                            /* the panel itself is click-through */
+  margin-top: 0.9rem;
+  padding: 0.6rem 1.15rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--selected-bg);
+  box-shadow: var(--selected-shadow);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+}
 /* ── Venue chooser sheet — same stacking as the promoter sheet:
    above the event modal (900), same tier as its sibling sheets. ── */
 #venue-backdrop { z-index: 940; }
